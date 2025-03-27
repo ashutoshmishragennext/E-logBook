@@ -1,15 +1,10 @@
 
 
-import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db';
-import { 
-  LogBookTemplateTable, 
-  AcademicYearTable, 
- 
-  SubjectTable, 
-  ModuleTable 
+import {
+  LogBookTemplateTable
 } from '@/db/schema';
-import { v4 as uuidv4 } from 'uuid';
+import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(request: NextRequest) {
   try {

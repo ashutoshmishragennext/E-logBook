@@ -1,14 +1,12 @@
-import { InferModel, relations } from "drizzle-orm";
+import { InferModel } from "drizzle-orm";
 import {
-  index,
+  jsonb,
   pgEnum,
   pgTable,
   text,
   timestamp,
-  uuid,
   uniqueIndex,
-  jsonb,
-  
+  uuid
 } from "drizzle-orm/pg-core";
 
 // ===== ENUMS =====

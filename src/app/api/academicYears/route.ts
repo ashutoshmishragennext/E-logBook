@@ -1,9 +1,9 @@
 import { db } from "@/db";
 import { AcademicYearTable } from "@/db/schema";
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 
 
-export async function GET(req){
+export async function GET(){
  try {
     const academicYear=await db.select().from(AcademicYearTable)
     return NextResponse.json(academicYear)

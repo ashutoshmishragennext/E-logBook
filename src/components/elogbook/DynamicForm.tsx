@@ -1,23 +1,23 @@
 'use client';
 
-import { useState } from 'react';
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
-} from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { 
-  AcademicYear, 
-  Batch, 
-  Subject, 
-  Module, 
-  LogBookDynamicSchema 
+import {
+  AcademicYear,
+  Batch,
+  LogBookDynamicSchema,
+  Module,
+  Subject
 } from '@/db/schema';
+import { useState } from 'react';
 
 interface LogBookTemplateFormProps {
   academicYears: AcademicYear[];
@@ -29,9 +29,7 @@ interface LogBookTemplateFormProps {
 
 export function LogBookTemplateForm({
   academicYears,
-  batches,
-  subjects,
-  modules,
+ 
   onSubmit
 }: LogBookTemplateFormProps) {
   const [formData, setFormData] = useState({
