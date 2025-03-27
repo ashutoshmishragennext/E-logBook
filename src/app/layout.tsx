@@ -11,7 +11,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Document Management System",
+  title: "E-Logbook",
   description: "We're here to Increase your Productivity",
 };
 
