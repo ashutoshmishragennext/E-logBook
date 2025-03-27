@@ -193,6 +193,9 @@ import {
 } from 'lucide-react';
 import { useCurrentUser } from '@/hooks/auth';
 import Dashboard1 from '@/components/new/Dashboard';
+import { LogBookTemplateForm } from '@/components/elogbook/DynamicForm';
+import StudentLogBookForm from '@/components/elogbook/Elogbook';
+import LogBookCreationPage from '@/components/elogbook/Elogbook';
 // import { FolderManagement } from '@/components/new/FolderManagement';
 
 export default function Dashboard() {
@@ -231,6 +234,8 @@ export default function Dashboard() {
   }
 
   if (!session) {
+    console.log("hhhhhhhhhhhhh");
+    
     return null;
   }
 
@@ -255,20 +260,20 @@ export default function Dashboard() {
     switch (activeComponent) {
       case 'documents':
         return (
-          <div className="space-y-6">
+         
 
-            <Dashboard1/>
+            <LogBookCreationPage/>
            
-          </div>
+        
         );
       case 'students':
         return (
-          <StudentManagement/>
+          <StudentLogBookForm/>
         
         );
       case 'folders':
         return (
-             <FolderManagement/>
+            <div>hii</div>
         );
       case 'activity':
         return (
