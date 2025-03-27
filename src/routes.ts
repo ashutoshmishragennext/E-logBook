@@ -24,4 +24,6 @@ export const authRoutes: string[] = [
 export const protectedRoutes: Record<string, Role[]> = {
   "^/dashboard/admin(/.*)?$": ["ADMIN"],
   "^/dashboard/user(/.*)?$": ["USER"],
+  "^/dashboard/student(/.*)?$": ["STUDENT"],
+  "^/dashboard/teacher(/.*)?$": ["TEACHER"],
 };

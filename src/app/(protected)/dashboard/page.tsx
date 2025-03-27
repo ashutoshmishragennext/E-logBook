@@ -35,6 +35,12 @@ export default function Dashboard() {
       case "USER":
           router.push("/dashboard/user");
           break;
+      case "STUDENT":
+          router.push("/dashboard/student");
+          break;
+      case "TEACHER":
+          router.push("/dashboard/teacher");
+          break;
       default:
         setIsRedirecting(false);
         break;
