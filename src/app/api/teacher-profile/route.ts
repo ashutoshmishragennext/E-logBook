@@ -19,7 +19,7 @@ export async function GET(req: NextRequest) {
     const teacher = await db
       .select()
       .from(TeacherProfileTable)
-      .where(eq(TeacherProfileTable.id, ID));
+      .where(eq(TeacherProfileTable.userId, ID));
 
     return NextResponse.json(teacher);
   } catch (error) {

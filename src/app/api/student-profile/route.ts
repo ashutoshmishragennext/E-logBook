@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
     const student = await db
       .select()
       .from(StudentProfileTable)
-      .where(eq(StudentProfileTable.id, ID));
+      .where(eq(StudentProfileTable.userId, ID));
 
     return NextResponse.json(student);
   } catch (error) {

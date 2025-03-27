@@ -2,44 +2,44 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db';
-import { 
-  LogBookTemplateTable, 
-  AcademicYearTable, 
- 
-  SubjectTable, 
-  ModuleTable 
+import {
+  LogBookTemplateTable,
+  AcademicYearTable,
+
+  SubjectTable,
+  ModuleTable
 } from '@/db/schema';
 import { v4 as uuidv4 } from 'uuid';
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    
+
     // Validate input
     const {
       academicYearId,
-     batchId,
-    subjectId,
-    moduleId,
-    createdBy,
+      batchId,
+      subjectId,
+      moduleId,
+      createdBy,
       name,
       description,
       dynamicSchema,
-    
+
     } = body;
 
 
-  //   const batchId="86f6cdd7-281c-4eba-b423-e835360b012e";
-  //  const subjectId ="21f6eaf4-878d-4c8b-aa14-e9ae7c854d32"
-  //  const moduleId ="05ac612a-b8c5-482d-bd3b-9d1233e1f0a4"
-  //   const createdBy="913d6747-dab3-4432-8e7e-4706377a920c";
+    //   const batchId="86f6cdd7-281c-4eba-b423-e835360b012e";
+    //  const subjectId ="21f6eaf4-878d-4c8b-aa14-e9ae7c854d32"
+    //  const moduleId ="05ac612a-b8c5-482d-bd3b-9d1233e1f0a4"
+    //   const createdBy="913d6747-dab3-4432-8e7e-4706377a920c";
 
-    console.log("bodyyyyyyyyyyyyyyyyyyy",body);
-    
+    console.log("bodyyyyyyyyyyyyyyyyyyy", body);
+
     // Ensure the UUIDs are valid and not empty
-    if (!academicYearId || !batchId || !subjectId || !moduleId ) {
+    if (!academicYearId || !batchId || !subjectId || !moduleId) {
       return NextResponse.json(
-        { error: 'Missing required fields (UUIDs)' }, 
+        { error: 'Missing required fields (UUIDs)' },
         { status: 400 }
       );
     }
@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Error creating log book template:', error);
     return NextResponse.json(
-      { error: 'Failed to create log book template' }, 
+      { error: 'Failed to create log book template' },
       { status: 500 }
     );
   }
@@ -101,7 +101,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Error fetching log book templates:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch log book templates' }, 
+      { error: 'Failed to fetch log book templates' },
       { status: 500 }
     );
   }

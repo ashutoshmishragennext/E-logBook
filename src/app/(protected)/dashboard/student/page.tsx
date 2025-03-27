@@ -22,6 +22,7 @@ import {
   Settings,
   Users
 } from 'lucide-react';
+import StudentProfileForm from '@/components/student/profileForm';
 // import { FolderManagement } from '@/components/new/FolderManagement';
 
 export default function Dashboard() {
@@ -36,7 +37,7 @@ export default function Dashboard() {
   // console.log("user",user?.name);
   
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [activeComponent, setActiveComponent] = useState('documents');
+  const [activeComponent, setActiveComponent] = useState('profile');
 
   const handleLogout = async () => {
     await signOut({ redirectTo: "/auth/login" });
@@ -65,9 +66,6 @@ export default function Dashboard() {
     return null;
   }
 
-  const handleFolderSelect = (folderId: string) => {
-    setSelectedFolderId(folderId);
-  };
 
   const toggleSidebar = () => {
     setSidebarOpen(!sidebarOpen);
@@ -75,7 +73,7 @@ export default function Dashboard() {
 
   // Navigation items for sidebar
   const navItems = [
-    { id: 'documents', label: 'Documents', icon: <File className="h-5 w-5" /> },
+    { id: 'profile', label: 'Profile', icon: <File className="h-5 w-5" /> },
     { id: 'students', label: 'Students', icon: <Users className="h-5 w-5" /> },
     // { id: 'folders', label: 'Folders', icon: <FolderOpen className="h-5 w-5" /> },
     // { id: 'activity', label: 'Activity', icon: <Activity className="h-5 w-5" /> },
@@ -84,12 +82,11 @@ export default function Dashboard() {
   // Render the appropriate component based on sidebar selection
   const renderMainContent = () => {
     switch (activeComponent) {
-      case 'documents':
+      case 'profile':
         return (
          
 
-            <LogBookCreationPage/>
-           
+           <StudentProfileForm/>
         
         );
       case 'students':
@@ -131,7 +128,7 @@ export default function Dashboard() {
             >
               <Menu className="h-5 w-5" />
             </button>
-            <h1 className="text-2xl font-semibold text-gray-800">Document Management System</h1>
+            <h1 className="text-2xl font-semibold text-gray-800">Student Portal</h1>
           </div>
           
           <Popover>

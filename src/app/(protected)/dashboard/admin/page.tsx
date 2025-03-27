@@ -1,154 +1,147 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
-import React, { useState } from 'react';
-import { useForm, useFieldArray } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Switch } from '@/components/ui/switch';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Trash2Icon, PlusIcon } from 'lucide-react';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { signOut } from "next-auth/react";
-import { Settings, LogOut } from 'lucide-react';
-import { useSession } from "next-auth/react"; // Add this import
+import { signOut, useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
+// import { UploadDocumentDialog } from '@/components/new/UploadDocumentDialog';
+import { default as LogBookCreationPage, default as StudentLogBookForm } from '@/components/elogbook/Elogbook';
+import UploadDocumentDialog from '@/components/new/UploadDocumentDialog';
+import { StudentFolderDialog } from '@/components/students/DetailsInput';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { useCurrentUser } from '@/hooks/auth';
+import {
+  ChevronLeft,
+  ChevronRight,
+  File,
+  LogOut,
+  Menu,
+  Settings,
+  Users
+} from 'lucide-react';
+import TeacherProfilePage from '@/components/teacher/TeacherProfile';
+import LogBookTemplateForm from '@/components/admin/LogFormTemplate';
+// import { FolderManagement } from '@/components/new/FolderManagement';
 
-// Form validation schema
-const formSchema = z.object({
-  name: z.string().min(2, { message: "Name must be at least 2 characters" }),
-  description: z.string().optional(),
-  isActive: z.boolean().default(true),
-  isRequired: z.boolean().default(false),
-  metadataFields: z.array(z.object({
-    fieldName: z.string().min(1, { message: "Field name is required" }),
-    fieldType: z.enum(["string", "number", "boolean", "date"]),
-    required: z.boolean().default(false),
-    description: z.string().optional(),
-    options: z.array(z.string()).optional(),
-  })).min(1, { message: "At least one metadata field is required" }),
-});
-
-type FormValues = z.infer<typeof formSchema>;
-
-const DocumentTypeForm = () => {
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const { data: session } = useSession(); // Get session data
+export default function Dashboard() {
+  const { data: session, status } = useSession();
+  const router = useRouter();
+  const [isCreateFolderOpen, setIsCreateFolderOpen] = useState(false);
+  const [isUploadDocumentOpen, setIsUploadDocumentOpen] = useState(false);
+  const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
+  const [organizationId, setOrganizationId] = useState<string | null>(null);
+  const [studentId, setStudentId] = useState<string | null>(null);
+  const user = useCurrentUser();
+  // console.log("user",user?.name);
   
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [activeComponent, setActiveComponent] = useState('logTemplate');
+
   const handleLogout = async () => {
     await signOut({ redirectTo: "/auth/login" });
   };
-  
-  const form = useForm<FormValues>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      name: '',
-      description: '',
-      isActive: true,
-      isRequired: false,
-      metadataFields: [
-        { fieldName: '', fieldType: 'string', required: false, description: '', options: [] }
-      ],
-    },
-  });
-  
-  const { fields, append, remove } = useFieldArray({
-    control: form.control,
-    name: 'metadataFields',
-  });
-  
-  const onSubmit = async (data: FormValues) => {
-    setIsSubmitting(true);
+
+  // Redirect if not authenticatedclear
+  useEffect(() => {
+    if (status === 'unauthenticated') {
+      router.push('/login');
+    }
     
-    // Convert form data to the format expected by the API
-    const metadataSchema = {
-      type: 'object',
-      required: data.metadataFields
-        .filter(field => field.required)
-        .map(field => field.fieldName),
-      properties: data.metadataFields.reduce((acc, field) => {
-        const schemaProperty: any = {
-          type: field.fieldType,
-          description: field.description || `${field.fieldName} field`,
-        };
-        
-        // Add enum options if needed
-        if (field.options && field.options.length > 0) {
-          schemaProperty.enum = field.options;
-        }
-        
-        return {
-          ...acc,
-          [field.fieldName]: schemaProperty
-        };
-      }, {}),
-    };
+    // For demo purposes - in a real app, you would get these from your auth context
+    if (status === 'authenticated') {
+      setOrganizationId('org-123');
+      setStudentId('student-123');
+    }
+  }, [status, router]);
+
+  if (status === 'loading') {
+    return <div className="flex items-center justify-center h-screen">Loading...</div>;
+  }
+
+  if (!session) {
+    console.log("hhhhhhhhhhhhh");
     
-    try {
-      // Get organization ID from the session or from somewhere in your app
-      const organizationId = '0cb46f34-0d7d-48f8-8195-e664dbe6dd80';
-      
-      if (!organizationId) {
-        throw new Error('Organization ID is required');
-      }
-      
-      const response = await fetch('/api/documentstype', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name: data.name,
-          description: data.description,
-          isActive: data.isActive,
-          isRequired: data.isRequired,
-          metadataSchema,
-          organizationId,
-          createdBy: session?.user?.id, // Include the user ID
-        }),
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to create document type');
-      }
-      
-      const result = await response.json();
-      
-      // Handle success (add toast notification here if you implement it)
-      console.log('Document type created:', result);
-      
-      // Reset form
-      form.reset();
-    } catch (error) {
-      console.error('Error creating document type:', error);
-      // Handle error (add toast notification here if you implement it)
-    } finally {
-      setIsSubmitting(false);
+    return null;
+  }
+
+  const handleFolderSelect = (folderId: string) => {
+    setSelectedFolderId(folderId);
+  };
+
+  const toggleSidebar = () => {
+    setSidebarOpen(!sidebarOpen);
+  };
+
+  // Navigation items for sidebar
+  const navItems = [
+    { id: 'logTemplate', label: 'E-Log Template', icon: <File className="h-5 w-5" /> },
+    { id: 'students', label: 'Students', icon: <Users className="h-5 w-5" /> },
+    // { id: 'folders', label: 'Folders', icon: <FolderOpen className="h-5 w-5" /> },
+    // { id: 'activity', label: 'Activity', icon: <Activity className="h-5 w-5" /> },
+  ];
+
+  // Render the appropriate component based on sidebar selection
+  const renderMainContent = () => {
+    switch (activeComponent) {
+      case 'logTemplate':
+        return (
+            <LogBookTemplateForm/>
+           
+        
+        );
+      case 'students':
+        return (
+          <StudentLogBookForm/>
+        
+        );
+      case 'folders':
+        return (
+            <div>hii</div>
+        );
+      case 'activity':
+        return (
+          <div>
+            <h1 className="text-2xl font-bold mb-6">Recent Activity</h1>
+            <div className="border rounded-lg p-6">
+              <h2 className="text-lg font-semibold mb-4">Activity Log</h2>
+              {/* Activity logs and timeline */}
+            </div>
+          </div>
+        );
+      default:
+        return (
+          <div className="text-center p-8 text-gray-500">
+            Select an option from the sidebar
+          </div>
+        );
     }
   };
 
   return (
-    <Card className="w-full max-w-3xl mx-auto">
+    <div className="min-h-screen bg-gray-50">
       <nav className="bg-white shadow-sm border-b px-6 py-3">
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-semibold text-gray-800">User Dashboard</h1>
+          <div className="flex items-center gap-4">
+            <button
+              onClick={toggleSidebar}
+              className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+            >
+              <Menu className="h-5 w-5" />
+            </button>
+            <h1 className="text-2xl font-semibold text-gray-800"> Teacher Portal</h1>
+          </div>
           
           <Popover>
             <PopoverTrigger asChild>
               <button className="flex items-center gap-2 hover:bg-gray-50 rounded-lg p-2 transition-colors">
-                <Avatar className="h-8 w-8">
+                {/* <Avatar className="h-8 w-8">
                   <AvatarImage src="/images/user_alt_icon.png" alt="User" />
-                  <AvatarFallback>
-                    {session?.user?.name?.substring(0, 2).toUpperCase() || 'U'}
-                  </AvatarFallback>
-                </Avatar>
-                <span className="text-sm font-medium text-gray-700">{session?.user?.name || 'User'}</span>
+                  
+                </Avatar> */}
+                <span className="text-sm font-medium text-gray-700">{user?.name}</span>
               </button>
             </PopoverTrigger>
             <PopoverContent className="w-56" align="end">
@@ -169,161 +162,49 @@ const DocumentTypeForm = () => {
           </Popover>
         </div>
       </nav>
-      <CardHeader>
-        <CardTitle>Create Document Type</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-          {/* Document Type Information */}
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="name">Document Type Name*</Label>
-              <Input 
-                id="name"
-                placeholder="E.g., PASSPORT, AADHAAR, DRIVING_LICENSE"
-                {...form.register('name')}
-              />
-              {form.formState.errors.name && (
-                <p className="text-sm text-red-500 mt-1">{form.formState.errors.name.message}</p>
-              )}
-            </div>
-            
-            <div>
-              <Label htmlFor="description">Description</Label>
-              <Textarea 
-                id="description"
-                placeholder="Provide a description for this document type"
-                {...form.register('description')}
-              />
-            </div>
-            
-            <div className="flex items-center space-x-2">
-              <Switch
-                id="isActive"
-                checked={form.watch('isActive')}
-                onCheckedChange={(checked) => form.setValue('isActive', checked)}
-              />
-              <Label htmlFor="isActive">Active</Label>
-            </div>
-            
-            <div className="flex items-center space-x-2">
-              <Switch
-                id="isRequired"
-                checked={form.watch('isRequired')}
-                onCheckedChange={(checked) => form.setValue('isRequired', checked)}
-              />
-              <Label htmlFor="isRequired">Required Document</Label>
-            </div>
-          </div>
-          
-          {/* Metadata Fields Section */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-medium">Metadata Schema</h3>
-            <p className="text-sm text-gray-500">Define the fields that should be collected for this document type.</p>
-            
-            {fields.map((field, index) => (
-              <Card key={field.id} className="p-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor={`metadataFields.${index}.fieldName`}>Field Name*</Label>
-                    <Input
-                      id={`metadataFields.${index}.fieldName`}
-                      placeholder="E.g., documentNumber, expiryDate"
-                      {...form.register(`metadataFields.${index}.fieldName`)}
-                    />
-                    {form.formState.errors.metadataFields?.[index]?.fieldName && (
-                      <p className="text-sm text-red-500 mt-1">
-                        {form.formState.errors.metadataFields[index]?.fieldName?.message}
-                      </p>
-                    )}
-                  </div>
-                  
-                  <div>
-                    <Label htmlFor={`metadataFields.${index}.fieldType`}>Field Type*</Label>
-                    <Select
-                      onValueChange={(value) => form.setValue(`metadataFields.${index}.fieldType` as any, value)}
-                      defaultValue={field.fieldType}
-                    >
-                      <SelectTrigger id={`metadataFields.${index}.fieldType`}>
-                        <SelectValue placeholder="Select field type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="string">Text</SelectItem>
-                        <SelectItem value="number">Number</SelectItem>
-                        <SelectItem value="boolean">Yes/No</SelectItem>
-                        <SelectItem value="date">Date</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  <div>
-                    <Label htmlFor={`metadataFields.${index}.description`}>Field Description</Label>
-                    <Input
-                      id={`metadataFields.${index}.description`}
-                      placeholder="Description for this field"
-                      {...form.register(`metadataFields.${index}.description`)}
-                    />
-                  </div>
-                  
-                  <div className="flex items-center space-x-2 mt-6">
-                    <Checkbox
-                      id={`metadataFields.${index}.required`}
-                      checked={form.watch(`metadataFields.${index}.required`)}
-                      onCheckedChange={(checked) => 
-                        form.setValue(`metadataFields.${index}.required` as any, !!checked)
-                      }
-                    />
-                    <Label htmlFor={`metadataFields.${index}.required`}>Required Field</Label>
-                  </div>
-                </div>
-                
-                <div className="mt-4 flex justify-end">
-                  <Button
-                    type="button"
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => {
-                      if (fields.length > 1) {
-                        remove(index);
-                      }
-                    }}
-                    disabled={fields.length <= 1}
-                  >
-                    <Trash2Icon className="h-4 w-4 mr-1" />
-                    Remove Field
-                  </Button>
-                </div>
-              </Card>
-            ))}
-            
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => append({ 
-                fieldName: '', 
-                fieldType: 'string', 
-                required: false, 
-                description: '',
-                options: []
-              })}
-            >
-              <PlusIcon className="h-4 w-4 mr-1" />
-              Add Metadata Field
-            </Button>
-          </div>
-          
-          <div className="flex justify-end space-x-2">
-            <Button type="button" variant="outline" onClick={() => form.reset()}>
-              Reset
-            </Button>
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? 'Creating...' : 'Create Document Type'}
-            </Button>
-          </div>
-        </form>
-      </CardContent>
-    </Card>
-  );
-};
 
-export default DocumentTypeForm;
+      <div className="flex">
+        {/* Sidebar */}
+        <div 
+          className={`${
+            sidebarOpen ? 'w-64' : 'w-20'
+          } bg-white border-r transition-all duration-300 ease-in-out h-[calc(100vh-64px)] flex flex-col justify-between`}
+        >
+          <div>
+            <div className="flex justify-end p-2">
+              <button 
+                onClick={toggleSidebar} 
+                className="p-1 text-gray-500 hover:bg-gray-100 rounded-full"
+              >
+                {sidebarOpen ? <ChevronLeft size={18} /> : <ChevronRight size={18} />}
+              </button>
+            </div>
+            <ul className="space-y-2 px-3 py-4">
+              {navItems.map((item) => (
+                <li key={item.id}>
+                  <button
+                    onClick={() => setActiveComponent(item.id)}
+                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                      activeComponent === item.id
+                        ? 'bg-gray-100 text-blue-600 font-medium'
+                        : 'text-gray-700 hover:bg-gray-50'
+                    }`}
+                  >
+                    {item.icon}
+                    {sidebarOpen && <span>{item.label}</span>}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+
+        {/* Main content */}
+        <div className="flex-1 p-6 overflow-auto">
+          {renderMainContent()}
+        </div>
+      </div>
+
+    </div>
+  );
+}

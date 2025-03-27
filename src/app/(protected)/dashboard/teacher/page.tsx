@@ -22,6 +22,7 @@ import {
   Settings,
   Users
 } from 'lucide-react';
+import TeacherProfilePage from '@/components/teacher/TeacherProfile';
 // import { FolderManagement } from '@/components/new/FolderManagement';
 
 export default function Dashboard() {
@@ -36,7 +37,7 @@ export default function Dashboard() {
   // console.log("user",user?.name);
   
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [activeComponent, setActiveComponent] = useState('documents');
+  const [activeComponent, setActiveComponent] = useState('profile');
 
   const handleLogout = async () => {
     await signOut({ redirectTo: "/auth/login" });
@@ -75,7 +76,7 @@ export default function Dashboard() {
 
   // Navigation items for sidebar
   const navItems = [
-    { id: 'documents', label: 'Documents', icon: <File className="h-5 w-5" /> },
+    { id: 'profile', label: 'Profile', icon: <File className="h-5 w-5" /> },
     { id: 'students', label: 'Students', icon: <Users className="h-5 w-5" /> },
     // { id: 'folders', label: 'Folders', icon: <FolderOpen className="h-5 w-5" /> },
     // { id: 'activity', label: 'Activity', icon: <Activity className="h-5 w-5" /> },
@@ -84,9 +85,9 @@ export default function Dashboard() {
   // Render the appropriate component based on sidebar selection
   const renderMainContent = () => {
     switch (activeComponent) {
-      case 'documents':
+      case 'profile':
         return (
-            <LogBookCreationPage/>
+            <TeacherProfilePage/>
            
         
         );
@@ -129,7 +130,7 @@ export default function Dashboard() {
             >
               <Menu className="h-5 w-5" />
             </button>
-            <h1 className="text-2xl font-semibold text-gray-800">Document Management System</h1>
+            <h1 className="text-2xl font-semibold text-gray-800"> Teacher Portal</h1>
           </div>
           
           <Popover>
@@ -203,41 +204,6 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Dialogs */}
-      {isCreateFolderOpen && organizationId && (
-  <StudentFolderDialog
-    open={isCreateFolderOpen}
-    onOpenChange={setIsCreateFolderOpen}
-    organizationId={organizationId}
-    parentFolderId={selectedFolderId || undefined}
-    onSuccess={(folderData) => {
-      // Here you would typically refresh the folder list
-      console.log('Student folder created:', folderData);
-      
-      // For a real app, you'd want to update your folder state or refetch the folder list
-      // For example:
-      // refetchFolders();
-      // OR
-      // setFolders(prev => [...prev, folderData]);
-      
-      // You might also want to select the newly created folder
-      setSelectedFolderId(folderData.id);
-    }}
-  />
-)}
-
-      {isUploadDocumentOpen && organizationId && (
-        <UploadDocumentDialog
-          // open={isUploadDocumentOpen}
-          // onOpenChange={setIsUploadDocumentOpen}
-          // organizationId={organizationId}
-          // studentId={studentId || ''}
-          // folderId={selectedFolderId || ''}
-          // onSuccess={() => {
-          //   // Refetch documents
-          // }}
-        />
-      )}
     </div>
   );
 }
