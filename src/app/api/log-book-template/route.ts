@@ -18,10 +18,10 @@ export async function POST(request: NextRequest) {
     // Validate input
     const {
       academicYearId,
-     batchId="86f6cdd7-281c-4eba-b423-e835360b012e",
-    subjectId ="21f6eaf4-878d-4c8b-aa14-e9ae7c854d32",
-    moduleId ="05ac612a-b8c5-482d-bd3b-9d1233e1f0a4",
-     createdBy="913d6747-dab3-4432-8e7e-4706377a920c",
+     batchId,
+    subjectId,
+    moduleId,
+    createdBy,
       name,
       description,
       dynamicSchema,
