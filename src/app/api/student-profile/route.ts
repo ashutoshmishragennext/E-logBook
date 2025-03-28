@@ -4,31 +4,56 @@ import { db } from "@/db";
 import { StudentProfileTable, UsersTable } from "@/db/schema";
 import { eq } from "drizzle-orm";
 
+
+
 export async function GET(req: NextRequest) {
   try {
     const searchParams = req.nextUrl.searchParams;
-    const ID = searchParams.get("id");
-    if(!ID){
-        return NextResponse.json(
-            { message: "User id id required in form of id" },
-            { status: 500 }
-          ); 
-    }
-    const student = await db
-      .select()
-      .from(StudentProfileTable)
-      .where(eq(StudentProfileTable.userId, ID));
+    const id = searchParams.get("id");
+    const byUserId = searchParams.get("byUserId");
 
-    return NextResponse.json(student);
+    // If neither parameter is provided
+    if (!id && !byUserId) {
+      return NextResponse.json(
+        { message: "Either id or byUserId is required" },
+        { status: 400 }
+      );
+    }
+
+    let student;
+    
+    if (byUserId) {
+      // Search by userId
+      student = await db
+        .select()
+        .from(StudentProfileTable)
+        .where(eq(StudentProfileTable.userId, byUserId))
+        .limit(1);
+    } else {
+      // Search by studentId (id parameter)
+      student = await db
+        .select()
+        .from(StudentProfileTable)
+        .where(eq(StudentProfileTable.id, id!))
+        .limit(1);
+    }
+
+    if (!student || student.length === 0) {
+      return NextResponse.json(
+        { message: "Student not found" },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json(student[0]);
   } catch (error) {
-    console.log(error);
+    console.error("Error fetching student profile:", error);
     return NextResponse.json(
-      { message: "Error fetching student profile" },
+      { message: "Internal server error while fetching student profile" },
       { status: 500 }
     );
   }
 }
-
 export async function POST(req: NextRequest) {
   try {
     const searchParams = req.nextUrl.searchParams;

@@ -1,211 +1,29 @@
-// 'use client';
 
-// import { useState, useEffect } from 'react';
-// import { signOut, useSession } from 'next-auth/react';
-// import { useRouter } from 'next/navigation';
-// import { Button } from '@/components/ui/button';
-// // import { FolderTree } from '@/components/FolderTree';
-// // import { DocumentList } from '@/components/DocumentList';
-// // import { CreateFolderDialog } from '@/components/CreateFolderDialog';
-// // import { UploadDocumentDialog } from '@/components/UploadDocumentDialog';
-// import { FolderTree } from '@/components/new/FolderTree';
-// import { DocumentList } from '@/components/new/DocumnetList';
-// import { UploadDocumentDialog } from '@/components/new/UploadDocumentDialog';
-// import { CreateFolderDialog } from '@/components/new/CereateFolderDialog';
-// import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-// import {
-//   Popover,
-//   PopoverContent,
-//   PopoverTrigger,
-// } from "@/components/ui/popover";
-// import { LogOut, Settings } from 'lucide-react';
-
-// export default function Dashboard() {
-//   const { data: session, status } = useSession();
-//   const router = useRouter();
-//   const [isCreateFolderOpen, setIsCreateFolderOpen] = useState(false);
-//   const [isUploadDocumentOpen, setIsUploadDocumentOpen] = useState(false);
-//   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
-//   const [organizationId, setOrganizationId] = useState<string | null>(null);
-//   const [studentId, setStudentId] = useState<string | null>(null);
-
-//    const handleLogout = async () => {
-//       await signOut({ redirectTo: "/auth/login" });
-//     };
-
-//   // Redirect if not authenticated
-//   useEffect(() => {
-//     if (status === 'unauthenticated') {
-//       router.push('/login');
-//     }
-    
-//     // For demo purposes - in a real app, you would get these from your auth context
-//     if (status === 'authenticated') {
-//       setOrganizationId('org-123');
-//       setStudentId('student-123');
-//     }
-//   }, [status, router]);
-
-//   if (status === 'loading') {
-//     return <div className="flex items-center justify-center h-screen">Loading...</div>;
-//   }
-
-//   if (!session) {
-//     return null;
-//   }
-
-//   const handleFolderSelect = (folderId: string) => {
-//     setSelectedFolderId(folderId);
-//   };
-
-//   return (
-//     <div className="container mx-auto p-4">
-//         <nav className="bg-white shadow-sm border-b px-6 py-3">
-//                     <div className="flex items-center justify-between">
-//                       <h1 className="text-2xl font-semibold text-gray-800">User Dashboard</h1>
-                      
-//                       <Popover>
-//                         <PopoverTrigger asChild>
-//                           <button className="flex items-center gap-2 hover:bg-gray-50 rounded-lg p-2 transition-colors">
-//                             <Avatar className="h-8 w-8">
-//                               <AvatarImage src="/images/user_alt_icon.png" alt="User" />
-//                               <AvatarFallback>AD</AvatarFallback>
-//                             </Avatar>
-//                             <span className="text-sm font-medium text-gray-700">User User</span>
-//                           </button>
-//                         </PopoverTrigger>
-//                         <PopoverContent className="w-56" align="end">
-//                           <div className="space-y-1">
-//                             <button className="w-full flex items-center gap-2 rounded-lg p-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors">
-//                               <Settings className="h-4 w-4" />
-//                               Profile Settings
-//                             </button>
-//                             <button 
-//                               onClick={handleLogout}
-//                               className="w-full flex items-center gap-2 rounded-lg p-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
-//                             >
-//                               <LogOut className="h-4 w-4" />
-//                               Logout
-//                             </button>
-//                           </div>
-//                         </PopoverContent>
-//                       </Popover>
-//                     </div>
-//                   </nav>
-//       <div className="flex justify-between items-center mb-6">
-//         <h1 className="text-2xl font-bold">Document Management</h1>
-//         <div className="space-x-2">
-//           <Button onClick={() => setIsCreateFolderOpen(true)}>
-//             Create Folder
-//           </Button>
-//           <Button onClick={() => setIsUploadDocumentOpen(true)}>
-//             Upload Document
-//           </Button>
-//         </div>
-//       </div>
-
-//       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-//         <div className="md:col-span-1 border rounded-lg p-4">
-//           <h2 className="text-lg font-semibold mb-4">Folders</h2>
-//           {organizationId && (
-//             <FolderTree 
-//               organizationId={organizationId} 
-//               studentId={studentId}
-//               onFolderSelect={handleFolderSelect}
-//             />
-//           )}
-//         </div>
-        
-//         <div className="md:col-span-3 border rounded-lg p-4">
-//           <h2 className="text-lg font-semibold mb-4">Documents</h2>
-//           {organizationId && selectedFolderId && (
-//             <DocumentList
-//               folderId={selectedFolderId} 
-//               organizationId={organizationId}
-//             />
-//           )}
-//           {!selectedFolderId && (
-//             <div className="text-center p-8 text-gray-500">
-//               Select a folder to view documents
-//             </div>
-//           )}
-//         </div>
-//       </div>
-
-//       {isCreateFolderOpen && organizationId && (
-//         <CreateFolderDialog
-//           open={isCreateFolderOpen}
-//           onOpenChange={setIsCreateFolderOpen}
-//           organizationId={organizationId}
-//           studentId={studentId || undefined}
-//           parentFolderId={selectedFolderId || undefined}
-//           onSuccess={() => {
-//             // Refetch folders
-//           }}
-//         />
-//       )}
-
-//       {isUploadDocumentOpen && organizationId && (
-//         <UploadDocumentDialog
-//           open={isUploadDocumentOpen}
-//           onOpenChange={setIsUploadDocumentOpen}
-//           organizationId={organizationId}
-//           studentId={studentId || ''}
-//           folderId={selectedFolderId || ''}
-//           onSuccess={() => {
-//             // Refetch documents
-//           }}
-//         />
-//       )}
-//     </div>
-//   );
-// }
-
-
-/* eslint-disable @typescript-eslint/no-unused-vars */
-/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
-import { signOut, useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
-// import { UploadDocumentDialog } from '@/components/new/UploadDocumentDialog';
-import FolderManagement from '@/components/new/Folder';
-import UploadDocumentDialog from '@/components/new/UploadDocumentDialog';
-import { StudentFolderDialog } from '@/components/students/DetailsInput';
-import { StudentManagement } from '@/components/students/StudentInfoDisplay';
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { default as LogBookCreationPage, default as StudentLogBookForm } from '@/components/elogbook/Elogbook';
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { useCurrentUser } from '@/hooks/auth';
 import {
-  Activity,
   ChevronLeft,
   ChevronRight,
   File,
-  FolderOpen,
   LogOut,
   Menu,
   Settings,
   Users
 } from 'lucide-react';
-import { useCurrentUser } from '@/hooks/auth';
-import Dashboard1 from '@/components/new/Dashboard';
-import { LogBookTemplateForm } from '@/components/elogbook/DynamicForm';
-import StudentLogBookForm from '@/components/elogbook/Elogbook';
-import LogBookCreationPage from '@/components/elogbook/Elogbook';
-// import { FolderManagement } from '@/components/new/FolderManagement';
+import { signOut, useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
 
 export default function Dashboard() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const [isCreateFolderOpen, setIsCreateFolderOpen] = useState(false);
-  const [isUploadDocumentOpen, setIsUploadDocumentOpen] = useState(false);
-  const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
-  const [organizationId, setOrganizationId] = useState<string | null>(null);
-  const [studentId, setStudentId] = useState<string | null>(null);
   const user = useCurrentUser();
   // console.log("user",user?.name);
   
@@ -222,11 +40,6 @@ export default function Dashboard() {
       router.push('/login');
     }
     
-    // For demo purposes - in a real app, you would get these from your auth context
-    if (status === 'authenticated') {
-      setOrganizationId('org-123');
-      setStudentId('student-123');
-    }
   }, [status, router]);
 
   if (status === 'loading') {
@@ -238,10 +51,6 @@ export default function Dashboard() {
     
     return null;
   }
-
-  const handleFolderSelect = (folderId: string) => {
-    setSelectedFolderId(folderId);
-  };
 
   const toggleSidebar = () => {
     setSidebarOpen(!sidebarOpen);
@@ -378,42 +187,6 @@ export default function Dashboard() {
           {renderMainContent()}
         </div>
       </div>
-
-      {/* Dialogs */}
-      {isCreateFolderOpen && organizationId && (
-  <StudentFolderDialog
-    open={isCreateFolderOpen}
-    onOpenChange={setIsCreateFolderOpen}
-    organizationId={organizationId}
-    parentFolderId={selectedFolderId || undefined}
-    onSuccess={(folderData) => {
-      // Here you would typically refresh the folder list
-      console.log('Student folder created:', folderData);
-      
-      // For a real app, you'd want to update your folder state or refetch the folder list
-      // For example:
-      // refetchFolders();
-      // OR
-      // setFolders(prev => [...prev, folderData]);
-      
-      // You might also want to select the newly created folder
-      setSelectedFolderId(folderData.id);
-    }}
-  />
-)}
-
-      {isUploadDocumentOpen && organizationId && (
-        <UploadDocumentDialog
-          // open={isUploadDocumentOpen}
-          // onOpenChange={setIsUploadDocumentOpen}
-          // organizationId={organizationId}
-          // studentId={studentId || ''}
-          // folderId={selectedFolderId || ''}
-          // onSuccess={() => {
-          //   // Refetch documents
-          // }}
-        />
-      )}
     </div>
   );
 }

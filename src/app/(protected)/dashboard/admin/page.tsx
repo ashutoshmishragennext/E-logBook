@@ -3,10 +3,8 @@
 import { signOut, useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-// import { UploadDocumentDialog } from '@/components/new/UploadDocumentDialog';
-import { default as LogBookCreationPage, default as StudentLogBookForm } from '@/components/elogbook/Elogbook';
-import UploadDocumentDialog from '@/components/new/UploadDocumentDialog';
-import { StudentFolderDialog } from '@/components/students/DetailsInput';
+import LogBookTemplateForm from '@/components/admin/LogFormTemplate';
+import { default as StudentLogBookForm } from '@/components/elogbook/Elogbook';
 import {
   Popover,
   PopoverContent,
@@ -22,21 +20,12 @@ import {
   Settings,
   Users
 } from 'lucide-react';
-import TeacherProfilePage from '@/components/teacher/TeacherProfile';
-import LogBookTemplateForm from '@/components/admin/LogFormTemplate';
-// import { FolderManagement } from '@/components/new/FolderManagement';
+
 
 export default function Dashboard() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const [isCreateFolderOpen, setIsCreateFolderOpen] = useState(false);
-  const [isUploadDocumentOpen, setIsUploadDocumentOpen] = useState(false);
-  const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
-  const [organizationId, setOrganizationId] = useState<string | null>(null);
-  const [studentId, setStudentId] = useState<string | null>(null);
   const user = useCurrentUser();
-  // console.log("user",user?.name);
-  
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [activeComponent, setActiveComponent] = useState('logTemplate');
 
@@ -47,13 +36,7 @@ export default function Dashboard() {
   // Redirect if not authenticatedclear
   useEffect(() => {
     if (status === 'unauthenticated') {
-      router.push('/login');
-    }
-    
-    // For demo purposes - in a real app, you would get these from your auth context
-    if (status === 'authenticated') {
-      setOrganizationId('org-123');
-      setStudentId('student-123');
+      router.push('/auth/login');
     }
   }, [status, router]);
 
@@ -62,14 +45,10 @@ export default function Dashboard() {
   }
 
   if (!session) {
-    console.log("hhhhhhhhhhhhh");
     
     return null;
   }
 
-  const handleFolderSelect = (folderId: string) => {
-    setSelectedFolderId(folderId);
-  };
 
   const toggleSidebar = () => {
     setSidebarOpen(!sidebarOpen);
@@ -89,13 +68,10 @@ export default function Dashboard() {
       case 'logTemplate':
         return (
             <LogBookTemplateForm/>
-           
-        
         );
       case 'students':
         return (
           <StudentLogBookForm/>
-        
         );
       case 'folders':
         return (
@@ -204,7 +180,6 @@ export default function Dashboard() {
           {renderMainContent()}
         </div>
       </div>
-
     </div>
   );
 }

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useEffect, useState } from 'react';
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -15,6 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useCurrentUser } from '@/hooks/auth';
+import Image from 'next/image';
 
 // Zod schema for teacher profile validation
 const teacherProfileSchema = z.object({
@@ -246,10 +248,12 @@ export function TeacherProfilePage() {
                       )}
                       {field.value && (
                         <div className="mt-2">
-                          <img 
+                          <Image
                             src={field.value} 
                             alt="Profile" 
                             className="h-24 w-24 rounded-full object-cover"
+                            width={96}
+                            height={96}
                           />
                         </div>
                       )}

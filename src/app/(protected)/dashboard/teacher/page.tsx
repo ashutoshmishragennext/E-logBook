@@ -1,12 +1,7 @@
 'use client';
 
-import { signOut, useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
-// import { UploadDocumentDialog } from '@/components/new/UploadDocumentDialog';
-import { default as LogBookCreationPage, default as StudentLogBookForm } from '@/components/elogbook/Elogbook';
-import UploadDocumentDialog from '@/components/new/UploadDocumentDialog';
-import { StudentFolderDialog } from '@/components/students/DetailsInput';
+import DisplayLogBookEntries from '@/components/teacher/DisplayLogBookEntries';
+import TeacherProfilePage from '@/components/teacher/TeacherProfile';
 import {
   Popover,
   PopoverContent,
@@ -22,17 +17,12 @@ import {
   Settings,
   Users
 } from 'lucide-react';
-import TeacherProfilePage from '@/components/teacher/TeacherProfile';
-// import { FolderManagement } from '@/components/new/FolderManagement';
-
+import { signOut, useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
 export default function Dashboard() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const [isCreateFolderOpen, setIsCreateFolderOpen] = useState(false);
-  const [isUploadDocumentOpen, setIsUploadDocumentOpen] = useState(false);
-  const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
-  const [organizationId, setOrganizationId] = useState<string | null>(null);
-  const [studentId, setStudentId] = useState<string | null>(null);
   const user = useCurrentUser();
   // console.log("user",user?.name);
   
@@ -49,11 +39,6 @@ export default function Dashboard() {
       router.push('/login');
     }
     
-    // For demo purposes - in a real app, you would get these from your auth context
-    if (status === 'authenticated') {
-      setOrganizationId('org-123');
-      setStudentId('student-123');
-    }
   }, [status, router]);
 
   if (status === 'loading') {
@@ -66,10 +51,6 @@ export default function Dashboard() {
     return null;
   }
 
-  const handleFolderSelect = (folderId: string) => {
-    setSelectedFolderId(folderId);
-  };
-
   const toggleSidebar = () => {
     setSidebarOpen(!sidebarOpen);
   };
@@ -77,7 +58,7 @@ export default function Dashboard() {
   // Navigation items for sidebar
   const navItems = [
     { id: 'profile', label: 'Profile', icon: <File className="h-5 w-5" /> },
-    { id: 'students', label: 'Students', icon: <Users className="h-5 w-5" /> },
+    { id: 'logBooks', label: 'Log Books', icon: <Users className="h-5 w-5" /> },
     // { id: 'folders', label: 'Folders', icon: <FolderOpen className="h-5 w-5" /> },
     // { id: 'activity', label: 'Activity', icon: <Activity className="h-5 w-5" /> },
   ];
@@ -91,9 +72,9 @@ export default function Dashboard() {
            
         
         );
-      case 'students':
+      case 'logBooks':
         return (
-          <StudentLogBookForm/>
+          <DisplayLogBookEntries/>
         
         );
       case 'folders':

@@ -1,12 +1,7 @@
 'use client';
 
-import { signOut, useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
-// import { UploadDocumentDialog } from '@/components/new/UploadDocumentDialog';
-import { default as LogBookCreationPage, default as StudentLogBookForm } from '@/components/elogbook/Elogbook';
-import UploadDocumentDialog from '@/components/new/UploadDocumentDialog';
-import { StudentFolderDialog } from '@/components/students/DetailsInput';
+import LogBookEntries from '@/components/student/LogBookEntries';
+import StudentProfileForm from '@/components/student/profileForm';
 import {
   Popover,
   PopoverContent,
@@ -22,17 +17,12 @@ import {
   Settings,
   Users
 } from 'lucide-react';
-import StudentProfileForm from '@/components/student/profileForm';
-// import { FolderManagement } from '@/components/new/FolderManagement';
-
+import { signOut, useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
 export default function Dashboard() {
-  const { data: session, status } = useSession();
+  const { status} = useSession();
   const router = useRouter();
-  const [isCreateFolderOpen, setIsCreateFolderOpen] = useState(false);
-  const [isUploadDocumentOpen, setIsUploadDocumentOpen] = useState(false);
-  const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
-  const [organizationId, setOrganizationId] = useState<string | null>(null);
-  const [studentId, setStudentId] = useState<string | null>(null);
   const user = useCurrentUser();
   // console.log("user",user?.name);
   
@@ -46,24 +36,12 @@ export default function Dashboard() {
   // Redirect if not authenticatedclear
   useEffect(() => {
     if (status === 'unauthenticated') {
-      router.push('/login');
-    }
-    
-    // For demo purposes - in a real app, you would get these from your auth context
-    if (status === 'authenticated') {
-      setOrganizationId('org-123');
-      setStudentId('student-123');
+      router.push('/auth/login');
     }
   }, [status, router]);
 
   if (status === 'loading') {
     return <div className="flex items-center justify-center h-screen">Loading...</div>;
-  }
-
-  if (!session) {
-    console.log("hhhhhhhhhhhhh");
-    
-    return null;
   }
 
 
@@ -74,7 +52,7 @@ export default function Dashboard() {
   // Navigation items for sidebar
   const navItems = [
     { id: 'profile', label: 'Profile', icon: <File className="h-5 w-5" /> },
-    { id: 'students', label: 'Students', icon: <Users className="h-5 w-5" /> },
+    { id: 'LogBookEntries', label: 'Log Book Entries', icon: <Users className="h-5 w-5" /> },
     // { id: 'folders', label: 'Folders', icon: <FolderOpen className="h-5 w-5" /> },
     // { id: 'activity', label: 'Activity', icon: <Activity className="h-5 w-5" /> },
   ];
@@ -84,15 +62,11 @@ export default function Dashboard() {
     switch (activeComponent) {
       case 'profile':
         return (
-         
-
            <StudentProfileForm/>
-        
         );
-      case 'students':
+      case 'LogBookEntries':
         return (
-          <StudentLogBookForm/>
-        
+          <LogBookEntries/>
         );
       case 'folders':
         return (
@@ -201,42 +175,6 @@ export default function Dashboard() {
           {renderMainContent()}
         </div>
       </div>
-
-      {/* Dialogs */}
-      {isCreateFolderOpen && organizationId && (
-  <StudentFolderDialog
-    open={isCreateFolderOpen}
-    onOpenChange={setIsCreateFolderOpen}
-    organizationId={organizationId}
-    parentFolderId={selectedFolderId || undefined}
-    onSuccess={(folderData) => {
-      // Here you would typically refresh the folder list
-      console.log('Student folder created:', folderData);
-      
-      // For a real app, you'd want to update your folder state or refetch the folder list
-      // For example:
-      // refetchFolders();
-      // OR
-      // setFolders(prev => [...prev, folderData]);
-      
-      // You might also want to select the newly created folder
-      setSelectedFolderId(folderData.id);
-    }}
-  />
-)}
-
-      {isUploadDocumentOpen && organizationId && (
-        <UploadDocumentDialog
-          // open={isUploadDocumentOpen}
-          // onOpenChange={setIsUploadDocumentOpen}
-          // organizationId={organizationId}
-          // studentId={studentId || ''}
-          // folderId={selectedFolderId || ''}
-          // onSuccess={() => {
-          //   // Refetch documents
-          // }}
-        />
-      )}
     </div>
   );
 }

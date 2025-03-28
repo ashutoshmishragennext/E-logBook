@@ -1,72 +1,58 @@
 import { db } from '@/db';
-import { AcademicYearTable, LogBookTemplateTable, ModuleTable, PhaseTable, SubjectTable } from '@/db/schema';
+import { LogBookEntryTable } from '@/db/schema';
+import { eq , and } from 'drizzle-orm';
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
-// Zod schema for log book template creation
-const logBookTemplateCreationSchema = z.object({
-  academicYearId: z.string().uuid(),
-  batchId: z.string().uuid(),
-  subjectId: z.string().uuid(),
-  moduleId: z.string().uuid().optional(),
-  name: z.string().min(1),
-  description: z.string().optional(),
-  dynamicSchema: z.object({
-    groups: z.array(
-      z.object({
-        groupName: z.string().min(1),
-        fields: z.array(
-          z.object({
-            fieldName: z.string().min(1),
-            fieldLabel: z.string().min(1),
-            fieldType: z.enum(["text", "number", "date", "select", "textarea", "file"]),
-            isRequired: z.boolean(),
-            options: z.array(z.string()).optional(),
-            validationRegex: z.string().optional(),
-            defaultValue: z.string().optional()
-          })
-        ).min(1)
-      })
-    ).min(1)
-  }),
-  createdBy: z.string().min(1),
-});
+// Zod schema for log book entry creation
+const logBookEntryUpdateSchema = z.object({
+  id: z.string().uuid(),
+  logBookTemplateId: z.string().uuid(),
+  studentId: z.string().uuid(),
+  dynamicFields: z.record(z.any()).optional(),
+  studentRemarks: z.string().optional(),
+  status: z.enum(["DRAFT", "SUBMITTED", "REVIEWED"])
+}).strict();
 
 export async function POST(req: NextRequest) {
   try {
+    // Parse and validate the request body
     const body = await req.json();
+    const newId = crypto.randomUUID(); // Generate a new UUID for the entry
     
-    // Validate the request body
-    const validatedData = logBookTemplateCreationSchema.parse(body);
-    
-    // Get the authenticated user's ID (you'll need to implement authentication)
-    // For this example, I'll use a placeholder
-    // const authenticatedUserId = 'user-uuid-placeholder';
+    // Validate the request body against the schema
+    const validatedData = logBookEntryUpdateSchema.parse({
+      id: newId, // Use the generated UUID
+      ...body,
+      // Ensure default status if not provided
+      status: body.status || "DRAFT"
+    });
 
-    // Create the log book template
-    const [newLogBookTemplate] = await db
-      .insert(LogBookTemplateTable)
+    // Create the log book entry
+    const [newLogBookEntry] = await db
+      .insert(LogBookEntryTable)
       .values({
-        academicYearId: validatedData.academicYearId,
-        batchId: validatedData.batchId,
-        subjectId: validatedData.subjectId,
-        moduleId: validatedData.moduleId,
-        name: validatedData.name,
-        description: validatedData.description,
-        dynamicSchema: validatedData.dynamicSchema,
-        createdBy: validatedData.createdBy,
+        id: validatedData.id,
+        logBookTemplateId: validatedData.logBookTemplateId,
+        studentId: validatedData.studentId, // Assuming you pass the student ID
+        dynamicFields: validatedData.dynamicFields,
+        studentRemarks: validatedData.studentRemarks,
+        status: validatedData.status,
         createdAt: new Date(),
         updatedAt: new Date()
       })
       .returning();
 
-    return NextResponse.json(newLogBookTemplate, { status: 201 });
+    return NextResponse.json(newLogBookEntry, { status: 201 });
   } catch (error) {
-    console.error('Log Book Template Creation Error:', error);
+    console.error('Log Book Entry Creation Error:', error);
     
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { error: 'Validation Failed', details: error.errors }, 
+        { 
+          error: 'Validation Failed', 
+          details: error.errors 
+        }, 
         { status: 400 }
       );
     }
@@ -78,22 +64,106 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// Optional: Add a GET route to fetch available academic years, batches, subjects, etc.
-export async function GET() {
+// Optional: GET route to fetch log book entries
+export async function GET(req: NextRequest) {
   try {
-    const academicYears = await db.select().from(AcademicYearTable);
-    const batches = await db.select().from(PhaseTable);
-    const subjects = await db.select().from(SubjectTable);
-    const modules = await db.select().from(ModuleTable);
+    // Extract query parameters
+    const searchParams = req.nextUrl.searchParams;
+    const studentId = searchParams.get('studentId');
+    const logBookTemplateId = searchParams.get('logBookTemplateId');
+    const status = searchParams.get('status');
 
-    return NextResponse.json({
-      academicYears,
-      batches,
-      subjects,
-      modules
-    });
+    // Build query conditions
+    const conditions = [];
+    if (studentId) conditions.push(eq(LogBookEntryTable.studentId, studentId));
+    if (logBookTemplateId) conditions.push(eq(LogBookEntryTable.logBookTemplateId, logBookTemplateId));
+    if (status) conditions.push(eq(LogBookEntryTable.status, status));
+
+    // Fetch log book entries based on conditions
+    const logBookEntries = await db
+      .select()
+      .from(LogBookEntryTable)
+      .where(and(...conditions));
+
+    return NextResponse.json(logBookEntries);
   } catch (error) {
-    console.error('Fetching reference data error:', error);
+    console.error('Fetching Log Book Entries Error:', error);
+    return NextResponse.json(
+      { error: 'Internal Server Error' }, 
+      { status: 500 }
+    );
+  }
+}
+
+
+// Create a separate schema for updating log book entries
+
+
+export async function PUT(req: NextRequest) {
+  try {
+    // Get the ID from query parameters
+    const searchParams = req.nextUrl.searchParams;
+    const entryId = searchParams.get('id');
+
+    // Validate that ID is present and is a valid UUID
+    if (!entryId || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(entryId)) {
+      return NextResponse.json(
+        { error: 'Invalid or missing log book entry ID' }, 
+        { status: 400 }
+      );
+    }
+
+    // Parse the request body
+    const body = await req.json();
+
+    // Log the raw request body for debugging
+    console.log('Received body:', body);
+
+    // Validate the request body against the schema
+    const validatedData = logBookEntryUpdateSchema.parse({
+      id: entryId,
+      ...body
+    });
+
+    // Update the log book entry
+    const updatedEntries = await db
+      .update(LogBookEntryTable)
+      .set({ 
+        status: validatedData.status,
+        ...(validatedData.logBookTemplateId && { logBookTemplateId: validatedData.logBookTemplateId }),
+        ...(validatedData.studentId && { studentId: validatedData.studentId }),
+        ...(validatedData.dynamicFields && { dynamicFields: validatedData.dynamicFields }),
+        ...(validatedData.studentRemarks && { studentRemarks: validatedData.studentRemarks }),
+        updatedAt: new Date()
+      })
+      .where(eq(LogBookEntryTable.id, validatedData.id))
+      .returning();
+
+    // Check if any entries were updated
+    if (updatedEntries.length === 0) {
+      return NextResponse.json(
+        { error: 'No matching log book entry found' }, 
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json(updatedEntries[0], { status: 200 });
+  } catch (error) {
+    console.error('Log Book Entry Status Update Error:', error);
+    
+    if (error instanceof z.ZodError) {
+      return NextResponse.json(
+        { 
+          error: 'Validation Failed', 
+          details: error.errors.map(err => ({
+            path: err.path.join('.'),
+            message: err.message
+          }))
+        }, 
+        { status: 400 }
+      );
+    }
+    
     return NextResponse.json(
       { error: 'Internal Server Error' }, 
       { status: 500 }

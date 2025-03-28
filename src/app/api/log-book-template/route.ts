@@ -1,13 +1,9 @@
 
-
 import { db } from '@/db';
-import { 
-  LogBookTemplateTable, 
-  AcademicYearTable, 
- 
-  SubjectTable, 
-  ModuleTable 
+import {
+  LogBookTemplateTable
 } from '@/db/schema';
+import { and, eq } from 'drizzle-orm';
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(request: NextRequest) {
@@ -79,15 +75,24 @@ export async function GET(request: NextRequest) {
     const batchId = searchParams.get('batchId');
     const subjectId = searchParams.get('subjectId');
 
-    // Build query conditions
+    // Build query conditions using drizzle-orm's filtering
     const conditions = [];
-    if (academicYearId) conditions.push(`academicYearId = '${academicYearId}'`);
-    if (batchId) conditions.push(`batchId = '${batchId}'`);
-    if (subjectId) conditions.push(`subjectId = '${subjectId}'`);
+    
+    if (academicYearId) {
+      conditions.push(eq(LogBookTemplateTable.academicYearId, academicYearId));
+    }
+    
+    if (batchId) {
+      conditions.push(eq(LogBookTemplateTable.batchId, batchId));
+    }
+    
+    if (subjectId) {
+      conditions.push(eq(LogBookTemplateTable.subjectId, subjectId));
+    }
 
     // Fetch log book templates
     const templates = await db.query.LogBookTemplateTable.findMany({
-      where: conditions.length > 0 ? conditions.join(' AND ') : undefined,
+      where: conditions.length > 0 ? and(...conditions) : undefined,
       with: {
         academicYear: true,
         batch: true,
@@ -99,11 +104,19 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(templates);
   } catch (error) {
     console.error('Error fetching log book templates:', error);
+    
+    // Log the full error for more detailed debugging
+    if (error instanceof Error) {
+      console.error('Detailed error:', error.message);
+      console.error('Stack trace:', error.stack);
+    }
+
     return NextResponse.json(
-      { error: 'Failed to fetch log book templates' },
+      { 
+        error: 'Failed to fetch log book templates', 
+        details: error instanceof Error ? error.message : 'Unknown error' 
+      },
       { status: 500 }
     );
   }
 }
-
-

@@ -1,4 +1,4 @@
-import { InferModel } from "drizzle-orm";
+import { InferModel, relations } from "drizzle-orm";
 import {
   jsonb,
   pgEnum,
@@ -295,3 +295,71 @@ export type NewStudentProfile = InferModel<typeof StudentProfileTable, "insert">
 
 export type TeacherProfile = InferModel<typeof TeacherProfileTable>;
 export type NewTeacherProfile = InferModel<typeof TeacherProfileTable, "insert">;
+
+
+
+export const academicYearRelations = relations(AcademicYearTable, ({ many }) => ({
+  phases: many(PhaseTable),
+  logBookTemplates: many(LogBookTemplateTable)
+}));
+
+export const phaseRelations = relations(PhaseTable, ({ one, many }) => ({
+  academicYear: one(AcademicYearTable, {
+    fields: [PhaseTable.academicYearId],
+    references: [AcademicYearTable.id]
+  }),
+  subjects: many(SubjectTable),
+  logBookTemplates: many(LogBookTemplateTable)
+}));
+
+export const subjectRelations = relations(SubjectTable, ({ one, many }) => ({
+  phase: one(PhaseTable, {
+    fields: [SubjectTable.phaseId],
+    references: [PhaseTable.id]
+  }),
+  modules: many(ModuleTable),
+  logBookTemplates: many(LogBookTemplateTable)
+}));
+
+export const moduleRelations = relations(ModuleTable, ({ one, many }) => ({
+  subject: one(SubjectTable, {
+    fields: [ModuleTable.subjectId],
+    references: [SubjectTable.id]
+  }),
+  logBookTemplates: many(LogBookTemplateTable)
+}));
+
+export const logBookTemplateRelations = relations(LogBookTemplateTable, ({ one, many }) => ({
+  academicYear: one(AcademicYearTable, {
+    fields: [LogBookTemplateTable.academicYearId],
+    references: [AcademicYearTable.id]
+  }),
+  batch: one(PhaseTable, {
+    fields: [LogBookTemplateTable.batchId],
+    references: [PhaseTable.id]
+  }),
+  subject: one(SubjectTable, {
+    fields: [LogBookTemplateTable.subjectId],
+    references: [SubjectTable.id]
+  }),
+  module: one(ModuleTable, {
+    fields: [LogBookTemplateTable.moduleId],
+    references: [ModuleTable.id]
+  }),
+  creator: one(UsersTable, {
+    fields: [LogBookTemplateTable.createdBy],
+    references: [UsersTable.id]
+  }),
+  logBookEntries: many(LogBookEntryTable)
+}));
+
+export const logBookEntryRelations = relations(LogBookEntryTable, ({ one }) => ({
+  logBookTemplate: one(LogBookTemplateTable, {
+    fields: [LogBookEntryTable.logBookTemplateId],
+    references: [LogBookTemplateTable.id]
+  }),
+  student: one(StudentProfileTable, {
+    fields: [LogBookEntryTable.studentId],
+    references: [StudentProfileTable.id]
+  })
+}));
