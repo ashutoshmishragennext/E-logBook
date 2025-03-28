@@ -13,6 +13,7 @@ const signupSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
   phone: z.string().min(10, "Invalid mobile number"),
   role: z.enum(UserRole.enumValues),
+  updatedAt:z.date(),
 });
 
 export async function POST(request: NextRequest) {

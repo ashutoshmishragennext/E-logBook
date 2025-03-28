@@ -57,6 +57,13 @@
       "when": 1743055154734,
       "tag": "0007_serious_killmonger",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1743154034238,
+      "tag": "0008_gorgeous_jimmy_woo",
+      "breakpoints": true
     }
   ]
 }

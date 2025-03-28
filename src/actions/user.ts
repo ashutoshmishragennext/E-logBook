@@ -8,6 +8,7 @@ interface UserData {
   password: string;
   phone: string;
   role: (typeof UserRole.enumValues)[number];
+  updatedAt: Date;
 }
 
 export async function createUser(data: UserData) {

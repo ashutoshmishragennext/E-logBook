@@ -27,6 +27,7 @@ export async function registerUser(values: z.infer<typeof RegisterUserSchema>) {
     password: hashedPassword,
     phone,
     role: role || "USER",
+    updatedAt: new Date(),
   });
 
   const verificationToken = await generateEmailVerificationToken(email);

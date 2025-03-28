@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
+
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -132,7 +133,7 @@ export default function StudentProfileForm() {
     }
 
     fetchExistingProfile();
-  }, [user?.id]);
+  }, [user?.id , form]);
   // Handle form submission
   const onSubmit = async (values: z.infer<typeof studentProfileSchema>) => {
     setIsLoading(true);

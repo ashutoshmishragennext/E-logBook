@@ -98,7 +98,6 @@ export async function verifyPhoneOTP(
     await db
       .update(UsersTable)
       .set({
-        phoneVerified: new Date(),
         phone: phone, // Ensure the phone number is saved
       })
       .where(eq(UsersTable.id, userId));

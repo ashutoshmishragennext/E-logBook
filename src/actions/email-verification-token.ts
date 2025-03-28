@@ -5,6 +5,7 @@ import { eq } from "drizzle-orm";
 
 interface EmailVerificationTokenData {
   email: string;
+  userId: string;  // Add this
   token: string;
   expiresAt: Date;
 }
@@ -13,22 +14,19 @@ export async function createEmailVerificationToken(
   data: EmailVerificationTokenData
 ) {
   try {
-    console.log(
-      `Creating email-verification-token for user with email: ${data.email}`
-    );
+    console.log(`Creating email-verification-token for user with email: ${data.email}`);
     const results = await db
       .insert(EmailVerificationTokenTable)
       .values({
         email: data.email,
+        userId: data.userId,  // Add this
         token: data.token,
         expiresAt: data.expiresAt,
       })
       .returning();
     return results[0] || null;
   } catch (error) {
-    console.log(
-      `Error creating email-verification-token for user with email: ${data.email}`
-    );
+    console.log(`Error creating email-verification-token for user with email: ${data.email}`);
     throw error;
   }
 }

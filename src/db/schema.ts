@@ -35,6 +35,7 @@ export const UsersTable = pgTable(
     emailVerified: timestamp("email_verified", { mode: "date" }),
     password: text("password").notNull(),
     role: UserRole("role").default("STUDENT").notNull(),
+    phone: text("phone"),
     
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),

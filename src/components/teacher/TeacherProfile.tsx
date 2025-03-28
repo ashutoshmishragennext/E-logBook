@@ -87,7 +87,7 @@ export function TeacherProfilePage() {
     }
 
     fetchExistingProfile();
-  }, [user?.id, form.reset]);
+  }, [user?.id, form.reset ,form]);
 
   // Handle form submission
   const onSubmit = async (values: TeacherProfileFormData) => {

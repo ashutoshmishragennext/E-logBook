@@ -1,11 +1,10 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import {
   Card,
-  CardContent,
-  CardFooter,
-  CardHeader,
-  CardTitle,
+  CardContent
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -21,6 +20,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
+} from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { useCurrentUser } from "@/hooks/auth";
 import { cn } from "@/lib/utils";
@@ -28,14 +35,6 @@ import { format } from "date-fns";
 import { Calendar as CalendarIcon, Download } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import * as XLSX from 'xlsx';
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHeader, 
-  TableHead, 
-  TableRow 
-} from "@/components/ui/table";
 
 // Constants for template selection
 const ACADEMIC_YEAR_ID = "2f8ab354-1f21-4d0f-ad41-87a39e44b0be";

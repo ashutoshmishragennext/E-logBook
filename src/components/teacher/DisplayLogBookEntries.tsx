@@ -1,4 +1,13 @@
-import React, { useState, useEffect } from "react";
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -7,15 +16,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import React, { useEffect, useState } from "react";
 import { toast } from "sonner";
 // import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
 import { ChevronsUpDown } from "lucide-react";
@@ -138,14 +139,14 @@ const DisplayLogBookEntries = () => {
         throw new Error(errorBody.error || "Failed to approve log book entry");
       }
 
-      const updatedEntry = await response.json();
-      setLogBookEntries((prevEntries) =>
-        prevEntries.map((entry) =>
-          entry.id === entryId
-            ? { ...entry, status: LogBookEntryStatus.REVIEWED }
-            : entry
-        )
-      );
+      // const updatedEntry = await response.json();
+      // setLogBookEntries((prevEntries) =>
+      //   prevEntries.map((entry) =>
+      //     entry.id === entryId
+      //       ? { ...entry, status: LogBookEntryStatus.REVIEWED }
+      //       : entry
+      //   )
+      // );
 
       toast.success("Log book entry approved successfully");
     } catch (error: any) {
