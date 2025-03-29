@@ -81,7 +81,7 @@ export async function GET(request: NextRequest) {
     if (batchId) conditions.push(`batchId = '${batchId}'`);
     if (subjectId) conditions.push(`subjectId = '${subjectId}'`);
 
-    // Fetch log book templates
+     // Fetch log book templates
     const templates = await db.query.LogBookTemplateTable.findMany({
       where: conditions.length > 0 ? conditions.join(' AND ') : undefined,
       with: {
