@@ -140,13 +140,13 @@ const DisplayLogBookEntries = () => {
       }
 
       // const updatedEntry = await response.json();
-      // setLogBookEntries((prevEntries) =>
-      //   prevEntries.map((entry) =>
-      //     entry.id === entryId
-      //       ? { ...entry, status: LogBookEntryStatus.REVIEWED }
-      //       : entry
-      //   )
-      // );
+      setLogBookEntries((prevEntries) =>
+        prevEntries.map((entry) =>
+          entry.id === entryId
+            ? { ...entry, status: LogBookEntryStatus.REVIEWED }
+            : entry
+        )
+      );
 
       toast.success("Log book entry approved successfully");
     } catch (error: any) {

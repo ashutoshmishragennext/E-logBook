@@ -20,6 +20,7 @@ import {
   Settings,
   Users
 } from 'lucide-react';
+import DisplayTemplates from '@/components/admin/DisplayTemplates';
 
 
 export default function Dashboard() {
@@ -27,7 +28,7 @@ export default function Dashboard() {
   const router = useRouter();
   const user = useCurrentUser();
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [activeComponent, setActiveComponent] = useState('logTemplate');
+  const [activeComponent, setActiveComponent] = useState('createlogTemplate');
 
   const handleLogout = async () => {
     await signOut({ redirectTo: "/auth/login" });
@@ -56,8 +57,8 @@ export default function Dashboard() {
 
   // Navigation items for sidebar
   const navItems = [
-    { id: 'logTemplate', label: 'E-Log Template', icon: <File className="h-5 w-5" /> },
-    { id: 'students', label: 'Students', icon: <Users className="h-5 w-5" /> },
+    { id: 'createlogTemplate', label: 'Create Template', icon: <File className="h-5 w-5" /> },
+    { id: 'templates', label: 'Templates', icon: <Users className="h-5 w-5" /> },
     // { id: 'folders', label: 'Folders', icon: <FolderOpen className="h-5 w-5" /> },
     // { id: 'activity', label: 'Activity', icon: <Activity className="h-5 w-5" /> },
   ];
@@ -65,13 +66,13 @@ export default function Dashboard() {
   // Render the appropriate component based on sidebar selection
   const renderMainContent = () => {
     switch (activeComponent) {
-      case 'logTemplate':
+      case 'createlogTemplate':
         return (
             <LogBookTemplateForm/>
         );
-      case 'students':
+      case 'templates':
         return (
-          <StudentLogBookForm/>
+          <DisplayTemplates/>
         );
       case 'folders':
         return (
@@ -107,7 +108,7 @@ export default function Dashboard() {
             >
               <Menu className="h-5 w-5" />
             </button>
-            <h1 className="text-2xl font-semibold text-gray-800"> Teacher Portal</h1>
+            <h1 className="text-2xl font-semibold text-gray-800"> Admin Portal</h1>
           </div>
           
           <Popover>
