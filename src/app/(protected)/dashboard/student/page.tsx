@@ -1,5 +1,6 @@
 'use client';
 
+import { StudentLogBookEntries } from '@/components/student/DisplayLogBookEntries';
 import LogBookEntries from '@/components/student/LogBookEntries';
 import StudentProfileForm from '@/components/student/profileForm';
 import {
@@ -53,7 +54,7 @@ export default function Dashboard() {
   const navItems = [
     { id: 'profile', label: 'Profile', icon: <File className="h-5 w-5" /> },
     { id: 'LogBookEntries', label: 'Log Book Entries', icon: <Users className="h-5 w-5" /> },
-    // { id: 'folders', label: 'Folders', icon: <FolderOpen className="h-5 w-5" /> },
+    { id: 'EnteredlogBook', label: 'Log Book ', icon: <File className="h-5 w-5" /> },
     // { id: 'activity', label: 'Activity', icon: <Activity className="h-5 w-5" /> },
   ];
 
@@ -68,9 +69,9 @@ export default function Dashboard() {
         return (
           <LogBookEntries/>
         );
-      case 'folders':
+      case 'EnteredlogBook':
         return (
-            <div>hii</div>
+            <StudentLogBookEntries/>
         );
       case 'activity':
         return (

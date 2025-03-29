@@ -1,10 +1,12 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-/* eslint-disable @typescript-eslint/no-unused-vars */
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import {
   Card,
-  CardContent
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -20,23 +22,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow
-} from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
+import React, { useEffect, useState } from "react";
+// import { Separator } from "@/components/ui/separator";
 import { useCurrentUser } from "@/hooks/auth";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
-import { Calendar as CalendarIcon, Download } from "lucide-react";
-import React, { useEffect, useState } from "react";
-import * as XLSX from 'xlsx';
+import { AlertCircle, Calendar as CalendarIcon, Check, Info } from "lucide-react";
+// import * as XLSX from 'xlsx';
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { LogBookFilters } from "../common/LogBookFilters";
 
-// Constants for template selection
+// Constants for template selection (will be replaced by filter selections)
 const ACADEMIC_YEAR_ID = "2f8ab354-1f21-4d0f-ad41-87a39e44b0be";
 const BATCH_ID = "86f6cdd7-281c-4eba-b423-e835360b012e";
 const MODULE_ID = "13f35a6b-2c2a-4386-b99e-d5685127afe2";
@@ -72,19 +69,48 @@ interface LogBookTemplate {
   updatedAt: string;
 }
 
+interface FilterOption {
+  id: string;
+  name: string;
+}
+
 const LogBookEntries: React.FC = () => {
-  // State management
-  const [logBookTemplate, setLogBookTemplate] = useState<LogBookTemplate | null>(null);
-  const [formData, setFormData] = useState<Record<string, any>>({});
-  const [errors, setErrors] = useState<Record<string, string>>({});
-  const [selectedFiles, setSelectedFiles] = useState<Record<string, File>>({});
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
+  // User and student details
+  const user = useCurrentUser();
   const [studentDetails, setStudentDetails] = useState<{
     id: string;
     personalInfo?: Record<string, any>;
   } | null>(null);
-  const user = useCurrentUser();
+
+  // Template and form state
+  const [logBookTemplate, setLogBookTemplate] = useState<LogBookTemplate | null>(null);
+  const [formData, setFormData] = useState<Record<string, any>>({});
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [selectedFiles, setSelectedFiles] = useState<Record<string, File>>({});
+  const [loading, setLoading] = useState<Record<string, boolean>>({
+    template: true,
+    student: true,
+    academicYears: true,
+    batches: true,
+    subjects: true,
+    modules: true,
+  });
+  const [error, setError] = useState<string | null>(null);
+  const [submitSuccess, setSubmitSuccess] = useState<boolean>(false);
+
+  // Filter options
+  const [academicYears, setAcademicYears] = useState<FilterOption[]>([]);
+  const [batches, setBatches] = useState<FilterOption[]>([]);
+  const [subjects, setSubjects] = useState<FilterOption[]>([]);
+  const [modules, setModules] = useState<FilterOption[]>([]);
+  
+  // Selected filter values
+  const [selectedAcademicYear, setSelectedAcademicYear] = useState<string>(ACADEMIC_YEAR_ID);
+  const [selectedBatch, setSelectedBatch] = useState<string>(BATCH_ID);
+  const [selectedSubject, setSelectedSubject] = useState<string>(SUBJECT_ID);
+  const [selectedModule, setSelectedModule] = useState<string>(MODULE_ID);
+
+  // Fetch student details
   useEffect(() => {
     const fetchStudentDetails = async () => {
       if (!user) return;
@@ -106,61 +132,194 @@ const LogBookEntries: React.FC = () => {
       } catch (err) {
         console.error('Student details fetch error:', err);
         setError(err instanceof Error ? err.message : 'Unknown error');
+      } finally {
+        setLoading(prev => ({ ...prev, student: false }));
       }
     };
 
     fetchStudentDetails();
   }, [user]);
-  // Fetch log book template
-  const fetchLogBookTemplate = async () => {
-    try {
-      const response = await fetch(
-        `/api/log-book-template?` +
-          `academicYearId=${ACADEMIC_YEAR_ID}&` +
-          `batchId=${BATCH_ID}&` +
-          `subjectId=${SUBJECT_ID}`
-      );
 
-      if (!response.ok) {
-        throw new Error(`Failed to fetch: ${response.status}`);
+  // Fetch filter options
+  useEffect(() => {
+    const fetchAcademicYears = async () => {
+      try {
+        const response = await fetch("/api/academicYears");
+        if (response.ok) {
+          const data = await response.json();
+          setAcademicYears(data);
+        } else {
+          console.error("Failed to fetch academic years");
+        }
+      } catch (error) {
+        console.error("Error fetching academic years:", error);
+      } finally {
+        setLoading(prev => ({ ...prev, academicYears: false }));
       }
+    };
+    
+    fetchAcademicYears();
+  }, []);
 
-      const templates = await response.json();
-      console.log("Fetched templates:", templates);
-
-      if (templates.length === 0) {
-        throw new Error("No templates found");
+  // Fetch batches when academic year changes
+  useEffect(() => {
+    const fetchBatches = async () => {
+      if (!selectedAcademicYear) {
+        setBatches([]);
+        setSelectedBatch("");
+        setLoading(prev => ({ ...prev, batches: false }));
+        return;
       }
-
-      const template = templates[0];
-
-      if (!template.dynamicSchema || !template.dynamicSchema.groups) {
-        throw new Error("Invalid template structure");
-      }
-
-      // Initialize form data with default values
-      const initialFormData: Record<string, any> = {};
-      template.dynamicSchema.groups.forEach((group: DynamicGroup) => {
-        initialFormData[group.name] = {};
-        group.fields.forEach((field: DynamicField) => {
-          const fieldName = field.label.toLowerCase().replace(/\s+/g, "_");
-          if (field.defaultValue) {
-            initialFormData[group.name][fieldName] = field.defaultValue;
-          } else {
-            initialFormData[group.name][fieldName] = "";
+      
+      try {
+        setLoading(prev => ({ ...prev, batches: true }));
+        const response = await fetch(`/api/phase?academicYears=${selectedAcademicYear}`);
+        if (response.ok) {
+          const data = await response.json();
+          setBatches(data);
+          if (data.length > 0 && !data.some((b: FilterOption) => b.id === selectedBatch)) {
+            setSelectedBatch(data[0].id);
           }
-        });
-      });
+        } else {
+          console.error("Failed to fetch batches");
+        }
+      } catch (error) {
+        console.error("Error fetching batches:", error);
+      } finally {
+        setLoading(prev => ({ ...prev, batches: false }));
+      }
+    };
+    
+    fetchBatches();
+  }, [selectedAcademicYear , selectedBatch]);
 
-      setLogBookTemplate(template);
-      setFormData(initialFormData);
-      setLoading(false);
-    } catch (err) {
-      console.error("Fetch error:", err);
-      setError(err instanceof Error ? err.message : "Unknown error occurred");
-      setLoading(false);
-    }
-  };
+  // Fetch subjects when batch changes
+  useEffect(() => {
+    const fetchSubjects = async () => {
+      if (!selectedBatch) {
+        setSubjects([]);
+        setSelectedSubject("");
+        setLoading(prev => ({ ...prev, subjects: false }));
+        return;
+      }
+      
+      try {
+        setLoading(prev => ({ ...prev, subjects: true }));
+        const response = await fetch(`/api/subject?PhaseId=${selectedBatch}`);
+        if (response.ok) {
+          const data = await response.json();
+          setSubjects(data);
+          if (data.length > 0 && !data.some((s: FilterOption) => s.id === selectedSubject)) {
+            setSelectedSubject(data[0].id);
+          }
+        } else {
+          console.error("Failed to fetch subjects");
+        }
+      } catch (error) {
+        console.error("Error fetching subjects:", error);
+      } finally {
+        setLoading(prev => ({ ...prev, subjects: false }));
+      }
+    };
+    
+    fetchSubjects();
+  }, [selectedBatch , selectedSubject]);
+
+  // Fetch modules when subject changes
+  useEffect(() => {
+    const fetchModules = async () => {
+      if (!selectedSubject) {
+        setModules([]);
+        setSelectedModule("");
+        setLoading(prev => ({ ...prev, modules: false }));
+        return;
+      }
+      
+      try {
+        setLoading(prev => ({ ...prev, modules: true }));
+        const response = await fetch(`/api/module?subjectId=${selectedSubject}`);
+        if (response.ok) {
+          const data = await response.json();
+          setModules(data);
+          if (data.length > 0 && !data.some((m: FilterOption) => m.id === selectedModule)) {
+            setSelectedModule(data[0].id);
+          }
+        } else {
+          console.error("Failed to fetch modules");
+        }
+      } catch (error) {
+        console.error("Error fetching modules:", error);
+      } finally {
+        setLoading(prev => ({ ...prev, modules: false }));
+      }
+    };
+    
+    fetchModules();
+  }, [selectedSubject , selectedModule]);
+
+  // Fetch log book template based on selected filters
+  useEffect(() => {
+    const fetchLogBookTemplate = async () => {
+      if (!selectedAcademicYear || !selectedBatch || !selectedSubject) {
+        return;
+      }
+      
+      try {
+        setLoading(prev => ({ ...prev, template: true }));
+        
+        let url = `/api/log-book-template?` +
+          `academicYearId=${selectedAcademicYear}&` +
+          `batchId=${selectedBatch}&` +
+          `subjectId=${selectedSubject}`;
+          
+        if (selectedModule) {
+          url += `&moduleId=${selectedModule}`;
+        }
+
+        const response = await fetch(url);
+
+        if (!response.ok) {
+          throw new Error(`Failed to fetch: ${response.status}`);
+        }
+
+        const templates = await response.json();
+
+        if (templates.length === 0) {
+          setLogBookTemplate(null);
+          setError("No template found for the selected filters");
+          return;
+        }
+
+        const template = templates[0];
+
+        if (!template.dynamicSchema || !template.dynamicSchema.groups) {
+          throw new Error("Invalid template structure");
+        }
+
+        // Initialize form data with default values
+        const initialFormData: Record<string, any> = {};
+        template.dynamicSchema.groups.forEach((group: DynamicGroup) => {
+          initialFormData[group.name] = {};
+          group.fields.forEach((field: DynamicField) => {
+            const fieldName = field.label.toLowerCase().replace(/\s+/g, "_");
+            initialFormData[group.name][fieldName] = field.defaultValue || "";
+          });
+        });
+
+        setLogBookTemplate(template);
+        setFormData(initialFormData);
+        setError(null);
+      } catch (err) {
+        console.error("Fetch error:", err);
+        setError(err instanceof Error ? err.message : "Unknown error occurred");
+        setLogBookTemplate(null);
+      } finally {
+        setLoading(prev => ({ ...prev, template: false }));
+      }
+    };
+
+    fetchLogBookTemplate();
+  }, [selectedAcademicYear, selectedBatch, selectedSubject, selectedModule]);
 
   // Validation of individual fields
   const validateField = (field: DynamicField, value: any): string | null => {
@@ -183,8 +342,9 @@ const LogBookEntries: React.FC = () => {
     groupName: string,
     fieldName: string,
     value: any,
-    fieldType: string
   ) => {
+    setSubmitSuccess(false);
+    
     const updatedFormData = {
       ...formData,
       [groupName]: {
@@ -220,12 +380,11 @@ const LogBookEntries: React.FC = () => {
       ...prev,
       [`${groupName}.${fieldName}`]: file,
     }));
-    handleInputChange(groupName, fieldName, file.name, "file");
+    handleInputChange(groupName, fieldName, file.name);
   };
 
   // Submit form data
   const handleSubmit = async () => {
-    // Validate inputs and check for errors (previous validation logic)
     if (!logBookTemplate || !studentDetails) return;
 
     const validationErrors: Record<string, string> = {};
@@ -278,36 +437,50 @@ const LogBookEntries: React.FC = () => {
         throw new Error(errorData.error || "Submission failed");
       }
 
-      alert("Submitted successfully!");
-      setFormData({});
+      setSubmitSuccess(true);
+      
+      // Reset form
+      const initialFormData: Record<string, any> = {};
+      logBookTemplate.dynamicSchema.groups.forEach((group: DynamicGroup) => {
+        initialFormData[group.name] = {};
+        group.fields.forEach((field: DynamicField) => {
+          const fieldName = field.label.toLowerCase().replace(/\s+/g, "_");
+          initialFormData[group.name][fieldName] = field.defaultValue || "";
+        });
+      });
+      
+      setFormData(initialFormData);
       setSelectedFiles({});
+      
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (err) {
       console.error("Submission error:", err);
-      alert(err instanceof Error ? err.message : "Submission failed. Please try again.");
+      setError(err instanceof Error ? err.message : "Submission failed. Please try again.");
     }
   };
+
   // Excel export
-  const exportToExcel = () => {
-    if (!logBookTemplate) return;
+  // const exportToExcel = () => {
+  //   if (!logBookTemplate) return;
 
-    const flattenedData: Record<string, any> = {};
+  //   const flattenedData: Record<string, any> = {};
     
-    logBookTemplate.dynamicSchema.groups.forEach((group) => {
-      group.fields.forEach((field) => {
-        const fieldName = field.label.toLowerCase().replace(/\s+/g, "_");
-        const value = formData[group.name]?.[fieldName] || '';
+  //   logBookTemplate.dynamicSchema.groups.forEach((group) => {
+  //     group.fields.forEach((field) => {
+  //       const fieldName = field.label.toLowerCase().replace(/\s+/g, "_");
+  //       const value = formData[group.name]?.[fieldName] || '';
         
-        const columnName = `${group.name} - ${field.label}`;
-        flattenedData[columnName] = value;
-      });
-    });
+  //       const columnName = `${group.name} - ${field.label}`;
+  //       flattenedData[columnName] = value;
+  //     });
+  //   });
 
-    const worksheet = XLSX.utils.json_to_sheet([flattenedData]);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Log Book Entry");
+  //   const worksheet = XLSX.utils.json_to_sheet([flattenedData]);
+  //   const workbook = XLSX.utils.book_new();
+  //   XLSX.utils.book_append_sheet(workbook, worksheet, "Log Book Entry");
     
-    XLSX.writeFile(workbook, `LogBookEntry_${new Date().toISOString().split('T')[0]}.xlsx`);
-  };
+  //   XLSX.writeFile(workbook, `LogBookEntry_${new Date().toISOString().split('T')[0]}.xlsx`);
+  // };
 
   // Render field based on type
   const renderField = (group: DynamicGroup, field: DynamicField) => {
@@ -315,41 +488,45 @@ const LogBookEntries: React.FC = () => {
     const fieldName = field.label.toLowerCase().replace(/\s+/g, "_");
     const errorKey = `${groupName}.${fieldName}`;
     const fieldValue = formData[groupName]?.[fieldName] || "";
+    const hasError = !!errors[errorKey];
 
     const commonProps = {
       id: `${groupName}-${fieldName}`,
       required: field.required,
       className: cn(
-        errors[errorKey] && "border-red-500 focus-visible:ring-red-500"
+        hasError && "border-red-500 focus-visible:ring-red-500"
       ),
     };
-
-    const renderError = () =>
-      errors[errorKey] && (
-        <p className="text-red-500 text-sm">{errors[errorKey]}</p>
-      );
 
     switch (field.type) {
       case "text":
         return (
           <div className="space-y-2">
-            <Label htmlFor={commonProps.id}>{field.label}</Label>
+            <Label htmlFor={commonProps.id} className={cn(hasError && "text-red-500")}>
+              {field.label}
+              {field.required && <span className="text-red-500 ml-1">*</span>}
+            </Label>
             <Input
               {...commonProps}
               type="text"
               value={fieldValue}
               onChange={(e) =>
-                handleInputChange(groupName, fieldName, e.target.value, "text")
+                handleInputChange(groupName, fieldName, e.target.value)
               }
             />
-            {renderError()}
+            {hasError && (
+              <p className="text-red-500 text-sm">{errors[errorKey]}</p>
+            )}
           </div>
         );
 
       case "number":
         return (
           <div className="space-y-2">
-            <Label htmlFor={commonProps.id}>{field.label}</Label>
+            <Label htmlFor={commonProps.id} className={cn(hasError && "text-red-500")}>
+              {field.label}
+              {field.required && <span className="text-red-500 ml-1">*</span>}
+            </Label>
             <Input
               {...commonProps}
               type="number"
@@ -359,18 +536,22 @@ const LogBookEntries: React.FC = () => {
                   groupName,
                   fieldName,
                   e.target.value,
-                  "number"
                 )
               }
             />
-            {renderError()}
+            {hasError && (
+              <p className="text-red-500 text-sm">{errors[errorKey]}</p>
+            )}
           </div>
         );
 
       case "textarea":
         return (
           <div className="space-y-2">
-            <Label htmlFor={commonProps.id}>{field.label}</Label>
+            <Label htmlFor={commonProps.id} className={cn(hasError && "text-red-500")}>
+              {field.label}
+              {field.required && <span className="text-red-500 ml-1">*</span>}
+            </Label>
             <Textarea
               {...commonProps}
               value={fieldValue}
@@ -379,22 +560,27 @@ const LogBookEntries: React.FC = () => {
                   groupName,
                   fieldName,
                   e.target.value,
-                  "textarea"
+                  // "textarea"
                 )
               }
             />
-            {renderError()}
+            {hasError && (
+              <p className="text-red-500 text-sm">{errors[errorKey]}</p>
+            )}
           </div>
         );
 
       case "select":
         return (
           <div className="space-y-2">
-            <Label>{field.label}</Label>
+            <Label className={cn(hasError && "text-red-500")}>
+              {field.label}
+              {field.required && <span className="text-red-500 ml-1">*</span>}
+            </Label>
             <Select
               value={fieldValue}
               onValueChange={(value) =>
-                handleInputChange(groupName, fieldName, value, "select")
+                handleInputChange(groupName, fieldName, value)
               }
             >
               <SelectTrigger className={commonProps.className}>
@@ -411,14 +597,19 @@ const LogBookEntries: React.FC = () => {
                 ))}
               </SelectContent>
             </Select>
-            {renderError()}
+            {hasError && (
+              <p className="text-red-500 text-sm">{errors[errorKey]}</p>
+            )}
           </div>
         );
 
       case "date":
         return (
           <div className="space-y-2">
-            <Label>{field.label}</Label>
+            <Label className={cn(hasError && "text-red-500")}>
+              {field.label}
+              {field.required && <span className="text-red-500 ml-1">*</span>}
+            </Label>
             <Popover>
               <PopoverTrigger asChild>
                 <Button
@@ -446,21 +637,26 @@ const LogBookEntries: React.FC = () => {
                       groupName,
                       fieldName,
                       date?.toISOString(),
-                      "date"
+                      // "date"
                     )
                   }
                   initialFocus
                 />
               </PopoverContent>
             </Popover>
-            {renderError()}
+            {hasError && (
+              <p className="text-red-500 text-sm">{errors[errorKey]}</p>
+            )}
           </div>
         );
 
       case "file":
         return (
           <div className="space-y-2">
-            <Label htmlFor={commonProps.id}>{field.label}</Label>
+            <Label htmlFor={commonProps.id} className={cn(hasError && "text-red-500")}>
+              {field.label}
+              {field.required && <span className="text-red-500 ml-1">*</span>}
+            </Label>
             <Input
               {...commonProps}
               type="file"
@@ -474,609 +670,165 @@ const LogBookEntries: React.FC = () => {
                 Selected: {selectedFiles[errorKey].name}
               </p>
             )}
-            {renderError()}
+            {hasError && (
+              <p className="text-red-500 text-sm">{errors[errorKey]}</p>
+            )}
           </div>
         );
 
       default:
         return (
           <div className="space-y-2">
-            <Label>
+            <Label className={cn(hasError && "text-red-500")}>
               {field.label} (Unsupported type: {field.type})
+              {field.required && <span className="text-red-500 ml-1">*</span>}
             </Label>
-            {renderError()}
+            {hasError && (
+              <p className="text-red-500 text-sm">{errors[errorKey]}</p>
+            )}
           </div>
         );
     }
   };
 
-  // Lifecycle hook to fetch template
-  useEffect(() => {
-    fetchLogBookTemplate();
-  }, []);
-
-  // Render loading state
-  if (loading) {
-    return (
-      <Card className="w-full max-w-4xl mx-auto">
-        <CardContent className="flex justify-center items-center h-64">
-          <p>Loading...</p>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  // Render error state
-  if (error) {
-    return (
-      <Card className="w-full max-w-4xl mx-auto">
-        <CardContent className="flex justify-center items-center h-64">
-          <p className="text-red-500">{error}</p>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  // Render no template found state
-  if (!logBookTemplate) {
-    return (
-      <Card className="w-full max-w-4xl mx-auto">
-        <CardContent className="flex justify-center items-center h-64">
-          <p>No template found</p>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  // Main render method
-    return (
-      <div className="w-full max-w-6xl mx-auto">
-        <div className="flex justify-between items-center mb-4">
-          <div>
-            <h2 className="text-2xl font-bold">
-              {logBookTemplate ? logBookTemplate.name : "Loading Template"}
-            </h2>
-            {logBookTemplate?.description && (
-              <p className="text-sm text-muted-foreground">
-                {logBookTemplate.description}
-              </p>
-            )}
-          </div>
-          <Button 
-            variant="outline" 
-            onClick={exportToExcel}
-            disabled={!logBookTemplate}
-          >
-            <Download className="mr-2 h-4 w-4" /> Export to Excel
-          </Button>
+  return (
+    <div className="container mx-auto px-4 py-6 max-w-6xl">
+      {/* Page Header */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Log Book Entries</h1>
+          <p className="text-muted-foreground mt-1">
+            Record and maintain your academic log book entries
+          </p>
         </div>
-  
-        {logBookTemplate?.dynamicSchema?.groups && 
-         logBookTemplate.dynamicSchema.groups.length > 0 ? (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-[100px]">Group</TableHead>
-                <TableHead>Field Name</TableHead>
-                <TableHead>Input</TableHead>
-                <TableHead>Validation</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {logBookTemplate.dynamicSchema.groups.map((group, groupIndex) => (
-                <>
+        
+        {/* <Button 
+          variant="outline" 
+          onClick={exportToExcel}
+          disabled={!logBookTemplate}
+          className="flex items-center"
+        >
+          <Download className="mr-2 h-4 w-4" /> Export to Excel
+        </Button> */}
+      </div>
+      
+      {/* Filter Section */}
+<LogBookFilters
+  academicYears={academicYears}
+  batches={batches}
+  subjects={subjects}
+  modules={modules}
+  selectedAcademicYear={selectedAcademicYear}
+  selectedBatch={selectedBatch}
+  selectedSubject={selectedSubject}
+  selectedModule={selectedModule}
+  onAcademicYearChange={setSelectedAcademicYear}
+  onBatchChange={setSelectedBatch}
+  onSubjectChange={setSelectedSubject}
+  onModuleChange={setSelectedModule}
+  loading={{
+    academicYears: loading.academicYears,
+    batches: loading.batches,
+    subjects: loading.subjects,
+    modules: loading.modules
+  }}
+/>
+      
+      {/* Loading State */}
+      {loading.template && (
+        <Card>
+          <CardContent className="flex justify-center items-center py-12">
+            <div className="flex flex-col items-center gap-2">
+              <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+              <p className="text-sm text-muted-foreground">Loading template...</p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+      
+      {/* Error State */}
+      {error && !loading.template && (
+        <Alert variant="destructive" className="mb-6">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            {error}
+          </AlertDescription>
+        </Alert>
+      )}
+      
+      {/* Success Message */}
+      {submitSuccess && (
+        <Alert className="mb-6 bg-green-50 border-green-200 text-green-800">
+          <Check className="h-4 w-4" />
+          <AlertDescription>
+            Log book entry submitted successfully!
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* Main Content - When template is loaded */}
+      {!loading.template && logBookTemplate && (
+        <>
+          {/* Template Info */}
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle>{logBookTemplate.name}</CardTitle>
+              {logBookTemplate.description && (
+                <CardDescription>
+                  {logBookTemplate.description}
+                </CardDescription>
+              )}
+            </CardHeader>
+          </Card>
+          
+          {/* Form Groups */}
+          {logBookTemplate.dynamicSchema.groups.map((group, groupIndex) => (
+            <Card key={`group-${groupIndex}`} className="mb-6">
+              <CardHeader>
+                <CardTitle className="text-lg font-semibold">{group.name}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {group.fields.map((field, fieldIndex) => (
-                    <TableRow 
-                      key={`field-${groupIndex}-${fieldIndex}-${field.label}`}
+                    <div 
+                      key={`field-${groupIndex}-${fieldIndex}`}
+                      className={field.type === 'textarea' ? 'md:col-span-2' : ''}
                     >
-                      {fieldIndex === 0 && (
-                        <TableCell 
-                          rowSpan={group.fields.length} 
-                          className="font-medium border-r"
-                        >
-                          {group.name}
-                        </TableCell>
-                      )}
-                      <TableCell>{field.label}</TableCell>
-                      <TableCell>
-                        {renderField(group, field)}
-                      </TableCell>
-                      <TableCell>
-                        {errors[`${group.name}.${field.label.toLowerCase().replace(/\s+/g, "_")}`] && (
-                          <span className="text-red-500 text-sm">
-                            {errors[`${group.name}.${field.label.toLowerCase().replace(/\s+/g, "_")}`]}
-                          </span>
-                        )}
-                      </TableCell>
-                    </TableRow>
+                      {renderField(group, field)}
+                    </div>
                   ))}
-                </>
-              ))}
-            </TableBody>
-          </Table>
-        ) : (
-          <p className="text-center text-muted-foreground">No form fields available</p>
-        )}
-  
-        <div className="mt-6">
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+          
+          {/* Submit Button */}
           <Button 
             onClick={handleSubmit} 
-            className="w-full" 
+            className="w-full py-6 text-lg font-medium" 
             size="lg"
           >
             Submit Entry
           </Button>
-        </div>
-      </div>
-    );
+        </>
+      )}
+      
+      {/* No Template Found State */}
+      {!loading.template && !logBookTemplate && !error && (
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+            <Info className="h-12 w-12 text-muted-foreground mb-4" />
+            <h3 className="text-xl font-semibold mb-2">No Template Available</h3>
+            <p className="text-muted-foreground max-w-md">
+              Please select different filter options or contact your administrator if you believe this is an error.
+            </p>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
   };
   
 
 
 export default LogBookEntries;
-
-
-
-
-
-// import React, { useEffect, useState } from "react";
-// import { Button } from "@/components/ui/button";
-// import { Calendar } from "@/components/ui/calendar";
-// import {
-//   Card,
-//   CardContent,
-//   CardHeader,
-//   CardTitle,
-// } from "@/components/ui/card";
-// import { Input } from "@/components/ui/input";
-// import { Label } from "@/components/ui/label";
-// import {
-//   Popover,
-//   PopoverContent,
-//   PopoverTrigger,
-// } from "@/components/ui/popover";
-// import {
-//   Select,
-//   SelectContent,
-//   SelectItem,
-//   SelectTrigger,
-//   SelectValue,
-// } from "@/components/ui/select";
-// import { Textarea } from "@/components/ui/textarea";
-// import { 
-//   Table, 
-//   TableBody, 
-//   TableCell, 
-//   TableHeader, 
-//   TableHead, 
-//   TableRow 
-// } from "@/components/ui/table";
-// import { format } from "date-fns";
-// import { Calendar as CalendarIcon, Download, Plus, Trash2 } from "lucide-react";
-// import * as XLSX from 'xlsx';
-// import { useCurrentUser } from "@/hooks/auth";
-
-// // Constants
-// const ACADEMIC_YEAR_ID = "2f8ab354-1f21-4d0f-ad41-87a39e44b0be";
-// const BATCH_ID = "86f6cdd7-281c-4eba-b423-e835360b012e";
-// const MODULE_ID = "13f35a6b-2c2a-4386-b99e-d5685127afe2";
-// const SUBJECT_ID = "e92e5996-bfcc-4097-8605-63dd00f4156c";
-
-// // Interfaces
-// interface DynamicField {
-//   type: string;
-//   label: string;
-//   required: boolean;
-//   options?: string[];
-//   validationRegex?: string;
-//   defaultValue?: string;
-// }
-
-// interface DynamicGroup {
-//   name: string;
-//   fields: DynamicField[];
-// }
-
-// interface LogBookTemplate {
-//   id: string;
-//   name: string;
-//   description: string;
-//   dynamicSchema: {
-//     groups: DynamicGroup[];
-//   };
-//   academicYearId: string;
-//   batchId: string;
-//   moduleId: string;
-//   subjectId: string;
-// }
-
-// interface StudentDetails {
-//   id: string;
-//   name: string;
-//   email: string;
-// }
-
-// const LogBookEntries: React.FC = () => {
-//   // State Management
-//   const [template, setTemplate] = useState<LogBookTemplate | null>(null);
-//   const [dynamicRows, setDynamicRows] = useState<Record<string, any>[]>([]);
-//   const [errors, setErrors] = useState<Record<string, string>>({});
-//   const [loading, setLoading] = useState(true);
-//   const [error, setError] = useState<string | null>(null);
-//   const [studentDetails, setStudentDetails] = useState<StudentDetails | null>(null);
-//   const user = useCurrentUser();
-
-//   // Fetch Template
-//   const fetchLogBookTemplate = async () => {
-//     try {
-//       const response = await fetch(
-//         `/api/log-book-template?` +
-//         `academicYearId=${ACADEMIC_YEAR_ID}&` +
-//         `batchId=${BATCH_ID}&` +
-//         `subjectId=${SUBJECT_ID}`
-//       );
-
-//       if (!response.ok) {
-//         throw new Error('Failed to fetch template');
-//       }
-
-//       const templates = await response.json();
-      
-//       if (templates.length === 0) {
-//         throw new Error("No templates found");
-//       }
-
-//       setTemplate(templates[0]);
-//       setLoading(false);
-//     } catch (err) {
-//       console.error("Template fetch error:", err);
-//       setError(err instanceof Error ? err.message : "Unknown error");
-//       setLoading(false);
-//     }
-//   };
-
-//   // Fetch Student Details
-//   const fetchStudentDetails = async () => {
-//     try {
-//       const response = await fetch('/api/student-profile?id=' + user?.id);
-      
-//       if (!response.ok) {
-//         throw new Error('Failed to fetch student details');
-//       }
-
-//       const studentData = await response.json();
-//       setStudentDetails(studentData);
-//     } catch (err) {
-//       console.error("Student details fetch error:", err);
-//       setError(err instanceof Error ? err.message : "Unknown error");
-//     }
-//   };
-
-//   // Validation
-//   const validateField = (field: DynamicField, value: any): string | null => {
-//     if (field.required && !value) {
-//       return `${field.label} is required`;
-//     }
-
-//     if (field.validationRegex && value) {
-//       const regex = new RegExp(field.validationRegex);
-//       if (!regex.test(value)) {
-//         return `${field.label} format is invalid`;
-//       }
-//     }
-
-//     return null;
-//   };
-
-//   // Add Dynamic Row
-//   const addDynamicRow = () => {
-//     if (!template) return;
-
-//     const newRow: Record<string, any> = {};
-//     template.dynamicSchema.groups.forEach((group) => {
-//       newRow[group.name] = {};
-//       group.fields.forEach((field) => {
-//         const fieldName = field.label.toLowerCase().replace(/\s+/g, "_");
-//         newRow[group.name][fieldName] = field.defaultValue || "";
-//       });
-//     });
-
-//     setDynamicRows([...dynamicRows, newRow]);
-//   };
-
-//   // Remove Dynamic Row
-//   const removeDynamicRow = (indexToRemove: number) => {
-//     setDynamicRows(dynamicRows.filter((_, index) => index !== indexToRemove));
-//   };
-
-//   // Handle Field Change
-//   const handleFieldChange = (
-//     rowIndex: number, 
-//     groupName: string, 
-//     fieldName: string, 
-//     value: any
-//   ) => {
-//     const updatedRows = [...dynamicRows];
-//     updatedRows[rowIndex][groupName][fieldName] = value;
-//     setDynamicRows(updatedRows);
-
-//     // Optional: Validate field
-//     if (template) {
-//       const group = template.dynamicSchema.groups.find(g => g.name === groupName);
-//       const field = group?.fields.find(f => 
-//         f.label.toLowerCase().replace(/\s+/g, "_") === fieldName
-//       );
-
-//       if (field) {
-//         const error = validateField(field, value);
-//         setErrors(prev => ({
-//           ...prev,
-//           [`${rowIndex}.${groupName}.${fieldName}`]: error || ""
-//         }));
-//       }
-//     }
-//   };
-
-//   // Submit Entries
-//   const handleSubmit = async () => {
-//     if (!template || !studentDetails) return;
-
-//     // Validate all rows
-//     const validationErrors: Record<string, string> = {};
-//     let hasErrors = false;
-
-//     dynamicRows.forEach((row, rowIndex) => {
-//       template.dynamicSchema.groups.forEach((group) => {
-//         group.fields.forEach((field) => {
-//           const fieldName = field.label.toLowerCase().replace(/\s+/g, "_");
-//           const value = row[group.name]?.[fieldName];
-//           const error = validateField(field, value);
-          
-//           if (error) {
-//             validationErrors[`${rowIndex}.${group.name}.${fieldName}`] = error;
-//             hasErrors = true;
-//           }
-//         });
-//       });
-//     });
-
-//     setErrors(validationErrors);
-//     if (hasErrors) return;
-
-//     try {
-//       // Prepare submissions
-//       const submissions = dynamicRows.map(row => ({
-//         logBookTemplateId: template.id,
-//         studentId: studentDetails.id,
-//         dynamicFields: row,
-//         status: 'SUBMITTED'
-//       }));
-
-//       // Submit all entries
-//       const responses = await Promise.all(
-//         submissions.map(submission => 
-//           fetch("/api/log-books", {
-//             method: "POST",
-//             headers: { 'Content-Type': 'application/json' },
-//             body: JSON.stringify(submission)
-//           })
-//         )
-//       );
-
-//       // Check submission success
-//       const allSuccessful = responses.every(response => response.ok);
-
-//       if (allSuccessful) {
-//         alert("All entries submitted successfully!");
-//         setDynamicRows([]);
-//       } else {
-//         throw new Error("Some entries failed to submit");
-//       }
-//     } catch (err) {
-//       console.error("Submission error:", err);
-//       alert(err instanceof Error ? err.message : "Submission failed");
-//     }
-//   };
-
-//   // Export to Excel
-//   const exportToExcel = () => {
-//     if (!template || dynamicRows.length === 0) return;
-
-//     const excelData = dynamicRows.map(row => {
-//       const flattenedRow: Record<string, any> = {};
-      
-//       template.dynamicSchema.groups.forEach((group) => {
-//         group.fields.forEach((field) => {
-//           const fieldName = field.label.toLowerCase().replace(/\s+/g, "_");
-//           const value = row[group.name]?.[fieldName] || '';
-//           flattenedRow[`${group.name} - ${field.label}`] = value;
-//         });
-//       });
-
-//       return flattenedRow;
-//     });
-
-//     const worksheet = XLSX.utils.json_to_sheet(excelData);
-//     const workbook = XLSX.utils.book_new();
-//     XLSX.utils.book_append_sheet(workbook, worksheet, "Log Book Entries");
-    
-//     XLSX.writeFile(workbook, `LogBookEntries_${new Date().toISOString().split('T')[0]}.xlsx`);
-//   };
-
-//   // Render Field
-//   const renderField = (
-//     rowIndex: number,
-//     group: DynamicGroup, 
-//     field: DynamicField
-//   ) => {
-//     const groupName = group.name;
-//     const fieldName = field.label.toLowerCase().replace(/\s+/g, "_");
-//     const errorKey = `${rowIndex}.${groupName}.${fieldName}`;
-//     const fieldValue = dynamicRows[rowIndex]?.[groupName]?.[fieldName] || "";
-
-//     const renderError = () => 
-//       errors[errorKey] && (
-//         <p className="text-red-500 text-sm">{errors[errorKey]}</p>
-//       );
-
-//     switch (field.type) {
-//       case "text":
-//         return (
-//           <div className="space-y-2">
-//             <Label>{field.label}</Label>
-//             <Input
-//               type="text"
-//               value={fieldValue}
-//               onChange={(e) => 
-//                 handleFieldChange(
-//                   rowIndex, 
-//                   groupName, 
-//                   fieldName, 
-//                   e.target.value
-//                 )
-//               }
-//               required={field.required}
-//             />
-//             {renderError()}
-//           </div>
-//         );
-
-//       case "select":
-//         return (
-//           <div className="space-y-2">
-//             <Label>{field.label}</Label>
-//             <Select
-//               value={fieldValue}
-//               onValueChange={(value) => 
-//                 handleFieldChange(
-//                   rowIndex, 
-//                   groupName, 
-//                   fieldName, 
-//                   value
-//                 )
-//               }
-//             >
-//               <SelectTrigger>
-//                 <SelectValue placeholder={`Select ${field.label}`} />
-//               </SelectTrigger>
-//               <SelectContent>
-//                 {field.options?.map((option) => (
-//                   <SelectItem key={option} value={option}>
-//                     {option}
-//                   </SelectItem>
-//                 ))}
-//               </SelectContent>
-//             </Select>
-//             {renderError()}
-//           </div>
-//         );
-
-//       // Add more field types as needed (date, number, textarea, etc.)
-//       default:
-//         return <div>Unsupported field type</div>;
-//     }
-//   };
-
-//   // Lifecycle Hooks
-//   useEffect(() => {
-//     fetchLogBookTemplate();
-//     fetchStudentDetails();
-//   }, []);
-
-//   // Render Methods
-//   if (loading) {
-//     return <div>Loading...</div>;
-//   }
-
-//   if (error) {
-//     return <div className="text-red-500">{error}</div>;
-//   }
-
-//   if (!template) {
-//     return <div>No template available</div>;
-//   }
-
-//   return (
-//     <div className="container mx-auto p-4">
-//       <Card>
-//         <CardHeader>
-//           <div className="flex justify-between items-center">
-//             <CardTitle>{template.name}</CardTitle>
-//             <div className="flex space-x-2">
-//               <Button 
-//                 variant="outline" 
-//                 onClick={exportToExcel}
-//                 disabled={dynamicRows.length === 0}
-//               >
-//                 <Download className="mr-2 h-4 w-4" /> Export
-//               </Button>
-//               <Button onClick={addDynamicRow}>
-//                 <Plus className="mr-2 h-4 w-4" /> Add Entry
-//               </Button>
-//             </div>
-//           </div>
-//         </CardHeader>
-//         <CardContent>
-//           {dynamicRows.map((row, rowIndex) => (
-//             <Card key={rowIndex} className="mb-4">
-//               <CardHeader className="flex flex-row justify-between items-center">
-//                 <CardTitle>Entry {rowIndex + 1}</CardTitle>
-//                 <Button 
-//                   variant="destructive" 
-//                   size="sm" 
-//                   onClick={() => removeDynamicRow(rowIndex)}
-//                 >
-//                   <Trash2 className="mr-2 h-4 w-4" /> Remove
-//                 </Button>
-//               </CardHeader>
-//               <CardContent>
-//                 <Table>
-//                   <TableHeader>
-//                     <TableRow>
-//                       <TableHead>Field</TableHead>
-//                       <TableHead>Input</TableHead>
-//                     </TableRow>
-//                   </TableHeader>
-//                   <TableBody>
-//                     {template.dynamicSchema.groups.map((group) => (
-//                       group.fields.map((field) => (
-//                         <TableRow key={field.label}>
-//                           <TableCell>{field.label}</TableCell>
-//                           <TableCell>
-//                             {renderField(rowIndex, group, field)}
-//                           </TableCell>
-//                         </TableRow>
-//                       ))
-//                     ))}
-//                   </TableBody>
-//                 </Table>
-//               </CardContent>
-//             </Card>
-//           ))}
-          
-//           {dynamicRows.length > 0 && (
-//             <Button 
-//               onClick={handleSubmit} 
-//               className="w-full mt-4"
-//             >
-//               Submit All Entries
-//             </Button>
-//           )}
-
-//           {dynamicRows.length === 0 && (
-//             <div className="text-center py-8">
-//               <p className="text-muted-foreground mb-4">
-//                 No entries added. Click "Add Entry" to get started.
-//               </p>
-//               <Button onClick={addDynamicRow}>
-//                 <Plus className="mr-2 h-4 w-4" /> Add First Entry
-//               </Button>
-//             </div>
-//           )}
-//         </CardContent>
-//       </Card>
-//     </div>
-//   );
-// };
-
-// export default LogBookEntries;

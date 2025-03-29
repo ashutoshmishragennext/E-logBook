@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -35,10 +36,10 @@ const MEDICAL_FIELD_TYPES = [
 
 // Zod schema for medical log book template
 const LogBookTemplateSchema = z.object({
-  academicYearId: z.string(),
-  batchId: z.string(),
-  subjectId: z.string(),
-  moduleId: z.string(),
+  academicYearId: z.string().min(1, "Academic year is required"),
+  batchId: z.string().min(1, "Batch is required"),
+  subjectId: z.string().min(1, "Subject is required"),
+  moduleId: z.string().min(1, "Module is required"),
   templateName: z.string().min(1, "Template name is required"),
   name: z.string().min(1, "Name is required"),
   department: z.string().min(1, "Department is required"),
@@ -62,14 +63,48 @@ const LogBookTemplateSchema = z.object({
     .optional(),
 });
 
-export default function MedicalLogBookTemplateForm() {
-  const ACADEMIC_YEAR_ID = "2f8ab354-1f21-4d0f-ad41-87a39e44b0be";
-  const BATCH_ID = "86f6cdd7-281c-4eba-b423-e835360b012e";
-  const MODULE_ID = "13f35a6b-2c2a-4386-b99e-d5685127afe2";
-  const SUBJECT_ID = "e92e5996-bfcc-4097-8605-63dd00f4156c";
+type AcademicYear = {
+  id: string;
+  name: string;
+  startDate: string;
+  endDate: string;
+};
+
+type Batch = {
+  id: string;
+  name: string;
+  academicYearId: string;
+};
+
+type Subject = {
+  id: string;
+  name: string;
+  code: string;
+  batchId: string;
+};
+
+type Module = {
+  id: string;
+  name: string;
+  subjectId: string;
+};
+
+export default function LogBookTemplateForm() {
   const user = useCurrentUser();
-  const userId = user?.id || "current-user-id"; // Replace with actual user ID
+  const userId = user?.id || "current-user-id";
   
+  // State for dropdown options
+  const [academicYears, setAcademicYears] = useState<AcademicYear[]>([]);
+  const [batches, setBatches] = useState<Batch[]>([]);
+  const [subjects, setSubjects] = useState<Subject[]>([]);
+  const [modules, setModules] = useState<Module[]>([]);
+  const [loading, setLoading] = useState({
+    academicYears: true,
+    batches: true,
+    subjects: true,
+    modules: true,
+  });
+
   // Form state and validation
   const {
     control,
@@ -81,10 +116,10 @@ export default function MedicalLogBookTemplateForm() {
   } = useForm({
     resolver: zodResolver(LogBookTemplateSchema),
     defaultValues: {
-      academicYearId: ACADEMIC_YEAR_ID,
-      batchId: BATCH_ID,
-      subjectId: SUBJECT_ID,
-      moduleId: MODULE_ID,
+      academicYearId: "",
+      batchId: "",
+      subjectId: "",
+      moduleId: "",
       templateName: "",
       name: "",
       department: "",
@@ -92,6 +127,119 @@ export default function MedicalLogBookTemplateForm() {
       dynamicSchema: { groups: [] },
     },
   });
+
+  // Watch selected values
+  const selectedAcademicYearId = watch("academicYearId");
+  const selectedBatchId = watch("batchId");
+  const selectedSubjectId = watch("subjectId");
+
+  // Fetch academic years on mount
+  useEffect(() => {
+    const fetchAcademicYears = async () => {
+      try {
+        const response = await fetch("/api/academicYears");
+        if (response.ok) {
+          const data = await response.json();
+          setAcademicYears(data);
+        } else {
+          console.error("Failed to fetch academic years");
+        }
+      } catch (error) {
+        console.error("Error fetching academic years:", error);
+      } finally {
+        setLoading(prev => ({ ...prev, academicYears: false }));
+      }
+    };
+
+    fetchAcademicYears();
+  }, []);
+
+  // Fetch batches when academic year changes
+  useEffect(() => {
+    const fetchBatches = async () => {
+      if (!selectedAcademicYearId) {
+        setBatches([]);
+        setValue("batchId", "");
+        setLoading(prev => ({ ...prev, batches: false }));
+        return;
+      }
+
+      try {
+        setLoading(prev => ({ ...prev, batches: true }));
+        const response = await fetch(`/api/phase?academicYears=${selectedAcademicYearId}`);
+        if (response.ok) {
+          const data = await response.json();
+          setBatches(data);
+        } else {
+          console.error("Failed to fetch batches");
+        }
+      } catch (error) {
+        console.error("Error fetching batches:", error);
+      } finally {
+        setLoading(prev => ({ ...prev, batches: false }));
+      }
+    };
+
+    fetchBatches();
+  }, [selectedAcademicYearId, setValue]);
+
+  // Fetch subjects when batch changes
+  useEffect(() => {
+    const fetchSubjects = async () => {
+      if (!selectedBatchId) {
+        setSubjects([]);
+        setValue("subjectId", "");
+        setLoading(prev => ({ ...prev, subjects: false }));
+        return;
+      }
+
+      try {
+        setLoading(prev => ({ ...prev, subjects: true }));
+        const response = await fetch(`/api/subject?PhaseId=${selectedBatchId}`);
+        if (response.ok) {
+          const data = await response.json();
+          setSubjects(data);
+        } else {
+          console.error("Failed to fetch subjects");
+        }
+      } catch (error) {
+        console.error("Error fetching subjects:", error);
+      } finally {
+        setLoading(prev => ({ ...prev, subjects: false }));
+      }
+    };
+
+    fetchSubjects();
+  }, [selectedBatchId, setValue]);
+
+  // Fetch modules when subject changes
+  useEffect(() => {
+    const fetchModules = async () => {
+      if (!selectedSubjectId) {
+        setModules([]);
+        setValue("moduleId", "");
+        setLoading(prev => ({ ...prev, modules: false }));
+        return;
+      }
+
+      try {
+        setLoading(prev => ({ ...prev, modules: true }));
+        const response = await fetch(`/api/module?subjectId=${selectedSubjectId}`);
+        if (response.ok) {
+          const data = await response.json();
+          setModules(data);
+        } else {
+          console.error("Failed to fetch modules");
+        }
+      } catch (error) {
+        console.error("Error fetching modules:", error);
+      } finally {
+        setLoading(prev => ({ ...prev, modules: false }));
+      }
+    };
+
+    fetchModules();
+  }, [selectedSubjectId, setValue]);
 
   // State to manage dropdown option input
   const [dropdownOptionInput, setDropdownOptionInput] = useState<{
@@ -202,10 +350,6 @@ export default function MedicalLogBookTemplateForm() {
       const formData = {
         ...data,
         name: data.templateName, // Ensure name matches templateName
-        academicYearId: ACADEMIC_YEAR_ID,
-        batchId: BATCH_ID,
-        subjectId: SUBJECT_ID,
-        moduleId: MODULE_ID,
         createdBy: userId,
       };
 
@@ -273,6 +417,229 @@ export default function MedicalLogBookTemplateForm() {
         </CardHeader>
         <CardContent className="flex-grow overflow-y-auto p-4 space-y-4">
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+            {/* Academic Hierarchy Selection */}
+            <Card className="mb-6">
+              <CardContent className="pt-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {/* Academic Year */}
+                  <div className="space-y-2">
+                    <Label htmlFor="academicYear">Academic Year</Label>
+                    <Controller
+                      name="academicYearId"
+                      control={control}
+                      render={({ field }) => (
+                        <Select
+                          onValueChange={field.onChange}
+                          value={field.value}
+                          disabled={loading.academicYears}
+                        >
+                          <SelectTrigger id="academicYear">
+                            <SelectValue placeholder="Select Academic Year" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {academicYears.length > 0 ? (
+                              academicYears.map((year) => (
+                                <SelectItem key={year.id} value={year.id}>
+                                  {year.name}
+                                </SelectItem>
+                              ))
+                            ) : (
+                              <SelectItem value="Loading" disabled>
+                                {loading.academicYears ? "Loading..." : "No academic years found"}
+                              </SelectItem>
+                            )}
+                          </SelectContent>
+                        </Select>
+                      )}
+                    />
+                    {errors.academicYearId && (
+                      <p className="text-destructive text-sm mt-1">
+                        {errors.academicYearId.message}
+                      </p>
+                    )}
+                    {!loading.academicYears && academicYears.length === 0 && (
+                      <Button
+                        type="button"
+                        variant="link"
+                        className="text-sm p-0 h-auto"
+                        onClick={() => {
+                          // Navigate to create academic year page or open a modal
+                          console.log("Navigate to create academic year");
+                        }}
+                      >
+                        + Create New Academic Year
+                      </Button>
+                    )}
+                  </div>
+
+                  {/* Batch/Phase */}
+                  <div className="space-y-2">
+                    <Label htmlFor="batch">Batch/Phase</Label>
+                    <Controller
+                      name="batchId"
+                      control={control}
+                      render={({ field }) => (
+                        <Select
+                          onValueChange={field.onChange}
+                          value={field.value}
+                          disabled={!selectedAcademicYearId || loading.batches}
+                        >
+                          <SelectTrigger id="batch">
+                            <SelectValue placeholder="Select Batch" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {batches.length > 0 ? (
+                              batches.map((batch) => (
+                                <SelectItem key={batch.id} value={batch.id}>
+                                  {batch.name}
+                                </SelectItem>
+                              ))
+                            ) : (
+                              <SelectItem value="loading" disabled>
+                                {loading.batches
+                                  ? "Loading..."
+                                  : selectedAcademicYearId
+                                  ? "No batches found"
+                                  : "Select academic year first"}
+                              </SelectItem>
+                            )}
+                          </SelectContent>
+                        </Select>
+                      )}
+                    />
+                    {errors.batchId && (
+                      <p className="text-destructive text-sm mt-1">
+                        {errors.batchId.message}
+                      </p>
+                    )}
+                    {!loading.batches && batches.length === 0 && selectedAcademicYearId && (
+                      <Button
+                        type="button"
+                        variant="link"
+                        className="text-sm p-0 h-auto"
+                        onClick={() => {
+                          // Navigate to create batch page or open a modal
+                          console.log("Navigate to create batch");
+                        }}
+                      >
+                        + Create New Batch
+                      </Button>
+                    )}
+                  </div>
+
+                  {/* Subject */}
+                  <div className="space-y-2">
+                    <Label htmlFor="subject">Subject</Label>
+                    <Controller
+                      name="subjectId"
+                      control={control}
+                      render={({ field }) => (
+                        <Select
+                          onValueChange={field.onChange}
+                          value={field.value}
+                          disabled={!selectedBatchId || loading.subjects}
+                        >
+                          <SelectTrigger id="subject">
+                            <SelectValue placeholder="Select Subject" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {subjects.length > 0 ? (
+                              subjects.map((subject) => (
+                                <SelectItem key={subject.id} value={subject.id}>
+                                  {subject.name} ({subject.code})
+                                </SelectItem>
+                              ))
+                            ) : (
+                              <SelectItem value="loading" disabled>
+                                {loading.subjects
+                                  ? "Loading..."
+                                  : selectedBatchId
+                                  ? "No subjects found"
+                                  : "Select batch first"}
+                              </SelectItem>
+                            )}
+                          </SelectContent>
+                        </Select>
+                      )}
+                    />
+                    {errors.subjectId && (
+                      <p className="text-destructive text-sm mt-1">
+                        {errors.subjectId.message}
+                      </p>
+                    )}
+                    {!loading.subjects && subjects.length === 0 && selectedBatchId && (
+                      <Button
+                        type="button"
+                        variant="link"
+                        className="text-sm p-0 h-auto"
+                        onClick={() => {
+                          // Navigate to create subject page or open a modal
+                          console.log("Navigate to create subject");
+                        }}
+                      >
+                        + Create New Subject
+                      </Button>
+                    )}
+                  </div>
+
+                  {/* Module */}
+                  <div className="space-y-2">
+                    <Label htmlFor="module">Module</Label>
+                    <Controller
+                      name="moduleId"
+                      control={control}
+                      render={({ field }) => (
+                        <Select
+                          onValueChange={field.onChange}
+                          value={field.value}
+                          disabled={!selectedSubjectId || loading.modules}
+                        >
+                          <SelectTrigger id="module">
+                            <SelectValue placeholder="Select Module" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {modules.length > 0 ? (
+                              modules.map((module) => (
+                                <SelectItem key={module.id} value={module.id}>
+                                  {module.name}
+                                </SelectItem>
+                              ))
+                            ) : (
+                              <SelectItem value="loading" disabled>
+                                {loading.modules
+                                  ? "Loading..."
+                                  : selectedSubjectId
+                                  ? "No modules found"
+                                  : "Select subject first"}
+                              </SelectItem>
+                            )}
+                          </SelectContent>
+                        </Select>
+                      )}
+                    />
+                    {errors.moduleId && (
+                      <p className="text-destructive text-sm mt-1">
+                        {errors.moduleId.message}
+                      </p>
+                    )}
+                    {!loading.modules && modules.length === 0 && selectedSubjectId && (
+                      <Button
+                        type="button"
+                        variant="link"
+                        className="text-sm p-0 h-auto"
+                        onClick={() => {
+                          // Navigate to create module page or open a modal
+                          console.log("Navigate to create module");
+                        }}
+                      >
+                        + Create New Module
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
             {/* Template Basic Information */}
             <div className="grid grid-cols-2 gap-4">
               <div>
@@ -570,6 +937,12 @@ export default function MedicalLogBookTemplateForm() {
             <Button
               type="submit"
               className="w-full mt-4 bg-primary hover:bg-primary/90 transition-colors"
+              disabled={
+                loading.academicYears ||
+                loading.batches ||
+                loading.subjects ||
+                loading.modules
+              }
             >
               Create Medical Log Book Template
             </Button>

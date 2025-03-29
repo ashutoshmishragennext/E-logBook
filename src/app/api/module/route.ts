@@ -1,5 +1,5 @@
 import { db } from "@/db";
-import { ModuleTable, PhaseTable } from "@/db/schema";
+import { ModuleTable } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -9,12 +9,12 @@ export async function GET(req:NextRequest){
     const subjectId = searchParams.get('subjectId');
     try {
         
-        let module= await db.select().from(ModuleTable)
+        let module1= await db.select().from(ModuleTable)
                 if(subjectId){
-                     module= await db.select().from(ModuleTable).where(eq(ModuleTable.subjectId,subjectId))
+                     module1= await db.select().from(ModuleTable).where(eq(ModuleTable.subjectId,subjectId))
                 }
         
-        return NextResponse.json(module)
+        return NextResponse.json(module1)
         
     } catch (error) {
        return  NextResponse.json({

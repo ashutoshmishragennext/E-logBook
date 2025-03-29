@@ -1,10 +1,7 @@
 'use client';
 
-import { signOut, useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import DisplayTemplates from '@/components/admin/DisplayTemplates';
 import LogBookTemplateForm from '@/components/admin/LogFormTemplate';
-import { default as StudentLogBookForm } from '@/components/elogbook/Elogbook';
 import {
   Popover,
   PopoverContent,
@@ -20,7 +17,9 @@ import {
   Settings,
   Users
 } from 'lucide-react';
-import DisplayTemplates from '@/components/admin/DisplayTemplates';
+import { signOut, useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
 
 
 export default function Dashboard() {
