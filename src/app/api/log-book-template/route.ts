@@ -90,7 +90,7 @@ export async function GET(request: NextRequest) {
       conditions.push(eq(LogBookTemplateTable.subjectId, subjectId));
     }
 
-    // Fetch log book templates
+     // Fetch log book templates
     const templates = await db.query.LogBookTemplateTable.findMany({
       where: conditions.length > 0 ? and(...conditions) : undefined,
       with: {

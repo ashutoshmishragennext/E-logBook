@@ -1,4 +1,6 @@
-import { InferModel, relations } from "drizzle-orm";
+import { previousDay } from "date-fns";
+import { InferModel } from "drizzle-orm";
+import { year } from "drizzle-orm/mysql-core";
 import {
   jsonb,
   pgEnum,
@@ -110,10 +112,25 @@ export const StudentProfileTable = pgTable(
     mobileNo: text("mobile_no").notNull(),
     email: text("email").notNull(),
     profilePhoto: text("profile_photo"),
+    dateOfBirth:text("date_of_birth"),
     
     // Location Information
-    location: text("location"),
-    
+    localAddress: text("local_address"),
+
+    permanentAddress: text("permanent_address"),
+    adharNo:text("adhar_no"),
+    previousInstitution:text("previous_institution"), 
+    yearOfPassing:text("year_of_passing"),
+    attempt:text("attempt"),
+    state:text("state"),
+    dateOfJoining:text("date_of_joining"),
+    previousExperience:text("perivious_experience"),
+    maritalStatus:text("merital_status"),
+    children:text("children"),
+    specialInterest:text("special_interest"),
+    dateOfCompletion:text("date_of_completion"),
+    nameAndOccpationOfSpouse:text("name_and_occpation_of_spouse"),
+    futurePlan:text("future_plan"),
     // Academic Information
     admissionBatch: text("admission_batch"),
     course: text("course"),
@@ -234,6 +251,7 @@ export const LogBookEntryTable = pgTable(
     
     // Student Information
     studentId: uuid("student_id").references(() => StudentProfileTable.id).notNull(),
+    teacherId: uuid("teacher_id").references(() => TeacherProfileTable.id),
     
     // Dynamic Field Values
     dynamicFields: jsonb("dynamic_fields").default({}),
