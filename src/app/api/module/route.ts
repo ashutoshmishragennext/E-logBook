@@ -22,3 +22,23 @@ export async function GET(req:NextRequest){
        })
     }
 }
+export async function POST(request: NextRequest) {
+    try {
+      // Parse the request body
+      const body = await request.json();
+      
+      // Insert the new module record
+      const newModule = await db.insert(ModuleTable).values(body).returning();
+      
+      // Return the newly created record
+      return NextResponse.json(newModule[0], { status: 201 });
+      
+    } catch (error) {
+      console.error("Error creating module:", error);
+      return NextResponse.json({
+        message: "Failed to create module",
+        error,
+        status: 500
+      }, { status: 500 });
+    }
+  }
