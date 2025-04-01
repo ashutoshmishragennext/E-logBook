@@ -1,42 +1,40 @@
 import { db } from '@/db';
 import { LogBookEntryTable } from '@/db/schema';
-import { eq , and } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
-// Zod schema for log book entry creation
-const logBookEntryUpdateSchema = z.object({
-  id: z.string().uuid(),
+// Zod schema for creating log book entries (without ID)
+const logBookEntryCreateSchema = z.object({
   logBookTemplateId: z.string().uuid(),
   studentId: z.string().uuid(),
-  dynamicFields: z.record(z.any()).optional(),
+  teacherId: z.string().uuid().optional(),
+  dynamicFields: z.record(z.any()),
   studentRemarks: z.string().optional(),
-  status: z.enum(["DRAFT", "SUBMITTED", "REVIEWED"])
+  status: z.enum(["DRAFT", "SUBMITTED", "REVIEWED"]).default("DRAFT")
 }).strict();
+
+// Zod schema for updating log book entries (with ID)
+const logBookEntryUpdateSchema = logBookEntryCreateSchema.extend({
+  id: z.string().uuid()
+});
 
 export async function POST(req: NextRequest) {
   try {
     // Parse and validate the request body
     const body = await req.json();
-    const newId = crypto.randomUUID(); // Generate a new UUID for the entry
-    
-    // Validate the request body against the schema
-    const validatedData = logBookEntryUpdateSchema.parse({
-      id: newId, // Use the generated UUID
-      ...body,
-      // Ensure default status if not provided
-      status: body.status || "DRAFT"
-    });
+    const validatedData = logBookEntryCreateSchema.parse(body);
 
-    // Create the log book entry
+    // Create the log book entry with server-generated ID
     const [newLogBookEntry] = await db
       .insert(LogBookEntryTable)
       .values({
-        id: validatedData.id,
+        id: crypto.randomUUID(),
         logBookTemplateId: validatedData.logBookTemplateId,
-        studentId: validatedData.studentId, // Assuming you pass the student ID
+        studentId: validatedData.studentId,
+        teacherId: validatedData.teacherId || null,
         dynamicFields: validatedData.dynamicFields,
-        studentRemarks: validatedData.studentRemarks,
+        studentRemarks: validatedData.studentRemarks || null,
         status: validatedData.status,
         createdAt: new Date(),
         updatedAt: new Date()
@@ -51,7 +49,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         { 
           error: 'Validation Failed', 
-          details: error.errors 
+          details: error.errors.map(err => ({
+            path: err.path.join('.'),
+            message: err.message
+          }))
         }, 
         { status: 400 }
       );
@@ -64,7 +65,6 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// Optional: GET route to fetch log book entries
 export async function GET(req: NextRequest) {
   try {
     // Extract query parameters
@@ -72,9 +72,11 @@ export async function GET(req: NextRequest) {
     const studentId = searchParams.get('studentId');
     const logBookTemplateId = searchParams.get('logBookTemplateId');
     const status = searchParams.get('status');
+    const teacherId = searchParams.get('teacherId');
 
     // Build query conditions
     const conditions = [];
+    if (teacherId) conditions.push(eq(LogBookEntryTable.teacherId, teacherId));
     if (studentId) conditions.push(eq(LogBookEntryTable.studentId, studentId));
     if (logBookTemplateId) conditions.push(eq(LogBookEntryTable.logBookTemplateId, logBookTemplateId));
     if (status) conditions.push(eq(LogBookEntryTable.status, status));
@@ -95,10 +97,6 @@ export async function GET(req: NextRequest) {
   }
 }
 
-
-// Create a separate schema for updating log book entries
-
-
 export async function PUT(req: NextRequest) {
   try {
     // Get the ID from query parameters
@@ -116,10 +114,7 @@ export async function PUT(req: NextRequest) {
     // Parse the request body
     const body = await req.json();
 
-    // Log the raw request body for debugging
-    console.log('Received body:', body);
-
-    // Validate the request body against the schema
+    // Validate the combined data
     const validatedData = logBookEntryUpdateSchema.parse({
       id: entryId,
       ...body
@@ -149,7 +144,7 @@ export async function PUT(req: NextRequest) {
 
     return NextResponse.json(updatedEntries[0], { status: 200 });
   } catch (error) {
-    console.error('Log Book Entry Status Update Error:', error);
+    console.error('Log Book Entry Update Error:', error);
     
     if (error instanceof z.ZodError) {
       return NextResponse.json(

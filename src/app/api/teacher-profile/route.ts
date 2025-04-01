@@ -9,18 +9,18 @@ export async function GET(req: NextRequest) {
 
     const searchParams = req.nextUrl.searchParams;
     const ID = searchParams.get("id");
+    let teacher = await db
+    .select()
+    .from(TeacherProfileTable)
 
-    if(!ID){
-        return NextResponse.json(
-            { message: "User id id required in form of id" },
-            { status: 500 }
-          ); 
-    }
-    const teacher = await db
+    if(ID){
+      teacher = await db
       .select()
       .from(TeacherProfileTable)
       .where(eq(TeacherProfileTable.userId, ID));
 
+    }
+     
     return NextResponse.json(teacher);
   } catch (error) {
     console.log(error);

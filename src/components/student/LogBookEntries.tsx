@@ -24,20 +24,12 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import React, { useEffect, useState } from "react";
-// import { Separator } from "@/components/ui/separator";
 import { useCurrentUser } from "@/hooks/auth";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { AlertCircle, Calendar as CalendarIcon, Check, Info } from "lucide-react";
-// import * as XLSX from 'xlsx';
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { LogBookFilters } from "../common/LogBookFilters";
-
-// Constants for template selection (will be replaced by filter selections)
-const ACADEMIC_YEAR_ID = "2f8ab354-1f21-4d0f-ad41-87a39e44b0be";
-const BATCH_ID = "86f6cdd7-281c-4eba-b423-e835360b012e";
-const MODULE_ID = "13f35a6b-2c2a-4386-b99e-d5685127afe2";
-const SUBJECT_ID = "e92e5996-bfcc-4097-8605-63dd00f4156c";
 
 // Interfaces for type safety
 interface DynamicField {
@@ -75,6 +67,13 @@ interface FilterOption {
   name: string;
 }
 
+interface Teacher {
+  id: string;
+  userId: string;
+  name: string;
+  email?: string;
+}
+
 const LogBookEntries: React.FC = () => {
   // User and student details
   const user = useCurrentUser();
@@ -95,9 +94,15 @@ const LogBookEntries: React.FC = () => {
     batches: true,
     subjects: true,
     modules: true,
+    teachers: true,
   });
   const [error, setError] = useState<string | null>(null);
   const [submitSuccess, setSubmitSuccess] = useState<boolean>(false);
+
+  // Teacher and remarks state
+  const [teachers, setTeachers] = useState<Teacher[]>([]);
+  const [selectedTeacherId, setSelectedTeacherId] = useState<string>("");
+  const [studentRemarks, setStudentRemarks] = useState<string>("");
 
   // Filter options
   const [academicYears, setAcademicYears] = useState<FilterOption[]>([]);
@@ -106,10 +111,10 @@ const LogBookEntries: React.FC = () => {
   const [modules, setModules] = useState<FilterOption[]>([]);
   
   // Selected filter values
-  const [selectedAcademicYear, setSelectedAcademicYear] = useState<string>(ACADEMIC_YEAR_ID);
-  const [selectedBatch, setSelectedBatch] = useState<string>(BATCH_ID);
-  const [selectedSubject, setSelectedSubject] = useState<string>(SUBJECT_ID);
-  const [selectedModule, setSelectedModule] = useState<string>(MODULE_ID);
+  const [selectedAcademicYear, setSelectedAcademicYear] = useState<string>("");
+  const [selectedBatch, setSelectedBatch] = useState<string>("");
+  const [selectedSubject, setSelectedSubject] = useState<string>("");
+  const [selectedModule, setSelectedModule] = useState<string>("");
 
   // Fetch student details
   useEffect(() => {
@@ -141,6 +146,28 @@ const LogBookEntries: React.FC = () => {
     fetchStudentDetails();
   }, [user]);
 
+  // Fetch teachers
+  useEffect(() => {
+    const fetchTeachers = async () => {
+      try {
+        const response = await fetch("/api/teacher-profile");
+        if (!response.ok) {
+          throw new Error('Failed to fetch teachers');
+        }
+        const data = await response.json();
+        console.log("Fetched teachers:", data);
+        setTeachers(data);
+      } catch (err) {
+        console.error('Teachers fetch error:', err);
+        setError(err instanceof Error ? err.message : 'Failed to load teachers');
+      } finally {
+        setLoading(prev => ({ ...prev, teachers: false }));
+      }
+    };
+
+    fetchTeachers();
+  }, []);
+
   // Fetch filter options
   useEffect(() => {
     const fetchAcademicYears = async () => {
@@ -149,6 +176,9 @@ const LogBookEntries: React.FC = () => {
         if (response.ok) {
           const data = await response.json();
           setAcademicYears(data);
+          if (data.length > 0) {
+            setSelectedAcademicYear(data[0].id);
+          }
         } else {
           console.error("Failed to fetch academic years");
         }
@@ -178,7 +208,7 @@ const LogBookEntries: React.FC = () => {
         if (response.ok) {
           const data = await response.json();
           setBatches(data);
-          if (data.length > 0 && !data.some((b: FilterOption) => b.id === selectedBatch)) {
+          if (data.length > 0) {
             setSelectedBatch(data[0].id);
           }
         } else {
@@ -192,7 +222,7 @@ const LogBookEntries: React.FC = () => {
     };
     
     fetchBatches();
-  }, [selectedAcademicYear , selectedBatch]);
+  }, [selectedAcademicYear]);
 
   // Fetch subjects when batch changes
   useEffect(() => {
@@ -210,7 +240,7 @@ const LogBookEntries: React.FC = () => {
         if (response.ok) {
           const data = await response.json();
           setSubjects(data);
-          if (data.length > 0 && !data.some((s: FilterOption) => s.id === selectedSubject)) {
+          if (data.length > 0) {
             setSelectedSubject(data[0].id);
           }
         } else {
@@ -224,7 +254,7 @@ const LogBookEntries: React.FC = () => {
     };
     
     fetchSubjects();
-  }, [selectedBatch , selectedSubject]);
+  }, [selectedBatch]);
 
   // Fetch modules when subject changes
   useEffect(() => {
@@ -242,7 +272,7 @@ const LogBookEntries: React.FC = () => {
         if (response.ok) {
           const data = await response.json();
           setModules(data);
-          if (data.length > 0 && !data.some((m: FilterOption) => m.id === selectedModule)) {
+          if (data.length > 0) {
             setSelectedModule(data[0].id);
           }
         } else {
@@ -256,7 +286,7 @@ const LogBookEntries: React.FC = () => {
     };
     
     fetchModules();
-  }, [selectedSubject , selectedModule]);
+  }, [selectedSubject]);
 
   // Fetch log book template based on selected filters
   useEffect(() => {
@@ -385,120 +415,105 @@ const LogBookEntries: React.FC = () => {
   };
 
   // Submit form data
-// Inside the LogBookEntries component, modify the handleSubmit function:
+  const handleSubmit = async () => {
+    if (!logBookTemplate || !studentDetails) return;
 
-const handleSubmit = async () => {
-  if (!logBookTemplate || !studentDetails) return;
+    const validationErrors: Record<string, string> = {};
+    let hasErrors = false;
 
-  const validationErrors: Record<string, string> = {};
-  let hasErrors = false;
-
-  logBookTemplate.dynamicSchema.groups.forEach((group) => {
-    group.fields.forEach((field) => {
-      const fieldName = field.label.toLowerCase().replace(/\s+/g, "_");
-      const value = formData[group.name]?.[fieldName];
-      const error = validateField(field, value);
-      if (error) {
-        validationErrors[`${group.name}.${fieldName}`] = error;
-        hasErrors = true;
-      }
-    });
-  });
-
-  setErrors(validationErrors);
-  if (hasErrors) return;
-
-  try {
-    // Create a new object that includes sequence numbers for each group
-    const dynamicFieldsWithSequence: Record<string, any> = {};
-    
-    // Process each group and add sequence number
     logBookTemplate.dynamicSchema.groups.forEach((group) => {
-      // Get the sequence from the group or default to 0 if not present
-      const sequence = group.sequence || 0;
-      
-      // Create the group data with sequence
-      dynamicFieldsWithSequence[group.name] = {
-        ...formData[group.name],
-        _sequence: sequence // Add sequence as a special property
-      };
-    });
-    
-    // Add student information
-    const dynamicFieldsWithStudentInfo = {
-      ...dynamicFieldsWithSequence,
-      personalInfo: {
-        ...(formData.personalInfo || {}),
-        studentId: studentDetails.id,
-        userId: user?.id,
-        name: studentDetails.personalInfo?.name || user?.name,
-      }
-    };
-
-    const payload = {
-      logBookTemplateId: logBookTemplate.id,
-      studentId: studentDetails.id,
-      dynamicFields: dynamicFieldsWithStudentInfo,
-      status: 'SUBMITTED'
-    };
-
-    const response = await fetch("/api/log-books", {
-      method: "POST",
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(payload)
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || "Submission failed");
-    }
-
-    setSubmitSuccess(true);
-    
-    // Reset form
-    const initialFormData: Record<string, any> = {};
-    logBookTemplate.dynamicSchema.groups.forEach((group: DynamicGroup) => {
-      initialFormData[group.name] = {};
-      group.fields.forEach((field: DynamicField) => {
+      group.fields.forEach((field) => {
         const fieldName = field.label.toLowerCase().replace(/\s+/g, "_");
-        initialFormData[group.name][fieldName] = field.defaultValue || "";
+        const value = formData[group.name]?.[fieldName];
+        const error = validateField(field, value);
+        if (error) {
+          validationErrors[`${group.name}.${fieldName}`] = error;
+          hasErrors = true;
+        }
       });
     });
-    
-    setFormData(initialFormData);
-    setSelectedFiles({});
-    
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  } catch (err) {
-    console.error("Submission error:", err);
-    setError(err instanceof Error ? err.message : "Submission failed. Please try again.");
-  }
-};
 
-  // Excel export
-  // const exportToExcel = () => {
-  //   if (!logBookTemplate) return;
+    // Validate teacher selection if required
+    if (!selectedTeacherId) {
+      validationErrors["teacher"] = "Please select a teacher";
+      hasErrors = true;
+    }
 
-  //   const flattenedData: Record<string, any> = {};
-    
-  //   logBookTemplate.dynamicSchema.groups.forEach((group) => {
-  //     group.fields.forEach((field) => {
-  //       const fieldName = field.label.toLowerCase().replace(/\s+/g, "_");
-  //       const value = formData[group.name]?.[fieldName] || '';
+    setErrors(validationErrors);
+    if (hasErrors) return;
+
+    try {
+      // Create a new object that includes sequence numbers for each group
+      const dynamicFieldsWithSequence: Record<string, any> = {};
+      
+      // Process each group and add sequence number
+      logBookTemplate.dynamicSchema.groups.forEach((group) => {
+        // Get the sequence from the group or default to 0 if not present
+        const sequence = group.sequence || 0;
         
-  //       const columnName = `${group.name} - ${field.label}`;
-  //       flattenedData[columnName] = value;
-  //     });
-  //   });
+        // Create the group data with sequence
+        dynamicFieldsWithSequence[group.name] = {
+          ...formData[group.name],
+          _sequence: sequence // Add sequence as a special property
+        };
+      });
+      
+      // Add student information
+      const dynamicFieldsWithStudentInfo = {
+        ...dynamicFieldsWithSequence,
+        personalInfo: {
+          ...(formData.personalInfo || {}),
+          studentId: studentDetails.id,
+          userId: user?.id,
+          name: studentDetails.personalInfo?.name || user?.name,
+        }
+      };
 
-  //   const worksheet = XLSX.utils.json_to_sheet([flattenedData]);
-  //   const workbook = XLSX.utils.book_new();
-  //   XLSX.utils.book_append_sheet(workbook, worksheet, "Log Book Entry");
-    
-  //   XLSX.writeFile(workbook, `LogBookEntry_${new Date().toISOString().split('T')[0]}.xlsx`);
-  // };
+      const payload = {
+        logBookTemplateId: logBookTemplate.id,
+        studentId: studentDetails.id,
+        teacherId: selectedTeacherId,
+        studentRemarks: studentRemarks,
+        dynamicFields: dynamicFieldsWithStudentInfo,
+        status: 'SUBMITTED'
+      };
+
+      const response = await fetch("/api/log-books", {
+        method: "POST",
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Submission failed");
+      }
+
+      setSubmitSuccess(true);
+      
+      // Reset form
+      const initialFormData: Record<string, any> = {};
+      logBookTemplate.dynamicSchema.groups.forEach((group: DynamicGroup) => {
+        initialFormData[group.name] = {};
+        group.fields.forEach((field: DynamicField) => {
+          const fieldName = field.label.toLowerCase().replace(/\s+/g, "_");
+          initialFormData[group.name][fieldName] = field.defaultValue || "";
+        });
+      });
+      
+      setFormData(initialFormData);
+      setSelectedFiles({});
+      setSelectedTeacherId("");
+      setStudentRemarks("");
+      
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } catch (err) {
+      console.error("Submission error:", err);
+      setError(err instanceof Error ? err.message : "Submission failed. Please try again.");
+    }
+  };
 
   // Render field based on type
   const renderField = (group: DynamicGroup, field: DynamicField) => {
@@ -578,7 +593,6 @@ const handleSubmit = async () => {
                   groupName,
                   fieldName,
                   e.target.value,
-                  // "textarea"
                 )
               }
             />
@@ -642,7 +656,7 @@ const handleSubmit = async () => {
                   {fieldValue ? (
                     format(new Date(fieldValue), "PPP")
                   ) : (
-                    <span>Pick a date</span>
+                    format(new Date(), "PPP")
                   )}
                 </Button>
               </PopoverTrigger>
@@ -655,7 +669,6 @@ const handleSubmit = async () => {
                       groupName,
                       fieldName,
                       date?.toISOString(),
-                      // "date"
                     )
                   }
                   initialFocus
@@ -719,38 +732,29 @@ const handleSubmit = async () => {
             Record and maintain your academic log book entries
           </p>
         </div>
-        
-        {/* <Button 
-          variant="outline" 
-          onClick={exportToExcel}
-          disabled={!logBookTemplate}
-          className="flex items-center"
-        >
-          <Download className="mr-2 h-4 w-4" /> Export to Excel
-        </Button> */}
       </div>
       
       {/* Filter Section */}
-<LogBookFilters
-  academicYears={academicYears}
-  batches={batches}
-  subjects={subjects}
-  modules={modules}
-  selectedAcademicYear={selectedAcademicYear}
-  selectedBatch={selectedBatch}
-  selectedSubject={selectedSubject}
-  selectedModule={selectedModule}
-  onAcademicYearChange={setSelectedAcademicYear}
-  onBatchChange={setSelectedBatch}
-  onSubjectChange={setSelectedSubject}
-  onModuleChange={setSelectedModule}
-  loading={{
-    academicYears: loading.academicYears,
-    batches: loading.batches,
-    subjects: loading.subjects,
-    modules: loading.modules
-  }}
-/>
+      <LogBookFilters
+        academicYears={academicYears}
+        batches={batches}
+        subjects={subjects}
+        modules={modules}
+        selectedAcademicYear={selectedAcademicYear}
+        selectedBatch={selectedBatch}
+        selectedSubject={selectedSubject}
+        selectedModule={selectedModule}
+        onAcademicYearChange={setSelectedAcademicYear}
+        onBatchChange={setSelectedBatch}
+        onSubjectChange={setSelectedSubject}
+        onModuleChange={setSelectedModule}
+        loading={{
+          academicYears: loading.academicYears,
+          batches: loading.batches,
+          subjects: loading.subjects,
+          modules: loading.modules
+        }}
+      />
       
       {/* Loading State */}
       {loading.template && (
@@ -806,7 +810,7 @@ const handleSubmit = async () => {
                 <CardTitle className="text-lg font-semibold">{group.name}</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   {group.fields.map((field, fieldIndex) => (
                     <div 
                       key={`field-${groupIndex}-${fieldIndex}`}
@@ -819,6 +823,52 @@ const handleSubmit = async () => {
               </CardContent>
             </Card>
           ))}
+          
+          {/* Additional Information Section */}
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle className="text-lg font-semibold">Additional Information</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 gap-6">
+                {/* Teacher Selection */}
+                <div className="space-y-2">
+                  <Label className={cn(errors.teacher && "text-red-500")}>
+                    Assign Teacher
+                    <span className="text-red-500 ml-1">*</span>
+                  </Label>
+                  <Select
+                    value={selectedTeacherId}
+                    onValueChange={setSelectedTeacherId}
+                  >
+                    <SelectTrigger className={cn(errors.teacher && "border-red-500")}>
+                      <SelectValue placeholder="Select a teacher" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {teachers.map((teacher) => (
+                        <SelectItem key={teacher.id} value={teacher.id}>
+                          {teacher.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {errors.teacher && (
+                    <p className="text-red-500 text-sm">{errors.teacher}</p>
+                  )}
+                </div>
+
+                {/* Student Remarks */}
+                <div className="space-y-2">
+                  <Label>Your Remarks</Label>
+                  <Textarea
+                    value={studentRemarks}
+                    onChange={(e) => setStudentRemarks(e.target.value)}
+                    placeholder="Enter any additional comments or remarks..."
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
           
           {/* Submit Button */}
           <Button 
@@ -845,8 +895,6 @@ const handleSubmit = async () => {
       )}
     </div>
   );
-  };
-  
-
+};
 
 export default LogBookEntries;

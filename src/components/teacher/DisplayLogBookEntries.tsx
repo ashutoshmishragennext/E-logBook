@@ -20,6 +20,7 @@ import React, { useEffect, useState } from "react";
 import { toast } from "sonner";
 // import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
 import { ChevronsUpDown } from "lucide-react";
+import { useCurrentUser } from "@/hooks/auth";
 
 export enum LogBookEntryStatus {
   DRAFT = "DRAFT",
@@ -57,6 +58,8 @@ const DisplayLogBookEntries = () => {
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<LogBookEntryStatus | "ALL">("ALL");
   const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({});
+  const user = useCurrentUser();
+  const teacherId = user?.id || ""; // Assuming you have the teacher ID from the user context
 
   const toggleRowExpansion = (entryId: string) => {
     setExpandedRows((prev) => ({
@@ -70,7 +73,9 @@ const DisplayLogBookEntries = () => {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const entriesResponse = await fetch("/api/log-books");
+        const entriesResponse = await fetch(
+          `/api/log-books?teacheId=${teacherId}`
+        );
         if (!entriesResponse.ok) {
           throw new Error("Failed to fetch log book entries");
         }
@@ -160,6 +165,18 @@ const DisplayLogBookEntries = () => {
     if (filter === "ALL") return true;
     return entry.status === filter;
   });
+  function isValidDate(value: any): boolean {
+    // Only attempt to parse as date if it's a string and matches common date patterns
+    if (typeof value !== 'string') return false;
+    
+    // Check for ISO date format (YYYY-MM-DD) or similar
+    if (/^\d{4}-\d{2}-\d{2}/.test(value)) {
+      const date = new Date(value);
+      return !isNaN(date.getTime());
+    }
+    
+    return false;
+  }
 
   // Render loading state
   if (loading) {
@@ -287,34 +304,43 @@ const DisplayLogBookEntries = () => {
                       <TableCell colSpan={7}>
                         <div className="p-4 bg-gray-50 rounded-lg">
                           {Object.entries(entry.dynamicFields)
-                            .filter(([section]) => section !== "personalInfo") // Filter out personalInfo
-                            .map(([section, fields]) => (
-                              <div key={section} className="mb-4">
-                                <h4 className="font-medium capitalize mb-3">
-                                  {section}
-                                </h4>
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                  {Object.entries(
-                                    fields as Record<string, any>
-                                  ).map(([field, value]) => (
-                                    <div
-                                      key={field}
-                                      className="bg-white p-3 rounded border"
-                                    >
-                                      <p className="text-sm font-medium capitalize">
-                                        {field.replace(/_/g, " ")}
-                                      </p>
-                                      <p className="text-sm text-gray-600">
-                                        {typeof value === "string" &&
-                                        !isNaN(Date.parse(value))
-                                          ? new Date(value).toLocaleDateString()
-                                          : String(value)}
-                                      </p>
-                                    </div>
-                                  ))}
+                            .filter(([section]) => section !== "personalInfo")
+                            .sort(
+                              ([, a], [, b]) =>
+                                (a._sequence || 0) - (b._sequence || 0)
+                            )
+                            .map(([section, fields]) => {
+                              const { _sequence, ...cleanFields } =
+                                fields as Record<string, any>;
+                              return (
+                                <div key={section} className="mb-4">
+                                  <h4 className="font-medium capitalize mb-3">
+                                    {section.trim()}
+                                  </h4>
+                                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    {Object.entries(cleanFields).map(
+                                      ([field, value]) => (
+                                        <div
+                                          key={field}
+                                          className="bg-white p-3 rounded border"
+                                        >
+                                          <p className="text-sm font-medium capitalize">
+                                            {field.replace(/_/g, " ").trim()}
+                                          </p>
+                                          <p className="text-sm text-gray-600">
+                                            {isValidDate(value)
+                                              ? new Date(
+                                                  value
+                                                ).toLocaleDateString()
+                                              : String(value)}
+                                          </p>
+                                        </div>
+                                      )
+                                    )}
+                                  </div>
                                 </div>
-                              </div>
-                            ))}
+                              );
+                            })}
                         </div>
                       </TableCell>
                     </TableRow>
