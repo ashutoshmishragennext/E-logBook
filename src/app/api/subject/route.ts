@@ -18,3 +18,24 @@ import { NextRequest, NextResponse } from "next/server";
         })
     }
  }
+
+ export async function POST(request: NextRequest) {
+    try {
+      // Parse the request body
+      const body = await request.json();
+      
+      // Insert the new subject record
+      const newSubject = await db.insert(SubjectTable).values(body).returning();
+      
+      // Return the newly created record
+      return NextResponse.json(newSubject[0], { status: 201 });
+      
+    } catch (error) {
+      console.error("Error creating subject:", error);
+      return NextResponse.json({
+        message: "Failed to create subject",
+        error,
+        status: 500
+      }, { status: 500 });
+    }
+  }
