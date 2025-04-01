@@ -8,12 +8,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { useCurrentUser } from "@/hooks/auth";
 import { useEffect, useState } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle, Loader2, Edit } from "lucide-react";
+import { AlertCircle, Loader2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 interface LogBookEntry {
   id: string;
@@ -38,7 +38,6 @@ interface LogBookEntry {
 }
 
 export const StudentLogBookEntries = () => {
-  // const router = useRouter();
   const user = useCurrentUser();
   const [entries, setEntries] = useState<LogBookEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -78,32 +77,17 @@ export const StudentLogBookEntries = () => {
     fetchStudentEntries();
   }, [user]);
 
-  const handleEditEntry = (entry: LogBookEntry) => {
-    if (!entry.template) return;
-    
-    // router.push({
-    //   pathname: '/logbook-entries',
-    //   query: {
-    //     academicYearId: entry.template.academicYearId,
-    //     batchId: entry.template.batchId,
-    //     subjectId: entry.template.subjectId,
-    //     moduleId: entry.template.moduleId,
-    //     editEntryId: entry.id
-    //   }
-    // });
-  };
-
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin" />
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
 
   if (error) {
     return (
-      <Alert variant="destructive">
+      <Alert variant="destructive" className="mx-auto max-w-3xl mt-8">
         <AlertCircle className="h-4 w-4" />
         <AlertDescription>{error}</AlertDescription>
       </Alert>
@@ -112,73 +96,154 @@ export const StudentLogBookEntries = () => {
 
   if (entries.length === 0) {
     return (
-      <Card>
+      <Card className="mx-auto max-w-4xl shadow-md">
         <CardHeader>
-          <CardTitle>My Log Book Entries</CardTitle>
+          <CardTitle className="text-xl font-semibold">My Log Book Entries</CardTitle>
+          <CardDescription>A record of your academic activities</CardDescription>
         </CardHeader>
         <CardContent>
-          <p className="text-muted-foreground">No log book entries found.</p>
+          <div className="bg-muted/30 p-8 rounded-md text-center">
+            <p className="text-muted-foreground">No log book entries found.</p>
+          </div>
         </CardContent>
       </Card>
     );
   }
 
-  // Get all unique field names in original order from first entry
-  const getFieldNames = (entry: LogBookEntry) => {
-    const fields = [];
+  // Get all fields with their sequences
+  const getOrderedFieldNames = (entry: LogBookEntry) => {
+    const fieldGroups: {name: string, sequence: number}[] = [];
+    const staticFields: string[] = [];
     
     // Add template info first
     if (entry.template) {
-      fields.push('Template');
-      if (entry.template.academicYear) fields.push('Academic Year');
-      if (entry.template.batch) fields.push('Batch');
-      if (entry.template.subject) fields.push('Subject');
-      if (entry.template.module) fields.push('Module');
+      staticFields.push('Template');
+      if (entry.template.academicYear) staticFields.push('Academic Year');
+      if (entry.template.batch) staticFields.push('Batch');
+      if (entry.template.subject) staticFields.push('Subject');
+      if (entry.template.module) staticFields.push('Module');
     }
     
-    fields.push('Created At');
+    staticFields.push('Created At');
     
-    // Add dynamic fields in their original order
+    // Get all dynamic fields with their sequence numbers
     if (entry.dynamicFields) {
       Object.keys(entry.dynamicFields).forEach(group => {
+        // Skip the personalInfo field as it's not for display
+        if (group === 'personalInfo') return;
+        
         if (typeof entry.dynamicFields[group] === 'object') {
-          Object.keys(entry.dynamicFields[group]).forEach(field => {
-            fields.push(`${group}.${field}`);
-          });
-        } else {
-          fields.push(group);
+          // Look for sequence property (_sequence or *sequence)
+          let sequence = null;
+          if (entry.dynamicFields[group]._sequence !== undefined) {
+            sequence = entry.dynamicFields[group]._sequence;
+          } else if (entry.dynamicFields[group]['_sequence'] !== undefined) {
+            sequence = entry.dynamicFields[group]['_sequence'];
+          } else if (entry.dynamicFields[group]['*sequence'] !== undefined) {
+            sequence = entry.dynamicFields[group]['*sequence'];
+          }
+          
+          if (sequence !== null) {
+            fieldGroups.push({ name: group, sequence });
+          } else {
+            // If no sequence found, add to the end
+            fieldGroups.push({ name: group, sequence: 999 });
+          }
         }
       });
     }
     
+    // Sort field groups by sequence
+    fieldGroups.sort((a, b) => a.sequence - b.sequence);
+    
+    // Final list of field names
+    const fields = [...staticFields];
+    
+    // Add dynamic fields based on sorted sequence
+    fieldGroups.forEach(group => {
+      if (typeof entry.dynamicFields[group.name] === 'object') {
+        Object.keys(entry.dynamicFields[group.name]).forEach(field => {
+          // Skip the sequence fields
+          if (field === '_sequence' || field === '*sequence') return;
+          
+          fields.push(`${group.name}.${field}`);
+        });
+      } else {
+        fields.push(group.name);
+      }
+    });
+    
     fields.push('Status');
-    fields.push('Actions');
     
     return fields;
   };
 
-  const fieldNames = entries.length > 0 ? getFieldNames(entries[0]) : [];
+  const fieldNames = entries.length > 0 ? getOrderedFieldNames(entries[0]) : [];
+
+  const getStatusBadgeVariant = (status: string) => {
+    switch (status.toUpperCase()) {
+      case 'SUBMITTED':
+        return 'default';
+      case 'APPROVED':
+        return 'default';
+      case 'REJECTED':
+        return 'destructive';
+      case 'DRAFT':
+        return 'secondary';
+      default:
+        return 'outline';
+    }
+  };
+
+  // Format a field name for display
+  const formatFieldName = (fieldName: string) => {
+    const name = fieldName.split('.').pop() || '';
+    return name
+      .replace(/_/g, ' ')
+      .replace(/([A-Z])/g, ' $1')
+      .trim()
+      .split(' ')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+  };
+
+  // Helper function to format dates properly
+  const formatDate = (dateString: string) => {
+    if (!dateString) return 'N/A';
+    
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+      });
+    } catch (e) {
+      return dateString;
+    }
+  };
 
   return (
     <div className="container mx-auto px-4 py-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>My Log Book Entries</CardTitle>
+      <Card className="shadow-md">
+        <CardHeader className="pb-4">
+          <CardTitle className="text-xl font-semibold text-primary">My Log Book Entries</CardTitle>
+          <CardDescription>A comprehensive record of your academic activities</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="relative overflow-x-auto shadow-sm rounded-lg border">
+          <div className="relative overflow-x-auto rounded-lg border">
             <Table className="min-w-full">
-              <TableHeader className="bg-muted/50">
+              <TableHeader className="bg-primary/5">
                 <TableRow>
                   {fieldNames.map((fieldName) => (
-                    <TableHead key={fieldName} className="whitespace-nowrap">
-                      {fieldName.split('.').pop()}
+                    <TableHead key={fieldName} className="whitespace-nowrap font-medium text-primary">
+                      {formatFieldName(fieldName)}
                     </TableHead>
                   ))}
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {entries.map((entry) => {
+                {entries.map((entry, entryIndex) => {
                   const rowData: Record<string, any> = {};
                   
                   // Template info
@@ -198,17 +263,27 @@ export const StudentLogBookEntries = () => {
                     }
                   }
                   
-                  rowData['Created At'] = new Date(entry.createdAt).toLocaleDateString();
+                  // Format date nicely
+                  rowData['Created At'] = formatDate(entry.createdAt);
                   
                   // Dynamic fields
                   if (entry.dynamicFields) {
                     Object.keys(entry.dynamicFields).forEach(group => {
                       if (typeof entry.dynamicFields[group] === 'object') {
                         Object.keys(entry.dynamicFields[group]).forEach(field => {
-                          rowData[`${group}.${field}`] = 
-                            typeof entry.dynamicFields[group][field] === 'object'
-                              ? JSON.stringify(entry.dynamicFields[group][field])
-                              : entry.dynamicFields[group][field];
+                          if (field !== '_sequence' && field !== '*sequence') {
+                            let value = entry.dynamicFields[group][field];
+                            
+                            // Check if this is a date_of_birth field and format it without time
+                            if (field === 'date_of_birth' && typeof value === 'string' && value.includes('T')) {
+                              value = formatDate(value);
+                            }
+                            
+                            rowData[`${group}.${field}`] = 
+                              typeof value === 'object'
+                                ? JSON.stringify(value)
+                                : value;
+                          }
                         });
                       } else {
                         rowData[group] = entry.dynamicFields[group];
@@ -216,27 +291,25 @@ export const StudentLogBookEntries = () => {
                     });
                   }
                   
-                  rowData['Status'] = entry.status;
-                  rowData['Actions'] = (
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      onClick={() => handleEditEntry(entry)}
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Button>
+                  rowData['Status'] = (
+                    <Badge variant={getStatusBadgeVariant(entry.status)}>
+                      {entry.status}
+                    </Badge>
                   );
 
                   return (
-                    <TableRow key={entry.id}>
+                    <TableRow 
+                      key={entry.id}
+                      className={entryIndex % 2 === 0 ? "bg-background" : "bg-muted/20"}
+                    >
                       {fieldNames.map((fieldName) => (
-                        <TableCell key={`${entry.id}-${fieldName}`} className="whitespace-nowrap">
+                        <TableCell key={`${entry.id}-${fieldName}`} className="whitespace-nowrap py-3">
                           {rowData[fieldName] !== undefined ? (
                             typeof rowData[fieldName] === 'string' && rowData[fieldName].length > 50
                               ? `${rowData[fieldName].substring(0, 50)}...`
-                              : rowData[fieldName]?.toString() || 'N/A'
+                              : rowData[fieldName]
                           ) : (
-                            'N/A'
+                            <span className="text-muted-foreground italic">N/A</span>
                           )}
                         </TableCell>
                       ))}

@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Plus, Trash2, Stethoscope } from "lucide-react";
+import { Plus, Trash2, Stethoscope, ArrowUp, ArrowDown } from "lucide-react";
 import { Controller, useForm } from "react-hook-form";
 import { z } from "zod";
 import {
@@ -34,7 +34,7 @@ const MEDICAL_FIELD_TYPES = [
   { value: "checkbox", label: "Checkbox" },
 ];
 
-// Zod schema for medical log book template
+// Updated Zod schema to include sequence number
 const LogBookTemplateSchema = z.object({
   academicYearId: z.string().min(1, "Academic year is required"),
   batchId: z.string().min(1, "Batch is required"),
@@ -49,6 +49,7 @@ const LogBookTemplateSchema = z.object({
       groups: z.array(
         z.object({
           name: z.string().min(1, "Group name is required"),
+          sequence: z.number(), // Added sequence field
           fields: z.array(
             z.object({
               label: z.string().min(1, "Field label is required"),
@@ -246,13 +247,18 @@ export default function LogBookTemplateForm() {
     [key: string]: string;
   }>({});
 
-  // Add a new group to dynamic schema
+  // Add a new group to dynamic schema with sequence number
   const addGroup = () => {
     const currentGroups = watch("dynamicSchema.groups") || [];
+    const newSequence = currentGroups.length > 0 
+      ? Math.max(...currentGroups.map(group => group.sequence)) + 1 
+      : 1;
+    
     setValue("dynamicSchema.groups", [
       ...currentGroups,
       {
         name: "",
+        sequence: newSequence, // Set sequence for new group
         fields: [
           {
             label: "",
@@ -270,7 +276,44 @@ export default function LogBookTemplateForm() {
     const updatedGroups = currentGroups.filter(
       (_, index) => index !== groupIndex
     );
+    
+    // No need to update sequences as we'll sort by sequence when submitting
     setValue("dynamicSchema.groups", updatedGroups);
+  };
+
+  // Move group up in sequence
+  const moveGroupUp = (groupIndex: number) => {
+    if (groupIndex === 0) return; // Already at top
+    
+    const currentGroups = [...(watch("dynamicSchema.groups") || [])];
+    const currentSequence = currentGroups[groupIndex].sequence;
+    const prevSequence = currentGroups[groupIndex - 1].sequence;
+    
+    // Swap sequences
+    currentGroups[groupIndex].sequence = prevSequence;
+    currentGroups[groupIndex - 1].sequence = currentSequence;
+    
+    // Sort groups by sequence
+    const sortedGroups = [...currentGroups].sort((a, b) => a.sequence - b.sequence);
+    setValue("dynamicSchema.groups", sortedGroups);
+  };
+
+  // Move group down in sequence
+  const moveGroupDown = (groupIndex: number) => {
+    const currentGroups = watch("dynamicSchema.groups") || [];
+    if (groupIndex === currentGroups.length - 1) return; // Already at bottom
+    
+    const groupsCopy = [...currentGroups];
+    const currentSequence = groupsCopy[groupIndex].sequence;
+    const nextSequence = groupsCopy[groupIndex + 1].sequence;
+    
+    // Swap sequences
+    groupsCopy[groupIndex].sequence = nextSequence;
+    groupsCopy[groupIndex + 1].sequence = currentSequence;
+    
+    // Sort groups by sequence
+    const sortedGroups = [...groupsCopy].sort((a, b) => a.sequence - b.sequence);
+    setValue("dynamicSchema.groups", sortedGroups);
   };
 
   // Add a field to a specific group
@@ -355,6 +398,7 @@ export default function LogBookTemplateForm() {
 
       // Validate dynamic schema - ensure all groups have names and fields have labels
       if (formData.dynamicSchema?.groups) {
+        // First filter out invalid groups and fields
         formData.dynamicSchema.groups = formData.dynamicSchema.groups
           .filter((group: { name: string; }) => group.name.trim() !== "") // Remove empty groups
           .map((group: { fields: any[]; }) => ({
@@ -362,6 +406,11 @@ export default function LogBookTemplateForm() {
             fields: group.fields.filter((field: { label: string; }) => field.label.trim() !== "") // Remove empty fields
           }))
           .filter((group: { fields: string | any[]; }) => group.fields.length > 0); // Remove groups with no fields
+        
+        // Then sort groups by sequence number to preserve order
+        formData.dynamicSchema.groups.sort((a: { sequence: number }, b: { sequence: number }) => 
+          a.sequence - b.sequence
+        );
       }
 
       console.log("Submitting form data:", formData);
@@ -716,12 +765,17 @@ export default function LogBookTemplateForm() {
                   <CardContent className="p-4 space-y-3">
                     <div className="flex justify-between items-center">
                       <div className="w-full mr-2">
-                        <Label
-                          htmlFor={`group-${groupIndex}`}
-                          className="mb-2 block"
-                        >
-                          Group Name
-                        </Label>
+                        <div className="flex items-center mb-2">
+                          <div className="flex-shrink-0 mr-2 bg-primary/10 px-2 py-1 rounded text-primary font-medium">
+                            {group.sequence}
+                          </div>
+                          <Label
+                            htmlFor={`group-${groupIndex}`}
+                            className="block"
+                          >
+                            Group Name
+                          </Label>
+                        </div>
                         <Input
                           id={`group-${groupIndex}`}
                           placeholder="Enter Group Name"
@@ -739,25 +793,72 @@ export default function LogBookTemplateForm() {
                           </p>
                         )}
                       </div>
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              type="button"
-                              variant="destructive"
-                              size="icon"
-                              className="mt-6"
-                              onClick={() => removeGroup(groupIndex)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>Remove this group</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
+                      <div className="flex space-x-2 mt-6">
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="icon"
+                                onClick={() => moveGroupUp(groupIndex)}
+                                disabled={groupIndex === 0}
+                                className={groupIndex === 0 ? "opacity-50 cursor-not-allowed" : ""}
+                              >
+                                <ArrowUp className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Move group up</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                        
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="icon"
+                                onClick={() => moveGroupDown(groupIndex)}
+                                disabled={groupIndex === (watch("dynamicSchema.groups")?.length - 1)}
+                                className={groupIndex === (watch("dynamicSchema.groups")?.length - 1) ? "opacity-50 cursor-not-allowed" : ""}
+                              >
+                                <ArrowDown className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Move group down</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                        
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                type="button"
+                                variant="destructive"
+                                size="icon"
+                                onClick={() => removeGroup(groupIndex)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Remove this group</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </div>
                     </div>
+
+                    {/* Hidden field to store sequence */}
+                    <input
+                      type="hidden"
+                      {...register(`dynamicSchema.groups.${groupIndex}.sequence` as const)}
+                    />
 
                     {/* Fields within Group */}
                     <div className="space-y-2">
@@ -772,51 +873,35 @@ export default function LogBookTemplateForm() {
                                 )}
                                 className="focus:ring-2 focus:ring-primary/50"
                               />
+                              {errors.dynamicSchema?.groups?.[groupIndex]?.fields?.[
+                                fieldIndex
+                              ]?.label && (
+                                <p className="text-destructive text-sm mt-1">
+                                  Field label is required
+                                </p>
+                              )}
                             </div>
-                            <div className="flex-grow">
-                              <Controller
-                                name={`dynamicSchema.groups.${groupIndex}.fields.${fieldIndex}.type`}
-                                control={control}
-                                render={({ field: selectField }) => (
-                                  <Select
-                                    onValueChange={selectField.onChange}
-                                    defaultValue={selectField.value}
-                                  >
-                                    <SelectTrigger>
-                                      <SelectValue placeholder="Field Type" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      {MEDICAL_FIELD_TYPES.map((type) => (
-                                        <SelectItem
-                                          key={type.value}
-                                          value={type.value}
-                                        >
-                                          {type.label}
-                                        </SelectItem>
-                                      ))}
-                                    </SelectContent>
-                                  </Select>
-                                )}
-                              />
-                            </div>
-                            <div className="flex items-center space-x-2">
-                              <Label
-                                htmlFor={`required-${groupIndex}-${fieldIndex}`}
-                              >
-                                Required
-                              </Label>
-                              <Controller
-                                name={`dynamicSchema.groups.${groupIndex}.fields.${fieldIndex}.required`}
-                                control={control}
-                                render={({ field: switchField }) => (
-                                  <Switch
-                                    id={`required-${groupIndex}-${fieldIndex}`}
-                                    checked={switchField.value}
-                                    onCheckedChange={switchField.onChange}
-                                  />
-                                )}
-                              />
-                            </div>
+                            <Controller
+                              name={`dynamicSchema.groups.${groupIndex}.fields.${fieldIndex}.type`}
+                              control={control}
+                              render={({ field }) => (
+                                <Select
+                                  onValueChange={field.onChange}
+                                  value={field.value}
+                                >
+                                  <SelectTrigger className="w-44">
+                                    <SelectValue placeholder="Field Type" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {MEDICAL_FIELD_TYPES.map((type) => (
+                                      <SelectItem key={type.value} value={type.value}>
+                                        {type.label}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              )}
+                            />
                             <TooltipProvider>
                               <Tooltip>
                                 <TooltipTrigger asChild>
@@ -824,9 +909,7 @@ export default function LogBookTemplateForm() {
                                     type="button"
                                     variant="destructive"
                                     size="icon"
-                                    onClick={() =>
-                                      removeField(groupIndex, fieldIndex)
-                                    }
+                                    onClick={() => removeField(groupIndex, fieldIndex)}
                                   >
                                     <Trash2 className="h-4 w-4" />
                                   </Button>
@@ -838,114 +921,137 @@ export default function LogBookTemplateForm() {
                             </TooltipProvider>
                           </div>
 
-                          {/* Dropdown Options for Select Type */}
-                          {watch(
-                            `dynamicSchema.groups.${groupIndex}.fields.${fieldIndex}.type`
-                          ) === "select" && (
-                            <div className="space-y-2 pl-4">
-                              <div className="flex space-x-2">
-                                <Input
-                                  placeholder="Enter dropdown option"
-                                  value={
-                                    dropdownOptionInput[
-                                      `${groupIndex}-${fieldIndex}-${
-                                        group.fields[fieldIndex].options
-                                          ?.length || 0
-                                      }`
-                                    ] || ""
-                                  }
-                                  onChange={(e) => {
-                                    const key = `${groupIndex}-${fieldIndex}-${
-                                      group.fields[fieldIndex].options
-                                        ?.length || 0
-                                    }`;
-                                    setDropdownOptionInput({
-                                      ...dropdownOptionInput,
-                                      [key]: e.target.value,
-                                    });
-                                  }}
-                                  className="flex-grow focus:ring-2 focus:ring-primary/50"
-                                />
-                                <Button
-                                  type="button"
-                                  variant="outline"
-                                  onClick={() =>
-                                    addDropdownOption(groupIndex, fieldIndex)
-                                  }
-                                >
-                                  <Plus className="mr-2 h-4 w-4" /> Add Option
-                                </Button>
-                              </div>
-
-                              {/* Existing Dropdown Options */}
-                              {group.fields[fieldIndex].options?.map(
-                                (option, optionIndex) => (
-                                  <div
-                                    key={optionIndex}
-                                    className="flex items-center space-x-2"
-                                  >
-                                    <Input
-                                      value={option}
-                                      readOnly
-                                      className="flex-grow"
-                                    />
-                                    <Button
-                                      type="button"
-                                      variant="destructive"
-                                      size="icon"
-                                      onClick={() =>
-                                        removeDropdownOption(
-                                          groupIndex,
-                                          fieldIndex,
-                                          optionIndex
-                                        )
-                                      }
-                                    >
-                                      <Trash2 className="h-4 w-4" />
-                                    </Button>
-                                  </div>
-                                )
-                              )}
+                          {/* Field Options */}
+                          <div className="ml-4">
+                            {/* Required checkbox */}
+                            <div className="flex items-center space-x-2 mt-1">
+                              <Controller
+                                name={`dynamicSchema.groups.${groupIndex}.fields.${fieldIndex}.required`}
+                                control={control}
+                                render={({ field }) => (
+                                  <Switch
+                                    checked={field.value}
+                                    onCheckedChange={field.onChange}
+                                    id={`required-${groupIndex}-${fieldIndex}`}
+                                  />
+                                )}
+                              />
+                              <Label
+                                htmlFor={`required-${groupIndex}-${fieldIndex}`}
+                              >
+                                Required Field
+                              </Label>
                             </div>
-                          )}
+
+                            {/* Dropdown Options (for select type) */}
+                            {watch(
+                              `dynamicSchema.groups.${groupIndex}.fields.${fieldIndex}.type`
+                            ) === "select" && (
+                              <div className="mt-3 border rounded-md p-3 bg-gray-50">
+                                <h4 className="font-medium text-sm mb-2">
+                                  Dropdown Options
+                                </h4>
+                                <div className="flex items-center space-x-2 mb-2">
+                                  <Input
+                                    placeholder="Add option"
+                                    value={
+                                      dropdownOptionInput[
+                                        `${groupIndex}-${fieldIndex}-${
+                                          watch(
+                                            `dynamicSchema.groups.${groupIndex}.fields.${fieldIndex}.options`
+                                          )?.length || 0
+                                        }`
+                                      ] || ""
+                                    }
+                                    onChange={(e) =>
+                                      setDropdownOptionInput({
+                                        ...dropdownOptionInput,
+                                        [`${groupIndex}-${fieldIndex}-${
+                                          watch(
+                                            `dynamicSchema.groups.${groupIndex}.fields.${fieldIndex}.options`
+                                          )?.length || 0
+                                        }`]: e.target.value,
+                                      })
+                                    }
+                                    className="flex-grow"
+                                  />
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() =>
+                                      addDropdownOption(groupIndex, fieldIndex)
+                                    }
+                                  >
+                                    Add
+                                  </Button>
+                                </div>
+                                <div>
+                                  {watch(
+                                    `dynamicSchema.groups.${groupIndex}.fields.${fieldIndex}.options`
+                                  )?.map((option, optionIndex) => (
+                                    <div
+                                      key={optionIndex}
+                                      className="flex items-center justify-between mb-1 bg-white p-2 rounded-md"
+                                    >
+                                      <span>{option}</span>
+                                      <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="icon"
+                                        onClick={() =>
+                                          removeDropdownOption(
+                                            groupIndex,
+                                            fieldIndex,
+                                            optionIndex
+                                          )
+                                        }
+                                      >
+                                        <Trash2 className="h-4 w-4 text-destructive" />
+                                      </Button>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
                         </div>
                       ))}
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => addField(groupIndex)}
-                        className="mt-2 w-full hover:bg-primary/10"
-                      >
-                        <Plus className="mr-2 h-4 w-4" /> Add Field
-                      </Button>
                     </div>
+
+                    
+
+                    {/* Add Field Button */}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => addField(groupIndex)}
+                      className="w-full mt-2"
+                    >
+                      <Plus className="mr-2 h-4 w-4" /> Add Field
+                    </Button>
                   </CardContent>
                 </Card>
               ))}
             </div>
 
-            {/* Display any form errors */}
-            {Object.keys(errors).length > 0 && (
-              <div className="p-4 bg-red-50 border border-red-200 rounded-md">
-                <h3 className="text-red-600 font-medium mb-2">Form Errors:</h3>
-                <pre className="text-sm text-red-500 whitespace-pre-wrap">
-                  {JSON.stringify(errors, null, 2)}
-                </pre>
-              </div>
-            )}
+            <div className="flex justify-center mt-4 mb-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={addGroup}
+                className="bg-primary/5 hover:bg-primary/10 border-primary/20 transition-all"
+              >
+                <Plus className="mr-2 h-5 w-5" /> Add Group
+              </Button>
+            </div>
 
-            <Button
-              type="submit"
-              className="w-full mt-4 bg-primary hover:bg-primary/90 transition-colors"
-              disabled={
-                loading.academicYears ||
-                loading.batches ||
-                loading.subjects ||
-                loading.modules
-              }
-            >
-              Create Medical Log Book Template
-            </Button>
+            {/* Submit Button */}
+            <div className="mt-8">
+              <Button type="submit" className="w-full">
+                Create Medical Log Book Template
+              </Button>
+            </div>
           </form>
         </CardContent>
       </Card>

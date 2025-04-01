@@ -74,6 +74,8 @@ export async function GET(request: NextRequest) {
     const academicYearId = searchParams.get('academicYearId');
     const batchId = searchParams.get('batchId');
     const subjectId = searchParams.get('subjectId');
+    const moduleId = searchParams.get('moduleId');
+    const templateId = searchParams.get('templateId');
 
     // Build query conditions using drizzle-orm's filtering
     const conditions = [];
@@ -89,8 +91,16 @@ export async function GET(request: NextRequest) {
     if (subjectId) {
       conditions.push(eq(LogBookTemplateTable.subjectId, subjectId));
     }
-
-     // Fetch log book templates
+    
+    if (moduleId) {
+      conditions.push(eq(LogBookTemplateTable.moduleId, moduleId));
+    }
+    
+    if (templateId) {
+      conditions.push(eq(LogBookTemplateTable.id, templateId));
+    }
+    
+    // Fetch log book templates
     const templates = await db.query.LogBookTemplateTable.findMany({
       where: conditions.length > 0 ? and(...conditions) : undefined,
       with: {

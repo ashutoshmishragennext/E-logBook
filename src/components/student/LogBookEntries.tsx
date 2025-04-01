@@ -50,6 +50,7 @@ interface DynamicField {
 }
 
 interface DynamicGroup {
+  sequence: number;
   name: string;
   fields: DynamicField[];
 }
@@ -384,80 +385,97 @@ const LogBookEntries: React.FC = () => {
   };
 
   // Submit form data
-  const handleSubmit = async () => {
-    if (!logBookTemplate || !studentDetails) return;
+// Inside the LogBookEntries component, modify the handleSubmit function:
 
-    const validationErrors: Record<string, string> = {};
-    let hasErrors = false;
+const handleSubmit = async () => {
+  if (!logBookTemplate || !studentDetails) return;
 
+  const validationErrors: Record<string, string> = {};
+  let hasErrors = false;
+
+  logBookTemplate.dynamicSchema.groups.forEach((group) => {
+    group.fields.forEach((field) => {
+      const fieldName = field.label.toLowerCase().replace(/\s+/g, "_");
+      const value = formData[group.name]?.[fieldName];
+      const error = validateField(field, value);
+      if (error) {
+        validationErrors[`${group.name}.${fieldName}`] = error;
+        hasErrors = true;
+      }
+    });
+  });
+
+  setErrors(validationErrors);
+  if (hasErrors) return;
+
+  try {
+    // Create a new object that includes sequence numbers for each group
+    const dynamicFieldsWithSequence: Record<string, any> = {};
+    
+    // Process each group and add sequence number
     logBookTemplate.dynamicSchema.groups.forEach((group) => {
-      group.fields.forEach((field) => {
-        const fieldName = field.label.toLowerCase().replace(/\s+/g, "_");
-        const value = formData[group.name]?.[fieldName];
-        const error = validateField(field, value);
-        if (error) {
-          validationErrors[`${group.name}.${fieldName}`] = error;
-          hasErrors = true;
-        }
-      });
+      // Get the sequence from the group or default to 0 if not present
+      const sequence = group.sequence || 0;
+      
+      // Create the group data with sequence
+      dynamicFieldsWithSequence[group.name] = {
+        ...formData[group.name],
+        _sequence: sequence // Add sequence as a special property
+      };
+    });
+    
+    // Add student information
+    const dynamicFieldsWithStudentInfo = {
+      ...dynamicFieldsWithSequence,
+      personalInfo: {
+        ...(formData.personalInfo || {}),
+        studentId: studentDetails.id,
+        userId: user?.id,
+        name: studentDetails.personalInfo?.name || user?.name,
+      }
+    };
+
+    const payload = {
+      logBookTemplateId: logBookTemplate.id,
+      studentId: studentDetails.id,
+      dynamicFields: dynamicFieldsWithStudentInfo,
+      status: 'SUBMITTED'
+    };
+
+    const response = await fetch("/api/log-books", {
+      method: "POST",
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload)
     });
 
-    setErrors(validationErrors);
-    if (hasErrors) return;
-
-    try {
-      // Prepare dynamic fields with student information
-      const dynamicFieldsWithStudentInfo = {
-        ...formData,
-        personalInfo: {
-          ...formData.personalInfo,
-          studentId: studentDetails.id,
-          userId: user?.id,
-          name: studentDetails.personalInfo?.name || user?.name,
-        }
-      };
-
-      const payload = {
-        logBookTemplateId: logBookTemplate.id,
-        studentId: studentDetails.id,
-        dynamicFields: dynamicFieldsWithStudentInfo,
-        status: 'SUBMITTED'
-      };
-
-      const response = await fetch("/api/log-books", {
-        method: "POST",
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload)
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Submission failed");
-      }
-
-      setSubmitSuccess(true);
-      
-      // Reset form
-      const initialFormData: Record<string, any> = {};
-      logBookTemplate.dynamicSchema.groups.forEach((group: DynamicGroup) => {
-        initialFormData[group.name] = {};
-        group.fields.forEach((field: DynamicField) => {
-          const fieldName = field.label.toLowerCase().replace(/\s+/g, "_");
-          initialFormData[group.name][fieldName] = field.defaultValue || "";
-        });
-      });
-      
-      setFormData(initialFormData);
-      setSelectedFiles({});
-      
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    } catch (err) {
-      console.error("Submission error:", err);
-      setError(err instanceof Error ? err.message : "Submission failed. Please try again.");
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || "Submission failed");
     }
-  };
+
+    setSubmitSuccess(true);
+    
+    // Reset form
+    const initialFormData: Record<string, any> = {};
+    logBookTemplate.dynamicSchema.groups.forEach((group: DynamicGroup) => {
+      initialFormData[group.name] = {};
+      group.fields.forEach((field: DynamicField) => {
+        const fieldName = field.label.toLowerCase().replace(/\s+/g, "_");
+        initialFormData[group.name][fieldName] = field.defaultValue || "";
+      });
+    });
+    
+    setFormData(initialFormData);
+    setSelectedFiles({});
+    
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  } catch (err) {
+    console.error("Submission error:", err);
+    setError(err instanceof Error ? err.message : "Submission failed. Please try again.");
+  }
+};
 
   // Excel export
   // const exportToExcel = () => {
