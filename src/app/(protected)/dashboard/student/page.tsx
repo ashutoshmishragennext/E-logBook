@@ -1,7 +1,6 @@
 'use client';
 
 import { StudentLogBookEntries } from '@/components/student/DisplayLogBookEntries';
-import LogBookEntries from '@/components/student/LogBookEntries';
 import LogBookManagement from '@/components/student/LogBookManagement';
 import StudentProfileForm from '@/components/student/profileForm';
 import {

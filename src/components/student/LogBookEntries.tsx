@@ -1,18 +1,18 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
-import {Card,CardContent,CardDescription,CardHeader,CardTitle} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {Popover,PopoverContent,PopoverTrigger,} from "@/components/ui/popover";
-import {Select,SelectContent,SelectItem,SelectTrigger,SelectValue,} from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger, } from "@/components/ui/popover";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import React, { useEffect, useState } from "react";
 import { useCurrentUser } from "@/hooks/auth";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { AlertCircle, Calendar as CalendarIcon, Check, Info } from "lucide-react";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import React, { useEffect, useState } from "react";
 import { LogBookFilters } from "../common/LogBookFilters";
 
 // Interfaces for type safety

@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { useCurrentUser } from "@/hooks/auth";
 import React, { useEffect, useState } from "react";
 
