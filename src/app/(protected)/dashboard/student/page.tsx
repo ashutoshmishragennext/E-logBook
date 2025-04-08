@@ -2,6 +2,7 @@
 
 import { StudentLogBookEntries } from '@/components/student/DisplayLogBookEntries';
 import LogBookEntries from '@/components/student/LogBookEntries';
+import LogBookManagement from '@/components/student/LogBookManagement';
 import StudentProfileForm from '@/components/student/profileForm';
 import {
   Popover,
@@ -54,7 +55,7 @@ export default function Dashboard() {
   const navItems = [
     { id: 'profile', label: 'Profile', icon: <File className="h-5 w-5" /> },
     { id: 'LogBookEntries', label: 'Log Book Entries', icon: <Users className="h-5 w-5" /> },
-    { id: 'EnteredlogBook', label: 'Log Book ', icon: <File className="h-5 w-5" /> },
+    // { id: 'EnteredlogBook', label: 'Log Book ', icon: <File className="h-5 w-5" /> },
     // { id: 'activity', label: 'Activity', icon: <Activity className="h-5 w-5" /> },
   ];
 
@@ -66,8 +67,12 @@ export default function Dashboard() {
            <StudentProfileForm/>
         );
       case 'LogBookEntries':
-        return (
-          <LogBookEntries/>
+        // return (
+        //   <LogBookEntries/>
+        // );
+
+        return(
+          <LogBookManagement/>
         );
       case 'EnteredlogBook':
         return (

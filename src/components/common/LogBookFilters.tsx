@@ -50,13 +50,13 @@ export const LogBookFilters = ({
   loading,
 }: LogBookFiltersProps) => {
   return (
-    <Card className="mb-6">
-      <CardHeader>
+    <Card className="mb-3 p-3">
+      {/* <CardHeader>
         <CardTitle className="text-lg">Filters</CardTitle>
         <CardDescription>
           Select academic year, batch, subject and module to load the appropriate template
         </CardDescription>
-      </CardHeader>
+      </CardHeader> */}
       <CardContent>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Academic Year Filter */}

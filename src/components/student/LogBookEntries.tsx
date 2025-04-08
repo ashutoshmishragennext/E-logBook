@@ -1,27 +1,11 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle
-} from "@/components/ui/card";
+import {Card,CardContent,CardDescription,CardHeader,CardTitle} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import {Popover,PopoverContent,PopoverTrigger,} from "@/components/ui/popover";
+import {Select,SelectContent,SelectItem,SelectTrigger,SelectValue,} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import React, { useEffect, useState } from "react";
 import { useCurrentUser } from "@/hooks/auth";
@@ -725,14 +709,14 @@ const LogBookEntries: React.FC = () => {
   return (
     <div className="container mx-auto px-4 py-6 max-w-6xl">
       {/* Page Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+      {/* <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Log Book Entries</h1>
           <p className="text-muted-foreground mt-1">
             Record and maintain your academic log book entries
           </p>
         </div>
-      </div>
+      </div> */}
       
       {/* Filter Section */}
       <LogBookFilters
@@ -792,7 +776,7 @@ const LogBookEntries: React.FC = () => {
       {!loading.template && logBookTemplate && (
         <>
           {/* Template Info */}
-          <Card className="mb-6">
+          {/* <Card className="mb-6">
             <CardHeader>
               <CardTitle>{logBookTemplate.name}</CardTitle>
               {logBookTemplate.description && (
@@ -801,7 +785,7 @@ const LogBookEntries: React.FC = () => {
                 </CardDescription>
               )}
             </CardHeader>
-          </Card>
+          </Card> */}
           
           {/* Form Groups */}
           {logBookTemplate.dynamicSchema.groups.map((group, groupIndex) => (

@@ -130,7 +130,6 @@ export const StudentLogBookEntries = () => {
     if (entry.dynamicFields) {
       Object.keys(entry.dynamicFields).forEach(group => {
         // Skip the personalInfo field as it's not for display
-        if (group === 'personalInfo') return;
         
         if (typeof entry.dynamicFields[group] === 'object') {
           // Look for sequence property (_sequence or *sequence)

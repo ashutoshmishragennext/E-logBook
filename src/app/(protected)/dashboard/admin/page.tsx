@@ -1,7 +1,11 @@
 'use client';
 
+import Academicyear from '@/components/admin/Academic year';
+import Batch from '@/components/admin/Batch';
 import DisplayTemplates from '@/components/admin/DisplayTemplates';
 import LogBookTemplateForm from '@/components/admin/LogFormTemplate';
+import Module from '@/components/admin/Module';
+import Subject from '@/components/admin/Subject';
 import {
   Popover,
   PopoverContent,
@@ -9,9 +13,11 @@ import {
 } from "@/components/ui/popover";
 import { useCurrentUser } from '@/hooks/auth';
 import {
+  Activity,
   ChevronLeft,
   ChevronRight,
   File,
+  FolderOpen,
   LogOut,
   Menu,
   Settings,
@@ -58,8 +64,11 @@ export default function Dashboard() {
   const navItems = [
     { id: 'createlogTemplate', label: 'Create Template', icon: <File className="h-5 w-5" /> },
     { id: 'templates', label: 'Templates', icon: <Users className="h-5 w-5" /> },
-    // { id: 'folders', label: 'Folders', icon: <FolderOpen className="h-5 w-5" /> },
-    // { id: 'activity', label: 'Activity', icon: <Activity className="h-5 w-5" /> },
+    { id: 'academicYear', label: 'Academic Year', icon: <FolderOpen className="h-5 w-5" /> },
+    { id: 'batch', label: 'Batch', icon: <Activity className="h-5 w-5" /> },
+    { id: 'subject', label: 'Subject', icon: <FolderOpen className="h-5 w-5" /> },
+    { id: 'module', label: 'Module', icon: <Activity className="h-5 w-5" /> },
+
   ];
 
   // Render the appropriate component based on sidebar selection
@@ -73,9 +82,22 @@ export default function Dashboard() {
         return (
           <DisplayTemplates/>
         );
-      case 'folders':
+      case 'academicYear':
         return (
-            <div>hii</div>
+            <Academicyear/>
+        );
+
+      case 'batch':
+        return (
+           <Batch/>
+        );
+      case 'subject':
+        return (
+            <Subject/>
+        );
+      case 'module':
+        return (
+            <Module/>
         );
       case 'activity':
         return (

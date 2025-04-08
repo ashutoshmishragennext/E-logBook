@@ -9,9 +9,10 @@ const logBookEntryCreateSchema = z.object({
   logBookTemplateId: z.string().uuid(),
   studentId: z.string().uuid(),
   teacherId: z.string().uuid().optional(),
-  dynamicFields: z.record(z.any()),
+  dynamicFields: z.record(z.any()).optional(),
   studentRemarks: z.string().optional(),
-  status: z.enum(["DRAFT", "SUBMITTED", "REVIEWED"]).default("DRAFT")
+  status: z.enum(["DRAFT", "SUBMITTED", "REVIEWED"]).default("DRAFT"),
+  teacherRemarks: z.string().optional(),
 }).strict();
 
 // Zod schema for updating log book entries (with ID)
@@ -129,6 +130,8 @@ export async function PUT(req: NextRequest) {
         ...(validatedData.studentId && { studentId: validatedData.studentId }),
         ...(validatedData.dynamicFields && { dynamicFields: validatedData.dynamicFields }),
         ...(validatedData.studentRemarks && { studentRemarks: validatedData.studentRemarks }),
+        ...(validatedData.teacherRemarks && { teacherRemarks: validatedData.teacherRemarks }),
+        ...(validatedData.teacherId && { teacherId: validatedData.teacherId }),
         updatedAt: new Date()
       })
       .where(eq(LogBookEntryTable.id, validatedData.id))
