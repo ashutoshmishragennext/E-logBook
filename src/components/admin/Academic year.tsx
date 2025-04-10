@@ -43,7 +43,7 @@ const AcademicYearPage = () => {
 
   const handleCreateAcademicYear = async () => {
     const { name, startDate, endDate } = form
-    if (!name || !startDate || !endDate) return alert({ title: "All fields are required" })
+    if (!name || !startDate || !endDate) return alert( "All fields are required" )
 
     const res = await fetch("/api/academicYears", {
       method: "POST",
@@ -52,11 +52,11 @@ const AcademicYearPage = () => {
     })
 
     if (res.ok) {
-      alert({ title: "Academic year created" })
+      alert("Academic year created" )
       setForm({ name: "", startDate: "", endDate: "" })
       fetchAcademicYears()
     } else {
-      alert({ title: "Failed to create academic year", variant: "destructive" })
+      alert("Failed to create academic year")
     }
   }
 

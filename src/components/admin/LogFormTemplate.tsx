@@ -53,7 +53,14 @@ const LogBookTemplateSchema = z.object({
           fields: z.array(
             z.object({
               label: z.string().min(1, "Field label is required"),
-              type: z.enum(["text", "number", "date", "textarea", "select", "checkbox"]),
+              type: z.enum([
+                "text",
+                "number",
+                "date",
+                "textarea",
+                "select",
+                "checkbox",
+              ]),
               required: z.boolean().optional(),
               options: z.array(z.string()).optional(),
             })
@@ -93,7 +100,7 @@ type Module = {
 export default function LogBookTemplateForm() {
   const user = useCurrentUser();
   const userId = user?.id || "current-user-id";
-  
+
   // State for dropdown options
   const [academicYears, setAcademicYears] = useState<AcademicYear[]>([]);
   const [batches, setBatches] = useState<Batch[]>([]);
@@ -148,7 +155,7 @@ export default function LogBookTemplateForm() {
       } catch (error) {
         console.error("Error fetching academic years:", error);
       } finally {
-        setLoading(prev => ({ ...prev, academicYears: false }));
+        setLoading((prev) => ({ ...prev, academicYears: false }));
       }
     };
 
@@ -161,13 +168,15 @@ export default function LogBookTemplateForm() {
       if (!selectedAcademicYearId) {
         setBatches([]);
         setValue("batchId", "");
-        setLoading(prev => ({ ...prev, batches: false }));
+        setLoading((prev) => ({ ...prev, batches: false }));
         return;
       }
 
       try {
-        setLoading(prev => ({ ...prev, batches: true }));
-        const response = await fetch(`/api/phase?academicYears=${selectedAcademicYearId}`);
+        setLoading((prev) => ({ ...prev, batches: true }));
+        const response = await fetch(
+          `/api/phase?academicYears=${selectedAcademicYearId}`
+        );
         if (response.ok) {
           const data = await response.json();
           setBatches(data);
@@ -177,7 +186,7 @@ export default function LogBookTemplateForm() {
       } catch (error) {
         console.error("Error fetching batches:", error);
       } finally {
-        setLoading(prev => ({ ...prev, batches: false }));
+        setLoading((prev) => ({ ...prev, batches: false }));
       }
     };
 
@@ -190,12 +199,12 @@ export default function LogBookTemplateForm() {
       if (!selectedBatchId) {
         setSubjects([]);
         setValue("subjectId", "");
-        setLoading(prev => ({ ...prev, subjects: false }));
+        setLoading((prev) => ({ ...prev, subjects: false }));
         return;
       }
 
       try {
-        setLoading(prev => ({ ...prev, subjects: true }));
+        setLoading((prev) => ({ ...prev, subjects: true }));
         const response = await fetch(`/api/subject?PhaseId=${selectedBatchId}`);
         if (response.ok) {
           const data = await response.json();
@@ -206,7 +215,7 @@ export default function LogBookTemplateForm() {
       } catch (error) {
         console.error("Error fetching subjects:", error);
       } finally {
-        setLoading(prev => ({ ...prev, subjects: false }));
+        setLoading((prev) => ({ ...prev, subjects: false }));
       }
     };
 
@@ -219,13 +228,15 @@ export default function LogBookTemplateForm() {
       if (!selectedSubjectId) {
         setModules([]);
         setValue("moduleId", "");
-        setLoading(prev => ({ ...prev, modules: false }));
+        setLoading((prev) => ({ ...prev, modules: false }));
         return;
       }
 
       try {
-        setLoading(prev => ({ ...prev, modules: true }));
-        const response = await fetch(`/api/module?subjectId=${selectedSubjectId}`);
+        setLoading((prev) => ({ ...prev, modules: true }));
+        const response = await fetch(
+          `/api/module?subjectId=${selectedSubjectId}`
+        );
         if (response.ok) {
           const data = await response.json();
           setModules(data);
@@ -235,7 +246,7 @@ export default function LogBookTemplateForm() {
       } catch (error) {
         console.error("Error fetching modules:", error);
       } finally {
-        setLoading(prev => ({ ...prev, modules: false }));
+        setLoading((prev) => ({ ...prev, modules: false }));
       }
     };
 
@@ -250,10 +261,11 @@ export default function LogBookTemplateForm() {
   // Add a new group to dynamic schema with sequence number
   const addGroup = () => {
     const currentGroups = watch("dynamicSchema.groups") || [];
-    const newSequence = currentGroups.length > 0 
-      ? Math.max(...currentGroups.map(group => group.sequence)) + 1 
-      : 1;
-    
+    const newSequence =
+      currentGroups.length > 0
+        ? Math.max(...currentGroups.map((group) => group.sequence)) + 1
+        : 1;
+
     setValue("dynamicSchema.groups", [
       ...currentGroups,
       {
@@ -276,7 +288,7 @@ export default function LogBookTemplateForm() {
     const updatedGroups = currentGroups.filter(
       (_, index) => index !== groupIndex
     );
-    
+
     // No need to update sequences as we'll sort by sequence when submitting
     setValue("dynamicSchema.groups", updatedGroups);
   };
@@ -284,17 +296,19 @@ export default function LogBookTemplateForm() {
   // Move group up in sequence
   const moveGroupUp = (groupIndex: number) => {
     if (groupIndex === 0) return; // Already at top
-    
+
     const currentGroups = [...(watch("dynamicSchema.groups") || [])];
     const currentSequence = currentGroups[groupIndex].sequence;
     const prevSequence = currentGroups[groupIndex - 1].sequence;
-    
+
     // Swap sequences
     currentGroups[groupIndex].sequence = prevSequence;
     currentGroups[groupIndex - 1].sequence = currentSequence;
-    
+
     // Sort groups by sequence
-    const sortedGroups = [...currentGroups].sort((a, b) => a.sequence - b.sequence);
+    const sortedGroups = [...currentGroups].sort(
+      (a, b) => a.sequence - b.sequence
+    );
     setValue("dynamicSchema.groups", sortedGroups);
   };
 
@@ -302,17 +316,19 @@ export default function LogBookTemplateForm() {
   const moveGroupDown = (groupIndex: number) => {
     const currentGroups = watch("dynamicSchema.groups") || [];
     if (groupIndex === currentGroups.length - 1) return; // Already at bottom
-    
+
     const groupsCopy = [...currentGroups];
     const currentSequence = groupsCopy[groupIndex].sequence;
     const nextSequence = groupsCopy[groupIndex + 1].sequence;
-    
+
     // Swap sequences
     groupsCopy[groupIndex].sequence = nextSequence;
     groupsCopy[groupIndex + 1].sequence = currentSequence;
-    
+
     // Sort groups by sequence
-    const sortedGroups = [...groupsCopy].sort((a, b) => a.sequence - b.sequence);
+    const sortedGroups = [...groupsCopy].sort(
+      (a, b) => a.sequence - b.sequence
+    );
     setValue("dynamicSchema.groups", sortedGroups);
   };
 
@@ -400,16 +416,21 @@ export default function LogBookTemplateForm() {
       if (formData.dynamicSchema?.groups) {
         // First filter out invalid groups and fields
         formData.dynamicSchema.groups = formData.dynamicSchema.groups
-          .filter((group: { name: string; }) => group.name.trim() !== "") // Remove empty groups
-          .map((group: { fields: any[]; }) => ({
+          .filter((group: { name: string }) => group.name.trim() !== "") // Remove empty groups
+          .map((group: { fields: any[] }) => ({
             ...group,
-            fields: group.fields.filter((field: { label: string; }) => field.label.trim() !== "") // Remove empty fields
+            fields: group.fields.filter(
+              (field: { label: string }) => field.label.trim() !== ""
+            ), // Remove empty fields
           }))
-          .filter((group: { fields: string | any[]; }) => group.fields.length > 0); // Remove groups with no fields
-        
+          .filter(
+            (group: { fields: string | any[] }) => group.fields.length > 0
+          ); // Remove groups with no fields
+
         // Then sort groups by sequence number to preserve order
-        formData.dynamicSchema.groups.sort((a: { sequence: number }, b: { sequence: number }) => 
-          a.sequence - b.sequence
+        formData.dynamicSchema.groups.sort(
+          (a: { sequence: number }, b: { sequence: number }) =>
+            a.sequence - b.sequence
         );
       }
 
@@ -494,7 +515,9 @@ export default function LogBookTemplateForm() {
                               ))
                             ) : (
                               <SelectItem value="Loading" disabled>
-                                {loading.academicYears ? "Loading..." : "No academic years found"}
+                                {loading.academicYears
+                                  ? "Loading..."
+                                  : "No academic years found"}
                               </SelectItem>
                             )}
                           </SelectContent>
@@ -561,19 +584,21 @@ export default function LogBookTemplateForm() {
                         {errors.batchId.message}
                       </p>
                     )}
-                    {!loading.batches && batches.length === 0 && selectedAcademicYearId && (
-                      <Button
-                        type="button"
-                        variant="link"
-                        className="text-sm p-0 h-auto"
-                        onClick={() => {
-                          // Navigate to create batch page or open a modal
-                          console.log("Navigate to create batch");
-                        }}
-                      >
-                        + Create New Batch
-                      </Button>
-                    )}
+                    {!loading.batches &&
+                      batches.length === 0 &&
+                      selectedAcademicYearId && (
+                        <Button
+                          type="button"
+                          variant="link"
+                          className="text-sm p-0 h-auto"
+                          onClick={() => {
+                            // Navigate to create batch page or open a modal
+                            console.log("Navigate to create batch");
+                          }}
+                        >
+                          + Create New Batch
+                        </Button>
+                      )}
                   </div>
 
                   {/* Subject */}
@@ -616,19 +641,21 @@ export default function LogBookTemplateForm() {
                         {errors.subjectId.message}
                       </p>
                     )}
-                    {!loading.subjects && subjects.length === 0 && selectedBatchId && (
-                      <Button
-                        type="button"
-                        variant="link"
-                        className="text-sm p-0 h-auto"
-                        onClick={() => {
-                          // Navigate to create subject page or open a modal
-                          console.log("Navigate to create subject");
-                        }}
-                      >
-                        + Create New Subject
-                      </Button>
-                    )}
+                    {!loading.subjects &&
+                      subjects.length === 0 &&
+                      selectedBatchId && (
+                        <Button
+                          type="button"
+                          variant="link"
+                          className="text-sm p-0 h-auto"
+                          onClick={() => {
+                            // Navigate to create subject page or open a modal
+                            console.log("Navigate to create subject");
+                          }}
+                        >
+                          + Create New Subject
+                        </Button>
+                      )}
                   </div>
 
                   {/* Module */}
@@ -671,19 +698,21 @@ export default function LogBookTemplateForm() {
                         {errors.moduleId.message}
                       </p>
                     )}
-                    {!loading.modules && modules.length === 0 && selectedSubjectId && (
-                      <Button
-                        type="button"
-                        variant="link"
-                        className="text-sm p-0 h-auto"
-                        onClick={() => {
-                          // Navigate to create module page or open a modal
-                          console.log("Navigate to create module");
-                        }}
-                      >
-                        + Create New Module
-                      </Button>
-                    )}
+                    {!loading.modules &&
+                      modules.length === 0 &&
+                      selectedSubjectId && (
+                        <Button
+                          type="button"
+                          variant="link"
+                          className="text-sm p-0 h-auto"
+                          onClick={() => {
+                            // Navigate to create module page or open a modal
+                            console.log("Navigate to create module");
+                          }}
+                        >
+                          + Create New Module
+                        </Button>
+                      )}
                   </div>
                 </div>
               </CardContent>
@@ -803,7 +832,11 @@ export default function LogBookTemplateForm() {
                                 size="icon"
                                 onClick={() => moveGroupUp(groupIndex)}
                                 disabled={groupIndex === 0}
-                                className={groupIndex === 0 ? "opacity-50 cursor-not-allowed" : ""}
+                                className={
+                                  groupIndex === 0
+                                    ? "opacity-50 cursor-not-allowed"
+                                    : ""
+                                }
                               >
                                 <ArrowUp className="h-4 w-4" />
                               </Button>
@@ -813,7 +846,7 @@ export default function LogBookTemplateForm() {
                             </TooltipContent>
                           </Tooltip>
                         </TooltipProvider>
-                        
+
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger asChild>
@@ -822,8 +855,16 @@ export default function LogBookTemplateForm() {
                                 variant="outline"
                                 size="icon"
                                 onClick={() => moveGroupDown(groupIndex)}
-                                disabled={groupIndex === (watch("dynamicSchema.groups")?.length - 1)}
-                                className={groupIndex === (watch("dynamicSchema.groups")?.length - 1) ? "opacity-50 cursor-not-allowed" : ""}
+                                disabled={
+                                  groupIndex ===
+                                  watch("dynamicSchema.groups")?.length - 1
+                                }
+                                className={
+                                  groupIndex ===
+                                  watch("dynamicSchema.groups")?.length - 1
+                                    ? "opacity-50 cursor-not-allowed"
+                                    : ""
+                                }
                               >
                                 <ArrowDown className="h-4 w-4" />
                               </Button>
@@ -833,7 +874,7 @@ export default function LogBookTemplateForm() {
                             </TooltipContent>
                           </Tooltip>
                         </TooltipProvider>
-                        
+
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger asChild>
@@ -857,7 +898,9 @@ export default function LogBookTemplateForm() {
                     {/* Hidden field to store sequence */}
                     <input
                       type="hidden"
-                      {...register(`dynamicSchema.groups.${groupIndex}.sequence` as const)}
+                      {...register(
+                        `dynamicSchema.groups.${groupIndex}.sequence` as const
+                      )}
                     />
 
                     {/* Fields within Group */}
@@ -865,6 +908,7 @@ export default function LogBookTemplateForm() {
                       {group.fields.map((field, fieldIndex) => (
                         <div key={fieldIndex} className="space-y-2">
                           <div className="flex items-center space-x-2">
+                            {/* Field Label */}
                             <div className="flex-grow">
                               <Input
                                 placeholder="Field Label"
@@ -873,14 +917,15 @@ export default function LogBookTemplateForm() {
                                 )}
                                 className="focus:ring-2 focus:ring-primary/50"
                               />
-                              {errors.dynamicSchema?.groups?.[groupIndex]?.fields?.[
-                                fieldIndex
-                              ]?.label && (
+                              {errors.dynamicSchema?.groups?.[groupIndex]
+                                ?.fields?.[fieldIndex]?.label && (
                                 <p className="text-destructive text-sm mt-1">
                                   Field label is required
                                 </p>
                               )}
                             </div>
+
+                            {/* Field Type Select */}
                             <Controller
                               name={`dynamicSchema.groups.${groupIndex}.fields.${fieldIndex}.type`}
                               control={control}
@@ -894,7 +939,10 @@ export default function LogBookTemplateForm() {
                                   </SelectTrigger>
                                   <SelectContent>
                                     {MEDICAL_FIELD_TYPES.map((type) => (
-                                      <SelectItem key={type.value} value={type.value}>
+                                      <SelectItem
+                                        key={type.value}
+                                        value={type.value}
+                                      >
                                         {type.label}
                                       </SelectItem>
                                     ))}
@@ -902,29 +950,9 @@ export default function LogBookTemplateForm() {
                                 </Select>
                               )}
                             />
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button
-                                    type="button"
-                                    variant="destructive"
-                                    size="icon"
-                                    onClick={() => removeField(groupIndex, fieldIndex)}
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                  </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p>Remove this field</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                          </div>
 
-                          {/* Field Options */}
-                          <div className="ml-4">
-                            {/* Required checkbox */}
-                            <div className="flex items-center space-x-2 mt-1">
+                            {/* Required Field Switch */}
+                            <div className="flex items-center space-x-1">
                               <Controller
                                 name={`dynamicSchema.groups.${groupIndex}.fields.${fieldIndex}.required`}
                                 control={control}
@@ -938,88 +966,108 @@ export default function LogBookTemplateForm() {
                               />
                               <Label
                                 htmlFor={`required-${groupIndex}-${fieldIndex}`}
+                                className="text-sm"
                               >
-                                Required Field
+                                Required
                               </Label>
                             </div>
 
-                            {/* Dropdown Options (for select type) */}
-                            {watch(
-                              `dynamicSchema.groups.${groupIndex}.fields.${fieldIndex}.type`
-                            ) === "select" && (
-                              <div className="mt-3 border rounded-md p-3 bg-gray-50">
-                                <h4 className="font-medium text-sm mb-2">
-                                  Dropdown Options
-                                </h4>
-                                <div className="flex items-center space-x-2 mb-2">
-                                  <Input
-                                    placeholder="Add option"
-                                    value={
-                                      dropdownOptionInput[
-                                        `${groupIndex}-${fieldIndex}-${
-                                          watch(
-                                            `dynamicSchema.groups.${groupIndex}.fields.${fieldIndex}.options`
-                                          )?.length || 0
-                                        }`
-                                      ] || ""
-                                    }
-                                    onChange={(e) =>
-                                      setDropdownOptionInput({
-                                        ...dropdownOptionInput,
-                                        [`${groupIndex}-${fieldIndex}-${
-                                          watch(
-                                            `dynamicSchema.groups.${groupIndex}.fields.${fieldIndex}.options`
-                                          )?.length || 0
-                                        }`]: e.target.value,
-                                      })
-                                    }
-                                    className="flex-grow"
-                                  />
+                            {/* Delete Button with Tooltip */}
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
                                   <Button
                                     type="button"
-                                    size="sm"
-                                    variant="outline"
+                                    variant="destructive"
+                                    size="icon"
                                     onClick={() =>
-                                      addDropdownOption(groupIndex, fieldIndex)
+                                      removeField(groupIndex, fieldIndex)
                                     }
                                   >
-                                    Add
+                                    <Trash2 className="h-4 w-4" />
                                   </Button>
-                                </div>
-                                <div>
-                                  {watch(
-                                    `dynamicSchema.groups.${groupIndex}.fields.${fieldIndex}.options`
-                                  )?.map((option, optionIndex) => (
-                                    <div
-                                      key={optionIndex}
-                                      className="flex items-center justify-between mb-1 bg-white p-2 rounded-md"
-                                    >
-                                      <span>{option}</span>
-                                      <Button
-                                        type="button"
-                                        variant="ghost"
-                                        size="icon"
-                                        onClick={() =>
-                                          removeDropdownOption(
-                                            groupIndex,
-                                            fieldIndex,
-                                            optionIndex
-                                          )
-                                        }
-                                      >
-                                        <Trash2 className="h-4 w-4 text-destructive" />
-                                      </Button>
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-                            )}
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Remove this field</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
                           </div>
+
+                          {/* Dropdown Options Section */}
+                          {watch(
+                            `dynamicSchema.groups.${groupIndex}.fields.${fieldIndex}.type`
+                          ) === "select" && (
+                            <div className="ml-4 mt-2 border rounded-md p-3 bg-gray-50">
+                              <h4 className="font-medium text-sm mb-2">
+                                Dropdown Options
+                              </h4>
+                              <div className="flex items-center space-x-2 mb-2">
+                                <Input
+                                  placeholder="Add option"
+                                  value={
+                                    dropdownOptionInput[
+                                      `${groupIndex}-${fieldIndex}-${
+                                        watch(
+                                          `dynamicSchema.groups.${groupIndex}.fields.${fieldIndex}.options`
+                                        )?.length || 0
+                                      }`
+                                    ] || ""
+                                  }
+                                  onChange={(e) =>
+                                    setDropdownOptionInput({
+                                      ...dropdownOptionInput,
+                                      [`${groupIndex}-${fieldIndex}-${
+                                        watch(
+                                          `dynamicSchema.groups.${groupIndex}.fields.${fieldIndex}.options`
+                                        )?.length || 0
+                                      }`]: e.target.value,
+                                    })
+                                  }
+                                  className="flex-grow"
+                                />
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() =>
+                                    addDropdownOption(groupIndex, fieldIndex)
+                                  }
+                                >
+                                  Add
+                                </Button>
+                              </div>
+                              <div>
+                                {watch(
+                                  `dynamicSchema.groups.${groupIndex}.fields.${fieldIndex}.options`
+                                )?.map((option, optionIndex) => (
+                                  <div
+                                    key={optionIndex}
+                                    className="flex items-center justify-between mb-1 bg-white p-2 rounded-md"
+                                  >
+                                    <span>{option}</span>
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="icon"
+                                      onClick={() =>
+                                        removeDropdownOption(
+                                          groupIndex,
+                                          fieldIndex,
+                                          optionIndex
+                                        )
+                                      }
+                                    >
+                                      <Trash2 className="h-4 w-4 text-destructive" />
+                                    </Button>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>
-
-                    
 
                     {/* Add Field Button */}
                     <Button

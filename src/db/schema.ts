@@ -115,7 +115,6 @@ export const StudentProfileTable = pgTable(
     
     // Location Information
     localAddress: text("local_address"),
-
     permanentAddress: text("permanent_address"),
     adharNo:text("adhar_no"),
     previousInstitution:text("previous_institution"), 
@@ -135,6 +134,7 @@ export const StudentProfileTable = pgTable(
     course: text("course"),
     subject: text("subject"),
     collegeIdProof: text("college_id_proof"),
+    status: VerificationStatus("verification_status").default("PENDING"),
     
     // Metadata
     createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -222,6 +222,7 @@ export const LogBookTemplateTable = pgTable(
     batchId: uuid("phase_id").references(() => PhaseTable.id).notNull(),
     subjectId: uuid("subject_id").references(() => SubjectTable.id).notNull(),
     moduleId: uuid("module_id").references(() => ModuleTable.id),
+
     
     // Template Configuration
     name: text("name").notNull(), // e.g., "Lab Experiments", "Project Work"
@@ -258,7 +259,7 @@ export const LogBookEntryTable = pgTable(
     // Tracking and Feedback
     studentRemarks: text("student_remarks"),
     teacherRemarks: text("teacher_remarks"),
-    status: text("status").default("DRAFT"), // e.g., DRAFT, SUBMITTED, REVIEWED
+    status: VerificationStatus("verification_status").default("PENDING"), // e.g., DRAFT, SUBMITTED, REVIEWED
     
     // Metadata
     createdAt: timestamp("created_at").defaultNow().notNull(),

@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useEffect, useState } from "react";
@@ -13,16 +12,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-// import { toast } from "@/components/ui/use-toast";
 
 export default function Batch() {
   const [academicYears, setAcademicYears] = useState([]);
   const [batches, setBatches] = useState([]);
   const [batchName, setBatchName] = useState("");
-  const [selectedYear, setSelectedYear] = useState("");
-  const [academicYearMap, setAcademicYearMap] = useState<
-    Record<string, string>
-  >({});
+  const [selectedYearForCreate, setSelectedYearForCreate] = useState("");
+  const [selectedYearForFilter, setSelectedYearForFilter] = useState("");
+  const [academicYearMap, setAcademicYearMap] = useState<Record<string, string>>({});
 
   useEffect(() => {
     const fetchData = async () => {
@@ -34,7 +31,6 @@ export default function Batch() {
       const years = await yearRes.json();
       const batches = await batchRes.json();
 
-      // Create a map of academicYearId -> name
       const yearMap: Record<string, string> = {};
       years.forEach((y: any) => {
         yearMap[y.id] = y.name;
@@ -49,7 +45,7 @@ export default function Batch() {
   }, []);
 
   const handleSubmit = async () => {
-    if (!batchName || !selectedYear) {
+    if (!batchName || !selectedYearForCreate) {
       alert("Fill all fields");
       return;
     }
@@ -58,7 +54,7 @@ export default function Batch() {
       method: "POST",
       body: JSON.stringify({
         name: batchName,
-        academicYearId: selectedYear,
+        academicYearId: selectedYearForCreate,
       }),
     });
 
@@ -73,8 +69,13 @@ export default function Batch() {
     }
   };
 
+  const filteredBatches = selectedYearForFilter
+    ? batches.filter((b: any) => b.academicYearId === selectedYearForFilter)
+    : batches;
+
   return (
     <div className="p-6 space-y-6">
+      {/* CREATE BATCH SECTION */}
       <Card>
         <CardHeader>
           <CardTitle>Create Batch</CardTitle>
@@ -90,7 +91,7 @@ export default function Batch() {
           </div>
           <div>
             <Label>Academic Year</Label>
-            <Select onValueChange={setSelectedYear}>
+            <Select onValueChange={setSelectedYearForCreate}>
               <SelectTrigger>
                 <SelectValue placeholder="Select academic year" />
               </SelectTrigger>
@@ -107,6 +108,25 @@ export default function Batch() {
         </CardContent>
       </Card>
 
+      {/* FILTER SECTION */}
+      <div className="flex items-center gap-4">
+        <Label className="whitespace-nowrap">Filter by Academic Year</Label>
+        <Select onValueChange={setSelectedYearForFilter}>
+          <SelectTrigger className="w-[250px]">
+            <SelectValue placeholder="All years" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="years">All Years</SelectItem>
+            {academicYears.map((year: any) => (
+              <SelectItem key={year.id} value={year.id}>
+                {year.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* TABLE SECTION */}
       <Card>
         <CardHeader>
           <CardTitle>Existing Batches</CardTitle>
@@ -116,18 +136,26 @@ export default function Batch() {
             <thead className="bg-gray-100 text-left">
               <tr>
                 <th className="p-2 border">Batch Name</th>
-                <th className="p-2 border">Academic Year ID</th>
+                <th className="p-2 border">Academic Year</th>
               </tr>
             </thead>
             <tbody>
-              {batches.map((batch: any) => (
-                <tr key={batch.id} className="border-t">
-                  <td className="p-2 border">{batch.name}</td>
-                  <td className="p-2 border">
-                    {academicYearMap[batch.academicYearId] || "Unknown"}
+              {filteredBatches.length > 0 ? (
+                filteredBatches.map((batch: any) => (
+                  <tr key={batch.id} className="border-t">
+                    <td className="p-2 border">{batch.name}</td>
+                    <td className="p-2 border">
+                      {academicYearMap[batch.academicYearId] || "Unknown"}
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={2} className="p-2 text-center">
+                    No batches found.
                   </td>
                 </tr>
-              ))}
+              )}
             </tbody>
           </table>
         </CardContent>
