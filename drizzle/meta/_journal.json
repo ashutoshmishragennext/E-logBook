@@ -15,6 +15,27 @@
       "when": 1744273275140,
       "tag": "0001_curious_nebula",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1744284253546,
+      "tag": "0002_odd_skreet",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1744349589732,
+      "tag": "0003_bumpy_korath",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1744351270753,
+      "tag": "0004_polite_thunderbolts",
+      "breakpoints": true
     }
   ]
 }

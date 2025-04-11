@@ -1,13 +1,14 @@
-'use client';
+"use client";
 
-import DisplayLogBookEntries from '@/components/teacher/DisplayLogBookEntries';
-import TeacherProfilePage from '@/components/teacher/TeacherProfile';
+import DisplayLogBookEntries from "@/components/teacher/DisplayLogBookEntries";
+import Students from "@/components/teacher/Students";
+import TeacherProfilePage from "@/components/teacher/TeacherProfile";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { useCurrentUser } from '@/hooks/auth';
+import { useCurrentUser } from "@/hooks/auth";
 import {
   ChevronLeft,
   ChevronRight,
@@ -15,19 +16,19 @@ import {
   LogOut,
   Menu,
   Settings,
-  Users
-} from 'lucide-react';
-import { signOut, useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+  Users,
+} from "lucide-react";
+import { signOut, useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 export default function Dashboard() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const user = useCurrentUser();
   // console.log("user",user?.name);
-  
+
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [activeComponent, setActiveComponent] = useState('profile');
+  const [activeComponent, setActiveComponent] = useState("profile");
 
   const handleLogout = async () => {
     await signOut({ redirectTo: "/auth/login" });
@@ -35,19 +36,22 @@ export default function Dashboard() {
 
   // Redirect if not authenticatedclear
   useEffect(() => {
-    if (status === 'unauthenticated') {
-      router.push('/login');
+    if (status === "unauthenticated") {
+      router.push("/login");
     }
-    
   }, [status, router]);
 
-  if (status === 'loading') {
-    return <div className="flex items-center justify-center h-screen">Loading...</div>;
+  if (status === "loading") {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        Loading...
+      </div>
+    );
   }
 
   if (!session) {
-    console.log("hhhhhhhhhhhhh");
-    
+    console.log("");
+
     return null;
   }
 
@@ -57,8 +61,9 @@ export default function Dashboard() {
 
   // Navigation items for sidebar
   const navItems = [
-    { id: 'profile', label: 'Profile', icon: <File className="h-5 w-5" /> },
-    { id: 'logBooks', label: 'Log Books', icon: <Users className="h-5 w-5" /> },
+    { id: "profile", label: "Profile", icon: <File className="h-5 w-5" /> },
+    { id: "students", label: "Students", icon: <Users className="h-5 w-5" /> },
+    { id: "logBooks", label: "Log Books", icon: <Users className="h-5 w-5" /> },
     // { id: 'folders', label: 'Folders', icon: <FolderOpen className="h-5 w-5" /> },
     // { id: 'activity', label: 'Activity', icon: <Activity className="h-5 w-5" /> },
   ];
@@ -66,22 +71,13 @@ export default function Dashboard() {
   // Render the appropriate component based on sidebar selection
   const renderMainContent = () => {
     switch (activeComponent) {
-      case 'profile':
-        return (
-            <TeacherProfilePage/>
-           
-        
-        );
-      case 'logBooks':
-        return (
-          <DisplayLogBookEntries/>
-        
-        );
-      case 'folders':
-        return (
-            <div>hii</div>
-        );
-      case 'activity':
+      case "profile":
+        return <TeacherProfilePage />;
+      case "logBooks":
+        return <DisplayLogBookEntries />;
+      case "students":
+        return <Students />;
+      case "activity":
         return (
           <div>
             <h1 className="text-2xl font-bold mb-6">Recent Activity</h1>
@@ -111,9 +107,12 @@ export default function Dashboard() {
             >
               <Menu className="h-5 w-5" />
             </button>
-            <h1 className="text-2xl font-semibold text-gray-800"> Teacher Portal</h1>
+            <h1 className="text-2xl font-semibold text-gray-800">
+              {" "}
+              Teacher Portal
+            </h1>
           </div>
-          
+
           <Popover>
             <PopoverTrigger asChild>
               <button className="flex items-center gap-2 hover:bg-gray-50 rounded-lg p-2 transition-colors">
@@ -121,7 +120,9 @@ export default function Dashboard() {
                   <AvatarImage src="/images/user_alt_icon.png" alt="User" />
                   
                 </Avatar> */}
-                <span className="text-sm font-medium text-gray-700">{user?.name}</span>
+                <span className="text-sm font-medium text-gray-700">
+                  {user?.name}
+                </span>
               </button>
             </PopoverTrigger>
             <PopoverContent className="w-56" align="end">
@@ -130,7 +131,7 @@ export default function Dashboard() {
                   <Settings className="h-4 w-4" />
                   Profile Settings
                 </button>
-                <button 
+                <button
                   onClick={handleLogout}
                   className="w-full flex items-center gap-2 rounded-lg p-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
                 >
@@ -145,18 +146,22 @@ export default function Dashboard() {
 
       <div className="flex">
         {/* Sidebar */}
-        <div 
+        <div
           className={`${
-            sidebarOpen ? 'w-64' : 'w-20'
+            sidebarOpen ? "w-64" : "w-20"
           } bg-white border-r transition-all duration-300 ease-in-out h-[calc(100vh-64px)] flex flex-col justify-between`}
         >
           <div>
             <div className="flex justify-end p-2">
-              <button 
-                onClick={toggleSidebar} 
+              <button
+                onClick={toggleSidebar}
                 className="p-1 text-gray-500 hover:bg-gray-100 rounded-full"
               >
-                {sidebarOpen ? <ChevronLeft size={18} /> : <ChevronRight size={18} />}
+                {sidebarOpen ? (
+                  <ChevronLeft size={18} />
+                ) : (
+                  <ChevronRight size={18} />
+                )}
               </button>
             </div>
             <ul className="space-y-2 px-3 py-4">
@@ -166,8 +171,8 @@ export default function Dashboard() {
                     onClick={() => setActiveComponent(item.id)}
                     className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
                       activeComponent === item.id
-                        ? 'bg-gray-100 text-blue-600 font-medium'
-                        : 'text-gray-700 hover:bg-gray-50'
+                        ? "bg-gray-100 text-blue-600 font-medium"
+                        : "text-gray-700 hover:bg-gray-50"
                     }`}
                   >
                     {item.icon}
@@ -180,11 +185,8 @@ export default function Dashboard() {
         </div>
 
         {/* Main content */}
-        <div className="flex-1 p-6 overflow-auto">
-          {renderMainContent()}
-        </div>
+        <div className="flex-1 p-6 overflow-auto">{renderMainContent()}</div>
       </div>
-
     </div>
   );
 }

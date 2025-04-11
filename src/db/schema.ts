@@ -135,6 +135,8 @@ export const StudentProfileTable = pgTable(
     subject: text("subject"),
     collegeIdProof: text("college_id_proof"),
     status: VerificationStatus("verification_status").default("PENDING"),
+    teacherId: uuid("teacher_id").references(() => TeacherProfileTable.id),
+    rejection_reason: text("rejection_reason"),
     
     // Metadata
     createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -259,7 +261,7 @@ export const LogBookEntryTable = pgTable(
     // Tracking and Feedback
     studentRemarks: text("student_remarks"),
     teacherRemarks: text("teacher_remarks"),
-    status: VerificationStatus("verification_status").default("PENDING"), // e.g., DRAFT, SUBMITTED, REVIEWED
+    status: text("verification_status").default("DRAFT"), // e.g., DRAFT, SUBMITTED, REVIEWED
     
     // Metadata
     createdAt: timestamp("created_at").defaultNow().notNull(),

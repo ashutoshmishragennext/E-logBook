@@ -1,5 +1,5 @@
-
 /* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/no-explicit-any*/
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent } from "@/components/ui/card";
@@ -40,6 +40,13 @@ import { useForm } from "react-hook-form";
 import * as z from "zod";
 
 // Zod validation schema
+
+interface Teacher {
+  email: string;
+  id: string;
+  name: string;
+  department?: string;
+}
 const studentProfileSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters" }),
   rollNo: z
@@ -51,6 +58,7 @@ const studentProfileSchema = z.object({
   email: z.string().email({ message: "Invalid email address" }),
   profilePhoto: z.string().optional(),
   dateOfBirth: z.date().optional(),
+  teacherId: z.string().optional(), // Added teacherId field
 
   // Location Information
   localAddress: z.string().optional(),
@@ -78,12 +86,18 @@ const studentProfileSchema = z.object({
   previousExperience: z.string().optional(),
   specialInterest: z.string().optional(),
   futurePlan: z.string().optional(),
+  status: z.enum(["PENDING", "APPROVED", "REJECTED"]).optional(), // Added status field
 });
 
-export default function StudentProfileForm() {
+export default function StudentProfileForm({
+  onProfileUpdate,
+}: {
+  onProfileUpdate: (profileData: any) => void;
+}) {
   const user = useCurrentUser();
   const [isLoading, setIsLoading] = useState(false);
   interface StudentProfile {
+    status: string;
     name: string;
     rollNo: string;
     mobileNo: string;
@@ -128,8 +142,28 @@ export default function StudentProfileForm() {
       specialInterest: "",
       nameAndOccpationOfSpouse: "",
       futurePlan: "",
+      teacherId: "",
+      status: "PENDING",
     },
   });
+
+  const [teachers, setTeachers] = useState<Teacher[]>([]);
+
+  // Add this function to fetch teachers
+  useEffect(() => {
+    async function fetchTeachers() {
+      try {
+        const response = await fetch("/api/teacher-profile");
+        const data = await response.json();
+        console.log("Fetched teachers:", data);
+        setTeachers(data);
+      } catch (error) {
+        console.error("Error fetching teachers:", error);
+      }
+    }
+
+    fetchTeachers();
+  }, []);
 
   // Fetch existing profile on component mount
   useEffect(() => {
@@ -229,8 +263,8 @@ export default function StudentProfileForm() {
     setIsLoading(true);
     try {
       const endpoint = existingProfile
-        ? `/api/student-profile?id=${user?.id}`
-        : `/api/student-profile?id=${user?.id}`;
+        ? `/api/student-profile?userId=${user?.id}`
+        : `/api/student-profile?userId=${user?.id}`;
 
       const method = existingProfile ? "PUT" : "POST";
 
@@ -329,6 +363,7 @@ export default function StudentProfileForm() {
                   <div className="flex flex-col md:flex-row gap-6">
                     {/* Profile Photo Upload */}
                     <div className="md:w-1/3">
+                      
                       <FormField
                         control={form.control}
                         name="profilePhoto"
@@ -384,6 +419,75 @@ export default function StudentProfileForm() {
                                 )} */}
                               </div>
                             </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="teacherId"
+                        render={({ field }) => (
+                          <FormItem className="col-span-2">
+                            <FormLabel>
+                              <span className="flex items-center gap-2">
+                                <span>👨‍🏫 Assign Teacher for Verification</span>
+                                {existingProfile &&
+                                  existingProfile.status !== "PENDING" && (
+                                    <span
+                                      className={`rounded-full px-2 py-1 text-xs ${
+                                        existingProfile.status === "APPROVED"
+                                          ? "bg-green-100 text-green-800"
+                                          : "bg-red-100 text-red-800"
+                                      }`}
+                                    >
+                                      {existingProfile.status}
+                                    </span>
+                                  )}
+                              </span>
+                            </FormLabel>
+                            <FormControl>
+                              <Select
+                            
+                                onValueChange={field.onChange}
+                                defaultValue={field.value}
+                                disabled={
+                                  !editMode ||
+                                  (existingProfile &&
+                                    existingProfile.status !== "PENDING") ||
+                                  undefined
+                                }
+                              >
+                                <SelectTrigger
+                                  className={
+                                    !editMode ||
+                                    (existingProfile &&
+                                      existingProfile.status !== "PENDING")
+                                      ? "bg-gray-200 cursor-not-allowed text-black"
+                                      : ""
+                                  }
+                                >
+                                  <SelectValue placeholder="Select a teacher for verification" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {teachers.map((teacher) => (
+                                    <SelectItem
+                                      key={teacher.id}
+                                      value={teacher.id}
+                                    >
+                                      {teacher.name} - {teacher.email}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </FormControl>
+                            {existingProfile &&
+                              existingProfile.status !== "PENDING" && (
+                                <p className="text-sm text-gray-500 mt-1">
+                                  Your profile has been{" "}
+                                  {existingProfile.status.toLowerCase()} and can
+                                  no longer be assigned to a different teacher.
+                                </p>
+                              )}
                             <FormMessage />
                           </FormItem>
                         )}

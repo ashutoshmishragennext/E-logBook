@@ -11,9 +11,10 @@ export async function GET(req: NextRequest) {
     const searchParams = req.nextUrl.searchParams;
     const id = searchParams.get("id");
     const byUserId = searchParams.get("byUserId");
+    const teacherId = searchParams.get("teacherId");
 
     // If neither parameter is provided
-    if (!id && !byUserId) {
+    if (!id && !byUserId && !teacherId) {
       return NextResponse.json(
         { message: "Either id or byUserId is required" },
         { status: 400 }
@@ -21,7 +22,7 @@ export async function GET(req: NextRequest) {
     }
 
     let student;
-    
+
     if (byUserId) {
       // Search by userId
       student = await db
@@ -29,7 +30,16 @@ export async function GET(req: NextRequest) {
         .from(StudentProfileTable)
         .where(eq(StudentProfileTable.userId, byUserId))
         .limit(1);
-    } else {
+    }
+    else if (teacherId) {
+      // Search by teacherId
+      student = await db
+        .select()
+        .from(StudentProfileTable)
+        .where(eq(StudentProfileTable.teacherId, teacherId))
+        .limit(1);
+    }
+    else {
       // Search by studentId (id parameter)
       student = await db
         .select()
@@ -57,8 +67,8 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const searchParams = req.nextUrl.searchParams;
-    const userId = searchParams.get("id");
-    
+    const userId = searchParams.get("userId");
+
     if (!userId) {
       return NextResponse.json(
         { message: "User ID is required" },
@@ -112,7 +122,7 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     console.error("Student Profile Creation Error:", error);
     return NextResponse.json(
-      { 
+      {
         message: "Error creating student profile",
         error: error instanceof Error ? error.message : "Unknown error"
       },
@@ -124,11 +134,12 @@ export async function POST(req: NextRequest) {
 export async function PUT(req: NextRequest) {
   try {
     const searchParams = req.nextUrl.searchParams;
-    const userId = searchParams.get("id");
+    const id = searchParams.get("id");
+    const userId = searchParams.get("userId");
 
-    if (!userId) {
+    if (!id && !userId) {
       return NextResponse.json(
-        { message: "User ID is required" },
+        { message: "Either ID or User ID is required" },
         { status: 400 }
       );
     }
@@ -136,12 +147,21 @@ export async function PUT(req: NextRequest) {
     // Parse the request body
     const body = await req.json();
 
-    // Check if profile exists
-    const existingProfile = await db
-      .select()
-      .from(StudentProfileTable)
-      .where(eq(StudentProfileTable.userId, userId))
-      .limit(1);
+    // Check if profile exists based on which parameter was provided
+    let existingProfile;
+    if (id) {
+      existingProfile = await db
+        .select()
+        .from(StudentProfileTable)
+        .where(eq(StudentProfileTable.id, id))
+        .limit(1);
+    } else {
+      existingProfile = await db
+        .select()
+        .from(StudentProfileTable)
+        .where(eq(StudentProfileTable.userId, userId!))
+        .limit(1);
+    }
 
     if (existingProfile.length === 0) {
       return NextResponse.json(
@@ -150,21 +170,33 @@ export async function PUT(req: NextRequest) {
       );
     }
 
-    // Update student profile
-    const updatedProfile = await db
-      .update(StudentProfileTable)
-      .set({
-        ...body,
-        updatedAt: new Date()
-      })
-      .where(eq(StudentProfileTable.userId, userId))
-      .returning();
+    // Update student profile using the same condition as the search
+    let updatedProfile;
+    if (id) {
+      updatedProfile = await db
+        .update(StudentProfileTable)
+        .set({
+          ...body,
+          updatedAt: new Date()
+        })
+        .where(eq(StudentProfileTable.id, id))
+        .returning();
+    } else {
+      updatedProfile = await db
+        .update(StudentProfileTable)
+        .set({
+          ...body,
+          updatedAt: new Date()
+        })
+        .where(eq(StudentProfileTable.userId, userId!))
+        .returning();
+    }
 
     return NextResponse.json(updatedProfile[0], { status: 200 });
   } catch (error) {
     console.error("Student Profile Update Error:", error);
     return NextResponse.json(
-      { 
+      {
         message: "Error updating student profile",
         error: error instanceof Error ? error.message : "Unknown error"
       },

@@ -1,8 +1,11 @@
+/* eslint-disable  react-hooks/exhaustive-deps*/
 'use client';
 
 import { StudentLogBookEntries } from '@/components/student/DisplayLogBookEntries';
 import LogBookManagement from '@/components/student/LogBookManagement';
 import StudentProfileForm from '@/components/student/profileForm';
+import ProfileVerificationStatus from '@/components/student/ProfileVerificationStatus ';
+
 import {
   Popover,
   PopoverContent,
@@ -10,6 +13,7 @@ import {
 } from "@/components/ui/popover";
 import { useCurrentUser } from '@/hooks/auth';
 import {
+  AlertCircle,
   ChevronLeft,
   ChevronRight,
   File,
@@ -21,20 +25,48 @@ import {
 import { signOut, useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
+
 export default function Dashboard() {
-  const { status} = useSession();
+  const { status } = useSession();
   const router = useRouter();
   const user = useCurrentUser();
-  // console.log("user",user?.name);
   
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [activeComponent, setActiveComponent] = useState('profile');
+  const [profileStatus, setProfileStatus] = useState<'PENDING' | 'APPROVED' | 'REJECTED'>('PENDING');
+  const [profileExists, setProfileExists] = useState(false);
 
   const handleLogout = async () => {
     await signOut({ redirectTo: "/auth/login" });
   };
 
-  // Redirect if not authenticatedclear
+  // Fetch profile verification status
+  useEffect(() => {
+    if (user?.id) {
+      fetchProfileStatus();
+    }
+  }, [user?.id]);
+
+  const fetchProfileStatus = async () => {
+    try {
+      const response = await fetch(`/api/student-profile?byUserId=${user?.id}`);
+      const data = await response.json();
+      
+      if (response.ok && data) {
+        if (data.message !== "Student not found") {
+          setProfileExists(true);
+          setProfileStatus(data.status || 'PENDING');
+        } else {
+          setProfileExists(false);
+          setProfileStatus('PENDING');
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching profile status:", error);
+    }
+  };
+
+  // Redirect if not authenticated
   useEffect(() => {
     if (status === 'unauthenticated') {
       router.push('/auth/login');
@@ -45,48 +77,63 @@ export default function Dashboard() {
     return <div className="flex items-center justify-center h-screen">Loading...</div>;
   }
 
-
   const toggleSidebar = () => {
     setSidebarOpen(!sidebarOpen);
   };
 
+  // Determine if logbook entry should be accessible
+  const canAccessLogBook = profileStatus === 'APPROVED';
+
   // Navigation items for sidebar
   const navItems = [
-    { id: 'profile', label: 'Profile', icon: <File className="h-5 w-5" /> },
-    { id: 'LogBookEntries', label: 'Log Book Entries', icon: <Users className="h-5 w-5" /> },
-    // { id: 'EnteredlogBook', label: 'Log Book ', icon: <File className="h-5 w-5" /> },
-    // { id: 'activity', label: 'Activity', icon: <Activity className="h-5 w-5" /> },
+    { id: 'profile', label: 'Profile', icon: <File className="h-5 w-5" />, always: true },
   ];
+
+  // Add verification status item if profile exists
+  if (profileExists && profileStatus !== 'APPROVED') {
+    navItems.push({ 
+      id: 'verification', 
+      label: 'Verification Status', 
+      icon: <AlertCircle className="h-5 w-5" />, 
+      always: true 
+    });
+  }
+
+  // Add LogBook entries only if profile is approved
+  if (canAccessLogBook) {
+    navItems.push({ 
+      id: 'LogBookEntries', 
+      label: 'Log Book Entries', 
+      icon: <Users className="h-5 w-5" />, 
+      always: false 
+    });
+  }
 
   // Render the appropriate component based on sidebar selection
   const renderMainContent = () => {
     switch (activeComponent) {
       case 'profile':
-        return (
-           <StudentProfileForm/>
-        );
+        return <StudentProfileForm onProfileUpdate={fetchProfileStatus} />;
+      case 'verification':
+        return <ProfileVerificationStatus status={profileStatus} />;
       case 'LogBookEntries':
-        // return (
-        //   <LogBookEntries/>
-        // );
-
-        return(
-          <LogBookManagement/>
-        );
-      case 'EnteredlogBook':
-        return (
-            <StudentLogBookEntries/>
-        );
-      case 'activity':
-        return (
-          <div>
-            <h1 className="text-2xl font-bold mb-6">Recent Activity</h1>
-            <div className="border rounded-lg p-6">
-              <h2 className="text-lg font-semibold mb-4">Activity Log</h2>
-              {/* Activity logs and timeline */}
+        if (!canAccessLogBook) {
+          return (
+            <div className="text-center p-8 text-red-500">
+              Your profile is pending verification. You cannot access the logbook entries until your profile is approved.
             </div>
-          </div>
-        );
+          );
+        }
+        return <LogBookManagement />;
+      case 'EnteredlogBook':
+        if (!canAccessLogBook) {
+          return (
+            <div className="text-center p-8 text-red-500">
+              Your profile is pending verification. You cannot access the logbook entries until your profile is approved.
+            </div>
+          );
+        }
+        return <StudentLogBookEntries />;
       default:
         return (
           <div className="text-center p-8 text-gray-500">
@@ -113,10 +160,6 @@ export default function Dashboard() {
           <Popover>
             <PopoverTrigger asChild>
               <button className="flex items-center gap-2 hover:bg-gray-50 rounded-lg p-2 transition-colors">
-                {/* <Avatar className="h-8 w-8">
-                  <AvatarImage src="/images/user_alt_icon.png" alt="User" />
-                  
-                </Avatar> */}
                 <span className="text-sm font-medium text-gray-700">{user?.name}</span>
               </button>
             </PopoverTrigger>
