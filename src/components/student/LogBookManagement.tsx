@@ -32,12 +32,13 @@ import {
   ArrowUpCircle,
   Check,
   Edit,
+  FileDown,
   Loader2,
   Plus,
+  Printer,
   X,
 } from "lucide-react";
 import { LogBookFilters } from "../common/LogBookFilters";
-import { FileDown, Printer } from "lucide-react";
 
 // Types
 interface DynamicField {
@@ -169,7 +170,6 @@ const LogBookManagement: React.FC = () => {
     key: string;
     direction: "asc" | "desc";
   } | null>(null);
-  const [activeTab, setActiveTab] = useState<string>("entries");
 
   // Fetch student details
   useEffect(() => {
