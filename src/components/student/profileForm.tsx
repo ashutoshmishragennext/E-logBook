@@ -38,6 +38,7 @@ import { useEffect, useState } from "react";
 import "react-datepicker/dist/react-datepicker.css";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
+import { toast } from "sonner";
 
 // Zod validation schema
 
@@ -87,6 +88,7 @@ const studentProfileSchema = z.object({
   specialInterest: z.string().optional(),
   futurePlan: z.string().optional(),
   status: z.enum(["PENDING", "APPROVED", "REJECTED"]).optional(), // Added status field
+  rejection_reason: z.string().optional(), // Added rejection reason field
 });
 
 export default function StudentProfileForm({
@@ -97,6 +99,8 @@ export default function StudentProfileForm({
   const user = useCurrentUser();
   const [isLoading, setIsLoading] = useState(false);
   interface StudentProfile {
+    rejection_reason: string;
+    id: any;
     status: string;
     name: string;
     rollNo: string;
@@ -144,6 +148,7 @@ export default function StudentProfileForm({
       futurePlan: "",
       teacherId: "",
       status: "PENDING",
+      rejection_reason: "",
     },
   });
 
@@ -261,9 +266,15 @@ export default function StudentProfileForm({
   // Handle form submission
   const onSubmit = async (values: z.infer<typeof studentProfileSchema>) => {
     setIsLoading(true);
+    console.log("Form submitted with values:", values);
+    if (values.teacherId === "") {
+      alert("Please select a teacher for verification.");
+      setIsLoading(false);
+      return;
+    }
     try {
       const endpoint = existingProfile
-        ? `/api/student-profile?userId=${user?.id}`
+        ? `/api/student-profile?userId=${user?.id}&id=${existingProfile?.id}`
         : `/api/student-profile?userId=${user?.id}`;
 
       const method = existingProfile ? "PUT" : "POST";
@@ -271,6 +282,7 @@ export default function StudentProfileForm({
       // Format date values
       const formattedValues = {
         ...values,
+        status: "PENDING",
         dateOfBirth: values.dateOfBirth
           ? values.dateOfBirth.toISOString()
           : null,
@@ -294,25 +306,30 @@ export default function StudentProfileForm({
 
       if (response.ok) {
         console.log("Profile saved successfully", data);
-        // toast.success(existingProfile
-        //   ? "Profile Updated Successfully"
-        //   : "Profile Created Successfully", {
-        //   description: `Your student profile has been ${existingProfile ? 'updated' : 'created'}.`
-        // });
+        toast.success(
+          existingProfile
+            ? "Profile Updated Successfully"
+            : "Profile Created Successfully",
+          {
+            description: `Your student profile has been ${
+              existingProfile ? "updated" : "created"
+            }.`,
+          }
+        );
         setExistingProfile(data);
         setEditMode(false); // Disable edit mode after saving
         console.log("Profile data:", data);
       } else {
         console.error("Error saving profile:", data);
-        // toast.error("Error", {
-        //   description: data.message || "Something went wrong"
-        // });
+        toast.error("Error", {
+          description: data.message || "Something went wrong",
+        });
       }
     } catch (error) {
       console.error("Network error:", error);
-      // toast.error("Error", {
-      //   description: "Network error. Please try again."
-      // });
+      toast.error("Error", {
+        description: "Network error. Please try again.",
+      });
     } finally {
       setIsLoading(false);
     }
@@ -363,7 +380,6 @@ export default function StudentProfileForm({
                   <div className="flex flex-col md:flex-row gap-6">
                     {/* Profile Photo Upload */}
                     <div className="md:w-1/3">
-                      
                       <FormField
                         control={form.control}
                         name="profilePhoto"
@@ -402,11 +418,11 @@ export default function StudentProfileForm({
                                           uploadedFileUrl
                                         );
                                         setProfilePhotoFileName(res[0].name);
-                                        // toast.success("Profile Photo Uploaded");
+                                        toast.success("Profile Photo Uploaded");
                                       }
                                     }}
                                     onUploadError={(error) => {
-                                      // toast.error("Upload Error");
+                                      toast.error("Upload Error");
                                       console.log("Upload Error:", error);
                                     }}
                                   />
@@ -447,13 +463,13 @@ export default function StudentProfileForm({
                             </FormLabel>
                             <FormControl>
                               <Select
-                            
                                 onValueChange={field.onChange}
                                 defaultValue={field.value}
+                                value={field.value}
                                 disabled={
                                   !editMode ||
                                   (existingProfile &&
-                                    existingProfile.status !== "PENDING") ||
+                                    existingProfile.status === "PENDING") ||
                                   undefined
                                 }
                               >
@@ -466,7 +482,19 @@ export default function StudentProfileForm({
                                       : ""
                                   }
                                 >
-                                  <SelectValue placeholder="Select a teacher for verification" />
+                                  <SelectValue placeholder="Select a teacher for verification">
+                                    {field.value
+                                      ? (() => {
+                                          const selectedTeacher = teachers.find(
+                                            (teacher) =>
+                                              teacher.id === field.value
+                                          );
+                                          return selectedTeacher
+                                            ? `${selectedTeacher.name} - ${selectedTeacher.email}`
+                                            : "Select a teacher for verification";
+                                        })()
+                                      : "Select a teacher for verification"}
+                                  </SelectValue>
                                 </SelectTrigger>
                                 <SelectContent>
                                   {teachers.map((teacher) => (
@@ -481,13 +509,21 @@ export default function StudentProfileForm({
                               </Select>
                             </FormControl>
                             {existingProfile &&
-                              existingProfile.status !== "PENDING" && (
+                              existingProfile.status === "APPROVED" &&  (
                                 <p className="text-sm text-gray-500 mt-1">
                                   Your profile has been{" "}
                                   {existingProfile.status.toLowerCase()} and can
                                   no longer be assigned to a different teacher.
                                 </p>
                               )}
+                              {existingProfile && existingProfile.status === "REJECTED" && (
+                                <p className="text-sm text-gray-500 mt-1">
+                                Your profile has been{" "}
+                                {existingProfile.status.toLowerCase()} and Reason for rejection is: {existingProfile.rejection_reason}
+                              </p>
+
+                              )
+                              }
                             <FormMessage />
                           </FormItem>
                         )}
@@ -1093,11 +1129,11 @@ export default function StudentProfileForm({
                                         uploadedFileUrl
                                       );
                                       setCollegeIdProofFileName(res[0].name);
-                                      // toast.success("ID Proof Uploaded");
+                                      toast.success("ID Proof Uploaded");
                                     }
                                   }}
                                   onUploadError={(error) => {
-                                    // toast.error("Upload Error");
+                                    toast.error("Upload Error");
                                     console.log("Upload Error:", error);
                                   }}
                                 />

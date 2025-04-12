@@ -203,7 +203,7 @@ const StudentsApproval = () => {
 
     try {
       const response = await fetch(
-        `/api/student-profile?id=${rejectionDialog.studentId}`, // Changed to query parameter format
+        `/api/student-profile?id=${rejectionDialog.studentId}`,
         {
           method: "PUT", // Changed from PATCH to PUT
           headers: {
