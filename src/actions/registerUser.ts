@@ -26,7 +26,7 @@ export async function registerUser(values: z.infer<typeof RegisterUserSchema>) {
     email,
     password: hashedPassword,
     phone,
-    role: role || "USER",
+    role: role || "STUDENT",
     updatedAt: new Date(),
   });
 

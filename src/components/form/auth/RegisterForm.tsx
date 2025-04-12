@@ -45,7 +45,7 @@ const RegisterForm = ({ text, role }: RegisterFormProps) => {
       email: "",
       phone: "",
       password: "",
-      role: "USER",
+      role: "STUDENT",
     },
   });
 
@@ -56,6 +56,7 @@ const RegisterForm = ({ text, role }: RegisterFormProps) => {
 
     setError(undefined);
     setSuccess(undefined);
+    console.log("Form data", data);
 
     startTransition(() => {
       registerUser(data)
