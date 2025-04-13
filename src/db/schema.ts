@@ -51,7 +51,7 @@ export const EmailVerificationTokenTable = pgTable(
   "email_verification_tokens",
   {
     id: uuid("id").defaultRandom().primaryKey().notNull(),
-    userId: uuid("user_id").references(() => UsersTable.id).notNull(),
+    // userId: uuid("user_id").references(() => UsersTable.id).notNull(),
     email: text("email").notNull(),
     token: uuid("token").notNull(),
     expiresAt: timestamp("expires_at", { mode: "date" }).notNull(),

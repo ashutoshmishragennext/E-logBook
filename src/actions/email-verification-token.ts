@@ -19,7 +19,7 @@ export async function createEmailVerificationToken(
       .insert(EmailVerificationTokenTable)
       .values({
         email: data.email,
-        userId: data.userId,  // Add this
+        // userId: data.userId,  // Add this
         token: data.token,
         expiresAt: data.expiresAt,
       })

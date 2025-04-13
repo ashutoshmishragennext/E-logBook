@@ -26,7 +26,7 @@ export async function generateEmailVerificationToken(email: string) {
     const expiresAt = new Date(new Date().getTime() + expirationTimeMs);
     return await createEmailVerificationToken({
       email, token, expiresAt,
-      userId: ""
+      userId: "xyz"
     });
   } catch (error) {
     console.error(`Error generating token`, error);
