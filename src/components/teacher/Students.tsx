@@ -106,36 +106,49 @@ const StudentsApproval = () => {
   useEffect(() => {
     const fetchStudents = async () => {
       if (!teacherId) return;
-
+      console.log("Fetching students for teacherId:", teacherId);
+  
       try {
         setLoading(true);
-        const studentResponse = await fetch(
+        const response = await fetch(
           `/api/student-profile?teacherId=${teacherId}`
         );
-
-        if (!studentResponse.ok) {
-          throw new Error("Failed to fetch student profiles");
+  
+        if (!response.ok) {
+          throw new Error(`Failed to fetch student profiles: ${response.status} ${response.statusText}`);
         }
-
-        const data = await studentResponse.json();
+  
+        const data = await response.json();
+        console.log("Response type:", typeof data);
+        console.log("Is array:", Array.isArray(data));
         console.log("Raw API response:", data);
-
-        // If the response is a single object, put it in an array
+  
+        // Ensure we're working with an array
         const studentArray = Array.isArray(data) ? data : [data];
-        console.log("Processed student array:", studentArray);
-
-        // Filter pending students (using status instead of verification_status)
+        console.log("Number of students received:", studentArray.length);
+  
+        // Check field names to handle both potential field naming conventions
+        if (studentArray.length > 0) {
+          console.log("Field names in first student:", Object.keys(studentArray[0]));
+        }
+  
+        // Filter pending students - handle both field naming conventions
         const pendingStudents = studentArray.filter(
-          (student) => student.status === "PENDING"
+          (student) => {
+            const status = student.status || student.verification_status;
+            return status === "PENDING";
+          }
         );
         console.log("Pending students:", pendingStudents);
-
+  
         setStudents(pendingStudents);
-
-        // Extract unique batches for filter
+  
+        // Extract unique batches for filter - handle both field naming conventions
         const batches = [
           ...new Set(
-            pendingStudents.map((s) => s.admissionBatch).filter(Boolean)
+            pendingStudents
+              .map((s) => s.admissionBatch || s.admission_batch)
+              .filter(Boolean)
           ),
         ] as string[];
         setAvailableBatches(batches);
@@ -146,11 +159,12 @@ const StudentsApproval = () => {
         setLoading(false);
       }
     };
-
+  
     if (teacherId) {
       fetchStudents();
     }
   }, [teacherId]);
+  
 
   // Handle approve student
   const handleApprove = async (studentId: string) => {

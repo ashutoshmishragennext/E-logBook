@@ -469,7 +469,7 @@ export default function StudentProfileForm({
                                 disabled={
                                   !editMode ||
                                   (existingProfile &&
-                                    existingProfile.status === "PENDING") ||
+                                    existingProfile.status !== "PENDING") ||
                                   undefined
                                 }
                               >

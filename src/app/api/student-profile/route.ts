@@ -16,50 +16,55 @@ export async function GET(req: NextRequest) {
     // If neither parameter is provided
     if (!id && !byUserId && !teacherId) {
       return NextResponse.json(
-        { message: "Either id or byUserId is required" },
+        { message: "Either id, byUserId, or teacherId is required" },
         { status: 400 }
       );
     }
 
-    let student;
+    let students;
 
     if (byUserId) {
       // Search by userId
-      student = await db
+      students = await db
         .select()
         .from(StudentProfileTable)
-        .where(eq(StudentProfileTable.userId, byUserId))
-        .limit(1);
+        .where(eq(StudentProfileTable.userId, byUserId));
     }
     else if (teacherId) {
-      // Search by teacherId
-      student = await db
+      // Search by teacherId - return ALL matching students
+      students = await db
         .select()
         .from(StudentProfileTable)
-        .where(eq(StudentProfileTable.teacherId, teacherId))
-        .limit(1);
+        .where(eq(StudentProfileTable.teacherId, teacherId));
+        
+      console.log(`Found ${students.length} students with teacherId ${teacherId}`);
     }
     else {
       // Search by studentId (id parameter)
-      student = await db
+      students = await db
         .select()
         .from(StudentProfileTable)
-        .where(eq(StudentProfileTable.id, id!))
-        .limit(1);
+        .where(eq(StudentProfileTable.id, id!));
     }
 
-    if (!student || student.length === 0) {
+    if (!students || students.length === 0) {
       return NextResponse.json(
-        { message: "Student not found" },
+        { message: "No students found with the provided criteria" },
         { status: 404 }
       );
     }
 
-    return NextResponse.json(student[0]);
+    // If we're querying by ID or userId, we expect a single result
+    // Otherwise return the full array
+    if (id || byUserId) {
+      return NextResponse.json(students[0]);
+    } else {
+      return NextResponse.json(students);
+    }
   } catch (error) {
-    console.error("Error fetching student profile:", error);
+    console.error("Error fetching student profile(s):", error);
     return NextResponse.json(
-      { message: "Internal server error while fetching student profile" },
+      { message: "Internal server error while fetching student profile(s)" },
       { status: 500 }
     );
   }
