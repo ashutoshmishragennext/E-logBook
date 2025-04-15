@@ -1023,6 +1023,7 @@ const LogBookManagement: React.FC = () => {
                   )}
                   <TableHead>Supervisor</TableHead>
                   <TableHead>Remarks</TableHead>
+                  <TableHead>Teacher Remarks</TableHead>
                   <TableHead>Status</TableHead>
                 </TableRow>
               </TableHeader>
@@ -1101,6 +1102,13 @@ const LogBookManagement: React.FC = () => {
                       ) : (
                         entry.remarks || "-"
                       )}
+                    </TableCell>
+
+                    {/* Teacher Remarks Cell - Empty for non-reviewed entries */}
+                    <TableCell>
+                      {entry.status === "REVIEWED"
+                        ? entry.teacherRemarks || "-"
+                        : ""}
                     </TableCell>
 
                     {/* Status Cell with Submit Functionality */}

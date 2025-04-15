@@ -509,21 +509,22 @@ export default function StudentProfileForm({
                               </Select>
                             </FormControl>
                             {existingProfile &&
-                              existingProfile.status === "APPROVED" &&  (
+                              existingProfile.status === "APPROVED" && (
                                 <p className="text-sm text-gray-500 mt-1">
                                   Your profile has been{" "}
                                   {existingProfile.status.toLowerCase()} and can
                                   no longer be assigned to a different teacher.
                                 </p>
                               )}
-                              {existingProfile && existingProfile.status === "REJECTED" && (
+                            {existingProfile &&
+                              existingProfile.status === "REJECTED" && (
                                 <p className="text-sm text-gray-500 mt-1">
-                                Your profile has been{" "}
-                                {existingProfile.status.toLowerCase()} and Reason for rejection is: {existingProfile.rejection_reason}
-                              </p>
-
-                              )
-                              }
+                                  Your profile has been{" "}
+                                  {existingProfile.status.toLowerCase()} and
+                                  Reason for rejection is:{" "}
+                                  {existingProfile.rejection_reason}
+                                </p>
+                              )}
                             <FormMessage />
                           </FormItem>
                         )}
@@ -657,6 +658,7 @@ export default function StudentProfileForm({
                               <FormLabel>Aadhar Number</FormLabel>
                               <FormControl>
                                 <Input
+                                  type="number"
                                   placeholder="Enter your Aadhar number"
                                   {...field}
                                   readOnly={!editMode}
@@ -1112,31 +1114,29 @@ export default function StudentProfileForm({
                         <FormItem className="col-span-2">
                           <FormLabel>College ID Proof</FormLabel>
                           <FormControl>
-                            <div className="space-y-2">
+                            <div className="flex flex-col items-start space-y-2 w-full">
                               {editMode && (
-                                <UploadButton
-                                  endpoint="docUploader"
-                                  onClientUploadComplete={(res) => {
-                                    if (res.length > 0) {
-                                      const uploadedFileUrl =
-                                        res[0].serverData.fileUrl;
-                                      form.setValue(
-                                        "collegeIdProof",
-                                        uploadedFileUrl
-                                      );
-                                      form.setValue(
-                                        "collegeIdProof",
-                                        uploadedFileUrl
-                                      );
-                                      setCollegeIdProofFileName(res[0].name);
-                                      toast.success("ID Proof Uploaded");
-                                    }
-                                  }}
-                                  onUploadError={(error) => {
-                                    toast.error("Upload Error");
-                                    console.log("Upload Error:", error);
-                                  }}
-                                />
+                                <div className="w-full">
+                                  <UploadButton
+                                    endpoint="docUploader"
+                                    onClientUploadComplete={(res) => {
+                                      if (res.length > 0) {
+                                        const uploadedFileUrl =
+                                          res[0].serverData.fileUrl;
+                                        form.setValue(
+                                          "collegeIdProof",
+                                          uploadedFileUrl
+                                        );
+                                        setCollegeIdProofFileName(res[0].name);
+                                        toast.success("ID Proof Uploaded");
+                                      }
+                                    }}
+                                    onUploadError={(error) => {
+                                      toast.error("Upload Error");
+                                      console.log("Upload Error:", error);
+                                    }}
+                                  />
+                                </div>
                               )}
 
                               {field.value && (
@@ -1167,10 +1167,10 @@ export default function StudentProfileForm({
                               )}
 
                               {/* {collegeIdProofFileName && (
-                                <div className="mt-1 text-sm text-gray-600">
-                                  {collegeIdProofFileName}
-                                </div>
-                              )} */}
+            <div className="mt-1 text-sm text-gray-600">
+              {collegeIdProofFileName}
+            </div>
+          )} */}
                             </div>
                           </FormControl>
                           <FormMessage />
