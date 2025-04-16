@@ -31,14 +31,17 @@ import { useCurrentUser } from "@/hooks/auth";
 import { cn } from "@/lib/utils";
 import { UploadButton } from "@/utils/uploadthing";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { format } from "date-fns";
-import { CalendarIcon } from "lucide-react";
+
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import "react-datepicker/dist/react-datepicker.css";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { toast } from "sonner";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
+import { CalendarIcon } from "lucide-react";
+import { format } from "date-fns";
 
 // Zod validation schema
 
@@ -185,7 +188,7 @@ export default function StudentProfileForm({
           console.log("Fetched profile data:", data);
 
           // Check if the response indicates the student wasn't found
-          if (data.message === "Student not found") {
+          if (data.message === "No students found with the provided criteria") {
             console.log("No existing profile found for this user");
             setExistingProfile(null); // Clear any existing profile data
             setEditMode(true); // Enable edit mode for new profiles
@@ -469,7 +472,7 @@ export default function StudentProfileForm({
                                 disabled={
                                   !editMode ||
                                   (existingProfile &&
-                                    existingProfile.status !== "PENDING") ||
+                                    existingProfile.status === "APPROVED") ||
                                   undefined
                                 }
                               >
@@ -477,7 +480,7 @@ export default function StudentProfileForm({
                                   className={
                                     !editMode ||
                                     (existingProfile &&
-                                      existingProfile.status !== "PENDING")
+                                      existingProfile.status === "APPROVED")
                                       ? "bg-gray-200 cursor-not-allowed text-black"
                                       : ""
                                   }
@@ -579,6 +582,13 @@ export default function StudentProfileForm({
                         <FormField
                           control={form.control}
                           name="mobileNo"
+                          rules={{
+                            required: "Mobile number is required",
+                            pattern: {
+                              value: /^[6-9]\d{9}$/, // Indian mobile numbers typically start from 6–9
+                              message: "Enter a valid 10-digit mobile number",
+                            },
+                          }}
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel>Mobile Number</FormLabel>
@@ -587,6 +597,7 @@ export default function StudentProfileForm({
                                   type="tel"
                                   placeholder="Enter 10-digit mobile number"
                                   {...field}
+                                  maxLength={10}
                                   readOnly={!editMode}
                                   className={
                                     !editMode
@@ -607,44 +618,27 @@ export default function StudentProfileForm({
                           render={({ field }) => (
                             <FormItem className="flex flex-col">
                               <FormLabel>Date of Birth</FormLabel>
-                              <Popover>
-                                <PopoverTrigger asChild>
-                                  <FormControl>
-                                    <Button
-                                      variant="outline"
-                                      className={cn(
-                                        "w-full pl-3 text-left font-normal",
-                                        !field.value && "text-muted-foreground",
-                                        !editMode &&
-                                          "bg-gray-100 cursor-not-allowed"
-                                      )}
-                                      disabled={!editMode}
-                                    >
-                                      {field.value ? (
-                                        format(field.value, "PPP") // Date only (no time)
-                                      ) : (
-                                        <span>Pick a date</span>
-                                      )}
-                                      <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                    </Button>
-                                  </FormControl>
-                                </PopoverTrigger>
-                                <PopoverContent
-                                  className="w-auto p-0"
-                                  align="start"
-                                >
-                                  <Calendar
-                                    mode="single"
+                              <FormControl>
+                                <div className="relative w-full">
+                                  <DatePicker
                                     selected={field.value}
-                                    onSelect={field.onChange}
+                                    onChange={(date) => field.onChange(date)}
+                                    dateFormat="PPP"
                                     disabled={!editMode}
-                                    initialFocus
-                                    captionLayout="dropdown" // Enables year/month dropdowns
-                                    fromYear={1900} // Minimum selectable year
-                                    toYear={new Date().getFullYear()} // Maximum selectable year
+                                    showMonthDropdown
+                                    showYearDropdown
+                                    dropdownMode="select"
+                                    className={cn(
+                                      "w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500",
+                                      !editMode &&
+                                        "bg-gray-100 cursor-not-allowed"
+                                    )}
+                                    placeholderText="Pick a date"
+                                    maxDate={new Date()}
+                                    minDate={new Date("1900-01-01")}
                                   />
-                                </PopoverContent>
-                              </Popover>
+                                </div>
+                              </FormControl>
                               <FormMessage />
                             </FormItem>
                           )}
@@ -653,15 +647,33 @@ export default function StudentProfileForm({
                         <FormField
                           control={form.control}
                           name="adharNo"
+                          rules={{
+                            required: "Aadhar number is required",
+                            pattern: {
+                              value: /^\d{12}$/, // Exactly 12 digits
+                              message: "Enter a valid 12-digit Aadhar number",
+                            },
+                          }}
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel>Aadhar Number</FormLabel>
                               <FormControl>
                                 <Input
-                                  type="number"
-                                  placeholder="Enter your Aadhar number"
+                                  type="text"
+                                  inputMode="numeric"
+                                  maxLength={12}
+                                  placeholder="Enter your 12-digit Aadhar number"
                                   {...field}
                                   readOnly={!editMode}
+                                  onInput={(e) => {
+                                    const target = e.target as HTMLInputElement;
+                                    target.value = target.value
+                                      .replace(/\D/g, "")
+                                      .slice(0, 12);
+                                    field.onChange(
+                                      (e.target as HTMLInputElement).value
+                                    );
+                                  }}
                                   className={
                                     !editMode
                                       ? "bg-gray-100 cursor-not-allowed"
@@ -1016,44 +1028,26 @@ export default function StudentProfileForm({
                     <FormField
                       control={form.control}
                       name="dateOfJoining"
+                      rules={{ required: "Date of joining is required" }}
                       render={({ field }) => (
                         <FormItem className="flex flex-col">
                           <FormLabel>Date of Joining</FormLabel>
-                          <Popover>
-                            <PopoverTrigger asChild>
-                              <FormControl>
-                                <Button
-                                  variant="outline"
-                                  className={cn(
-                                    "w-full pl-3 text-left font-normal",
-                                    !field.value && "text-muted-foreground",
-                                    !editMode &&
-                                      "bg-gray-100 cursor-not-allowed"
-                                  )}
-                                  disabled={!editMode}
-                                >
-                                  {field.value ? (
-                                    format(field.value, "PPP")
-                                  ) : (
-                                    <span>Pick a date</span>
-                                  )}
-                                  <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                </Button>
-                              </FormControl>
-                            </PopoverTrigger>
-                            <PopoverContent
-                              className="w-auto p-0"
-                              align="start"
-                            >
-                              <Calendar
-                                mode="single"
-                                selected={field.value}
-                                onSelect={field.onChange}
-                                disabled={!editMode}
-                                initialFocus
-                              />
-                            </PopoverContent>
-                          </Popover>
+                          <FormControl>
+                            <DatePicker
+                              selected={
+                                field.value ? new Date(field.value) : null
+                              }
+                              onChange={(date) => field.onChange(date)}
+                              dateFormat="PPP"
+                              placeholderText="Pick a date"
+                              className={cn(
+                                "w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500",
+                                !editMode && "bg-gray-100 cursor-not-allowed"
+                              )}
+                              disabled={!editMode}
+                              maxDate={new Date()} // Optional: to prevent future dates
+                            />
+                          </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -1063,44 +1057,27 @@ export default function StudentProfileForm({
                     <FormField
                       control={form.control}
                       name="dateOfCompletion"
+                      rules={{
+                        required: "Expected date of completion is required",
+                      }}
                       render={({ field }) => (
                         <FormItem className="flex flex-col">
                           <FormLabel>Expected Date of Completion</FormLabel>
-                          <Popover>
-                            <PopoverTrigger asChild>
-                              <FormControl>
-                                <Button
-                                  variant="outline"
-                                  className={cn(
-                                    "w-full pl-3 text-left font-normal",
-                                    !field.value && "text-muted-foreground",
-                                    !editMode &&
-                                      "bg-gray-100 cursor-not-allowed"
-                                  )}
-                                  disabled={!editMode}
-                                >
-                                  {field.value ? (
-                                    format(field.value, "PPP")
-                                  ) : (
-                                    <span>Pick a date</span>
-                                  )}
-                                  <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                </Button>
-                              </FormControl>
-                            </PopoverTrigger>
-                            <PopoverContent
-                              className="w-auto p-0"
-                              align="start"
-                            >
-                              <Calendar
-                                mode="single"
-                                selected={field.value}
-                                onSelect={field.onChange}
-                                disabled={!editMode}
-                                initialFocus
-                              />
-                            </PopoverContent>
-                          </Popover>
+                          <FormControl>
+                            <DatePicker
+                              selected={
+                                field.value ? new Date(field.value) : null
+                              }
+                              onChange={(date) => field.onChange(date)}
+                              dateFormat="PPP"
+                              placeholderText="Pick a date"
+                              className={cn(
+                                "w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500",
+                                !editMode && "bg-gray-100 cursor-not-allowed"
+                              )}
+                              disabled={!editMode}
+                            />
+                          </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}

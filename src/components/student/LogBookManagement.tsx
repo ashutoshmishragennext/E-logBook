@@ -92,7 +92,6 @@ interface FilterOption {
 interface LogBookEntry {
   isEditing: any;
   target: any;
-  remarks: string;
   isNew: any;
   id: string;
   studentId: string;
@@ -467,7 +466,7 @@ const LogBookManagement: React.FC = () => {
       logBookTemplateId: entry.logBookTemplateId || logBookTemplate?.id,
       studentId: entry.studentId || studentDetails?.id,
       teacherId: entry.teacherId || "",
-      studentRemarks: entry.remarks || "",
+      studentRemarks: entry.studentRemarks || "",
       dynamicFields: entry.dynamicFields || {},
       status: "SUBMITTED", // Use DRAFT for initial save
     };
@@ -729,7 +728,7 @@ const LogBookManagement: React.FC = () => {
     });
 
     // Add other important columns
-    headers.push("Supervisor", "Remarks", "Status");
+    headers.push("Supervisor", "StudentRemarks","TeacherRemarks",  "Status");
 
     // Create rows for each entry
     const rows = entries.map((entry) => {
@@ -746,7 +745,8 @@ const LogBookManagement: React.FC = () => {
       // Add other values
       const teacherName =
         teachers.find((t) => t.id === entry.teacherId)?.name || "-";
-      row.push(teacherName, entry.remarks || "-", entry.status);
+
+      row.push(teacherName, entry.studentRemarks || "-",entry.teacherRemarks||"-", entry.status);
 
       return row;
     });
@@ -811,7 +811,8 @@ const LogBookManagement: React.FC = () => {
                 )
                 .join("")}
               <th>Supervisor</th>
-              <th>Remarks</th>
+              <th>StudentRemarks</th>
+              <th>TeacherRemarks</th>
               <th>Status</th>
             </tr>
           </thead>
@@ -837,7 +838,8 @@ const LogBookManagement: React.FC = () => {
                 <td>${
                   teachers.find((t) => t.id === entry.teacherId)?.name || "-"
                 }</td>
-                <td>${entry.remarks || "-"}</td>
+                <td>${entry.studentRemarks || "-"}</td>
+                <td>${entry.teacherRemarks || "-"}</td>
                 <td>${entry.status}</td>
               </tr>
             `
@@ -970,13 +972,17 @@ const LogBookManagement: React.FC = () => {
                 createdAt: new Date().toISOString(),
                 updatedAt: new Date().toISOString(),
                 teacherId: "",
-                remarks: "",
+                studentRemarks: "",
+                teacherRemarks:"",
                 status: "DRAFT",
                 template: logBookTemplate,
               };
 
               // Add new entry at the TOP of the table
-              setEntries([{ ...newEntry, target: null }, ...entries]);
+              setEntries([{
+                ...newEntry, target: null,
+                studentRemarks: ""
+              }, ...entries]);
             }}
             disabled={loading.template}
           >
@@ -1086,7 +1092,7 @@ const LogBookManagement: React.FC = () => {
                     <TableCell>
                       {entry.isEditing ? (
                         <Textarea
-                          value={entry.remarks || ""}
+                          value={entry.studentRemarks || ""}
                           onChange={(e) => {
                             const newEntries = entries.map((ent) =>
                               ent.id === entry.id
@@ -1100,7 +1106,7 @@ const LogBookManagement: React.FC = () => {
                           className="w-full"
                         />
                       ) : (
-                        entry.remarks || "-"
+                        entry.studentRemarks || "-"
                       )}
                     </TableCell>
 
