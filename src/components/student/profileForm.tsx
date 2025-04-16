@@ -786,7 +786,7 @@ export default function StudentProfileForm({
                               readOnly={!editMode || !!existingProfile}
                               className={
                                 !editMode || existingProfile
-                                  ? "bg-gray-100 cursor-not-allowed"
+                                  ? "bg-gray-100 "
                                   : ""
                               }
                             />
