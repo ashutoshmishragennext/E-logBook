@@ -1096,7 +1096,7 @@ const LogBookManagement: React.FC = () => {
                           onChange={(e) => {
                             const newEntries = entries.map((ent) =>
                               ent.id === entry.id
-                                ? { ...ent, remarks: e.target.value }
+                                ? { ...ent, studentRemarks: e.target.value }  // Change this to studentRemarks
                                 : ent
                             );
                             setEntries([...newEntries]);
