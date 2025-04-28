@@ -133,6 +133,7 @@ export const StudentProfileTable = pgTable(
     collegeId: uuid("college_id").references(() => CollegeTable.id).notNull(),
     courseId: uuid("course_id").references(() => CourseTable.id).notNull(),
     academicYearId: uuid("academic_year_id").references(() => AcademicYearTable.id).notNull(),
+    branchId: uuid("branch_id").references(() => BranchTable.id).notNull(),
     enrollmentNo: text("enrollment_no").notNull(),
     currentSemester: text("current_semester"),
     enrollmentStatus: text("enrollment_status").default("ACTIVE"), // ACTIVE, GRADUATED, DROPOUT, etc.
