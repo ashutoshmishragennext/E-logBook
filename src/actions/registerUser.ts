@@ -34,13 +34,18 @@ export async function registerUser(values: z.infer<typeof RegisterUserSchema>) {
   if (verificationToken) {
     const emailVerificationUrl = `${process.env.NEXT_PUBLIC_BASE_URL}${process.env.NEXT_PUBLIC_EMAIL_VERIFICATION_ENDPOINT}`;
     const url = `${emailVerificationUrl}?token=${verificationToken.token}`;
-
     await sendEmail(
       "Nextjs Auth",
       verificationToken.email,
-      "Activate your account",
-      `<p>Click <a href="${url}">here</a> to activate your account.</p>`
+      "Activate Your Account",
+      `<p>Hello,</p>
+       <p>Thank you for registering with us!</p>
+       <p>Please verify your email address by clicking the link below:</p>
+       <p><a href="${url}">Activate Account</a></p>
+       <p>If you did not request this, you can safely ignore this email.</p>
+       <p>Thank you,<br>The [Your Company Name] Team</p>`
     );
+    
 
     return {
       success: "User created successfully and confirmation email sent!",

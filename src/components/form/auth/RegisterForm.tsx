@@ -71,6 +71,9 @@ const RegisterForm = ({ text, role }: RegisterFormProps) => {
               title: "🎉 Registration success",
               description: data.success,
             });
+            setTimeout(() => {
+              window.location.href = "/auth/login";
+            }, 2000);
           }
         })
         .catch(() => setError("Something went wrong!"));
