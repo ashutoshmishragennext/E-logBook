@@ -1,5 +1,5 @@
 {
-  "id": "bacf998c-02cc-4b5c-88cd-9175dd271c73",
+  "id": "fcc9d956-cfa8-40f2-95c5-aba237317f50",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -50,6 +50,316 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
+    "public.branches": {
+      "name": "branches",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "college_id": {
+          "name": "college_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "code": {
+          "name": "code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "branch_college_code_key": {
+          "name": "branch_college_code_key",
+          "columns": [
+            {
+              "expression": "college_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "code",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "branches_college_id_colleges_id_fk": {
+          "name": "branches_college_id_colleges_id_fk",
+          "tableFrom": "branches",
+          "tableTo": "colleges",
+          "columnsFrom": [
+            "college_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.colleges": {
+      "name": "colleges",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "code": {
+          "name": "code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "address": {
+          "name": "address",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "city": {
+          "name": "city",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "state": {
+          "name": "state",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "phone": {
+          "name": "phone",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "email": {
+          "name": "email",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "website": {
+          "name": "website",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "logo": {
+          "name": "logo",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "college_code_key": {
+          "name": "college_code_key",
+          "columns": [
+            {
+              "expression": "code",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.courses": {
+      "name": "courses",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "branch_id": {
+          "name": "branch_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "code": {
+          "name": "code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "level": {
+          "name": "level",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "duration": {
+          "name": "duration",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "course_branch_code_key": {
+          "name": "course_branch_code_key",
+          "columns": [
+            {
+              "expression": "branch_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "code",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "courses_branch_id_branches_id_fk": {
+          "name": "courses_branch_id_branches_id_fk",
+          "tableFrom": "courses",
+          "tableTo": "branches",
+          "columnsFrom": [
+            "branch_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
     "public.email_verification_tokens": {
       "name": "email_verification_tokens",
       "schema": "",
@@ -60,12 +370,6 @@
           "primaryKey": true,
           "notNull": true,
           "default": "gen_random_uuid()"
-        },
-        "user_id": {
-          "name": "user_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
         },
         "email": {
           "name": "email",
@@ -109,21 +413,7 @@
           "with": {}
         }
       },
-      "foreignKeys": {
-        "email_verification_tokens_user_id_users_id_fk": {
-          "name": "email_verification_tokens_user_id_users_id_fk",
-          "tableFrom": "email_verification_tokens",
-          "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
+      "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
@@ -178,8 +468,8 @@
           "primaryKey": false,
           "notNull": false
         },
-        "status": {
-          "name": "status",
+        "verification_status": {
+          "name": "verification_status",
           "type": "text",
           "primaryKey": false,
           "notNull": false,
@@ -734,20 +1024,8 @@
           "primaryKey": false,
           "notNull": false
         },
-        "date_of_joining": {
-          "name": "date_of_joining",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "perivious_experience": {
-          "name": "perivious_experience",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "merital_status": {
-          "name": "merital_status",
+        "marital_status": {
+          "name": "marital_status",
           "type": "text",
           "primaryKey": false,
           "notNull": false
@@ -764,14 +1042,8 @@
           "primaryKey": false,
           "notNull": false
         },
-        "date_of_completion": {
-          "name": "date_of_completion",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "name_and_occpation_of_spouse": {
-          "name": "name_and_occpation_of_spouse",
+        "name_and_occupation_of_spouse": {
+          "name": "name_and_occupation_of_spouse",
           "type": "text",
           "primaryKey": false,
           "notNull": false
@@ -782,20 +1054,69 @@
           "primaryKey": false,
           "notNull": false
         },
+        "previous_experience": {
+          "name": "previous_experience",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "college_id": {
+          "name": "college_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "course_id": {
+          "name": "course_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "academic_year_id": {
+          "name": "academic_year_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "enrollment_no": {
+          "name": "enrollment_no",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "current_semester": {
+          "name": "current_semester",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "enrollment_status": {
+          "name": "enrollment_status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "'ACTIVE'"
+        },
+        "date_of_joining": {
+          "name": "date_of_joining",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "date_of_completion": {
+          "name": "date_of_completion",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "graduation_date": {
+          "name": "graduation_date",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
         "admission_batch": {
           "name": "admission_batch",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "course": {
-          "name": "course",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "subject": {
-          "name": "subject",
           "type": "text",
           "primaryKey": false,
           "notNull": false
@@ -805,6 +1126,33 @@
           "type": "text",
           "primaryKey": false,
           "notNull": false
+        },
+        "verification_status": {
+          "name": "verification_status",
+          "type": "verification_status",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "'PENDING'"
+        },
+        "teacher_id": {
+          "name": "teacher_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "rejection_reason": {
+          "name": "rejection_reason",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "is_active": {
+          "name": "is_active",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'true'"
         },
         "created_at": {
           "name": "created_at",
@@ -822,8 +1170,8 @@
         }
       },
       "indexes": {
-        "student_profile_user_id_key": {
-          "name": "student_profile_user_id_key",
+        "student_user_id_key": {
+          "name": "student_user_id_key",
           "columns": [
             {
               "expression": "user_id",
@@ -837,11 +1185,59 @@
           "method": "btree",
           "with": {}
         },
-        "student_profile_roll_no_key": {
-          "name": "student_profile_roll_no_key",
+        "student_roll_no_key": {
+          "name": "student_roll_no_key",
           "columns": [
             {
               "expression": "roll_no",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "student_enrollment_no_key": {
+          "name": "student_enrollment_no_key",
+          "columns": [
+            {
+              "expression": "enrollment_no",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "student_enrollment_key": {
+          "name": "student_enrollment_key",
+          "columns": [
+            {
+              "expression": "id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "college_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "course_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "academic_year_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -860,6 +1256,58 @@
           "tableTo": "users",
           "columnsFrom": [
             "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "student_profiles_college_id_colleges_id_fk": {
+          "name": "student_profiles_college_id_colleges_id_fk",
+          "tableFrom": "student_profiles",
+          "tableTo": "colleges",
+          "columnsFrom": [
+            "college_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "student_profiles_course_id_courses_id_fk": {
+          "name": "student_profiles_course_id_courses_id_fk",
+          "tableFrom": "student_profiles",
+          "tableTo": "courses",
+          "columnsFrom": [
+            "course_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "student_profiles_academic_year_id_academic_years_id_fk": {
+          "name": "student_profiles_academic_year_id_academic_years_id_fk",
+          "tableFrom": "student_profiles",
+          "tableTo": "academic_years",
+          "columnsFrom": [
+            "academic_year_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "student_profiles_teacher_id_teacher_profiles_id_fk": {
+          "name": "student_profiles_teacher_id_teacher_profiles_id_fk",
+          "tableFrom": "student_profiles",
+          "tableTo": "teacher_profiles",
+          "columnsFrom": [
+            "teacher_id"
           ],
           "columnsTo": [
             "id"
@@ -987,6 +1435,67 @@
           "primaryKey": false,
           "notNull": false
         },
+        "college_id": {
+          "name": "college_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "branch_id": {
+          "name": "branch_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "subject_id": {
+          "name": "subject_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "course_id": {
+          "name": "course_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "academic_year_id": {
+          "name": "academic_year_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "phase_id": {
+          "name": "phase_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "designation": {
+          "name": "designation",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "employee_id": {
+          "name": "employee_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "joining_date": {
+          "name": "joining_date",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "is_active": {
+          "name": "is_active",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'true'"
+        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp",
@@ -1003,11 +1512,32 @@
         }
       },
       "indexes": {
-        "teacher_profile_user_id_key": {
-          "name": "teacher_profile_user_id_key",
+        "teacher_user_id_key": {
+          "name": "teacher_user_id_key",
           "columns": [
             {
               "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "teacher_college_employee_id_key": {
+          "name": "teacher_college_employee_id_key",
+          "columns": [
+            {
+              "expression": "college_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "employee_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -1026,6 +1556,84 @@
           "tableTo": "users",
           "columnsFrom": [
             "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "teacher_profiles_college_id_colleges_id_fk": {
+          "name": "teacher_profiles_college_id_colleges_id_fk",
+          "tableFrom": "teacher_profiles",
+          "tableTo": "colleges",
+          "columnsFrom": [
+            "college_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "teacher_profiles_branch_id_branches_id_fk": {
+          "name": "teacher_profiles_branch_id_branches_id_fk",
+          "tableFrom": "teacher_profiles",
+          "tableTo": "branches",
+          "columnsFrom": [
+            "branch_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "teacher_profiles_subject_id_subjects_id_fk": {
+          "name": "teacher_profiles_subject_id_subjects_id_fk",
+          "tableFrom": "teacher_profiles",
+          "tableTo": "subjects",
+          "columnsFrom": [
+            "subject_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "teacher_profiles_course_id_courses_id_fk": {
+          "name": "teacher_profiles_course_id_courses_id_fk",
+          "tableFrom": "teacher_profiles",
+          "tableTo": "courses",
+          "columnsFrom": [
+            "course_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "teacher_profiles_academic_year_id_academic_years_id_fk": {
+          "name": "teacher_profiles_academic_year_id_academic_years_id_fk",
+          "tableFrom": "teacher_profiles",
+          "tableTo": "academic_years",
+          "columnsFrom": [
+            "academic_year_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "teacher_profiles_phase_id_phase_id_fk": {
+          "name": "teacher_profiles_phase_id_phase_id_fk",
+          "tableFrom": "teacher_profiles",
+          "tableTo": "phase",
+          "columnsFrom": [
+            "phase_id"
           ],
           "columnsTo": [
             "id"

@@ -3,7 +3,7 @@
 
 import { StudentLogBookEntries } from '@/components/student/DisplayLogBookEntries';
 import LogBookManagement from '@/components/student/LogBookManagement';
-import StudentProfileForm from '@/components/student/profileForm';
+import StudentProfileTabs from '@/components/student/profileForm';
 import ProfileVerificationStatus from '@/components/student/ProfileVerificationStatus ';
 
 import {
@@ -14,12 +14,18 @@ import {
 import { useCurrentUser } from '@/hooks/auth';
 import {
   AlertCircle,
+  Book,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
+  ChevronUp,
   File,
+  GraduationCap,
   LogOut,
   Menu,
+  Briefcase,
   Settings,
+  User,
   Users
 } from 'lucide-react';
 import { signOut, useSession } from 'next-auth/react';
@@ -32,9 +38,10 @@ export default function Dashboard() {
   const user = useCurrentUser();
   
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [activeComponent, setActiveComponent] = useState('profile');
+  const [activeComponent, setActiveComponent] = useState('personal');
   const [profileStatus, setProfileStatus] = useState<'PENDING' | 'APPROVED' | 'REJECTED'>('PENDING');
   const [profileExists, setProfileExists] = useState(false);
+  const [isProfileExpanded, setIsProfileExpanded] = useState(true);
 
   const handleLogout = async () => {
     await signOut({ redirectTo: "/auth/login" });
@@ -81,39 +88,24 @@ export default function Dashboard() {
     setSidebarOpen(!sidebarOpen);
   };
 
+  const toggleProfileExpansion = () => {
+    setIsProfileExpanded(!isProfileExpanded);
+  };
+
   // Determine if logbook entry should be accessible
   const canAccessLogBook = profileStatus === 'APPROVED';
 
-  // Navigation items for sidebar
-  const navItems = [
-    { id: 'profile', label: 'Profile', icon: <File className="h-5 w-5" />, always: true },
-  ];
-
-  // Add verification status item if profile exists
-  if (profileExists && profileStatus !== 'APPROVED') {
-    navItems.push({ 
-      id: 'verification', 
-      label: 'Verification Status', 
-      icon: <AlertCircle className="h-5 w-5" />, 
-      always: true 
-    });
-  }
-
-  // Add LogBook entries only if profile is approved
-  if (canAccessLogBook) {
-    navItems.push({ 
-      id: 'LogBookEntries', 
-      label: 'Log Book Entries', 
-      icon: <Users className="h-5 w-5" />, 
-      always: false 
-    });
-  }
-
   // Render the appropriate component based on sidebar selection
   const renderMainContent = () => {
+    // Profile related components
+    if (['personal', 'academic', 'professional'].includes(activeComponent)) {
+      return <StudentProfileTabs 
+              onProfileUpdate={fetchProfileStatus} 
+              activeTab={activeComponent === 'personal' ? 0 : activeComponent === 'academic' ? 1 : 2} 
+             />;
+    }
+    
     switch (activeComponent) {
-      case 'profile':
-        return <StudentProfileForm onProfileUpdate={fetchProfileStatus} />;
       case 'verification':
         return <ProfileVerificationStatus status={profileStatus} />;
       case 'LogBookEntries':
@@ -199,21 +191,111 @@ export default function Dashboard() {
               </button>
             </div>
             <ul className="space-y-2 px-3 py-4">
-              {navItems.map((item) => (
-                <li key={item.id}>
+              {/* Profile section with collapsible options */}
+              <li>
+                <button
+                  onClick={toggleProfileExpansion}
+                  className={`w-full flex items-center justify-between px-4 py-3 rounded-lg transition-colors ${
+                    ['personal', 'academic', 'professional'].includes(activeComponent)
+                      ? 'bg-gray-100 text-blue-600 font-medium'
+                      : 'text-gray-700 hover:bg-gray-50'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <User className="h-5 w-5" />
+                    {sidebarOpen && <span>Profile</span>}
+                  </div>
+                  {sidebarOpen && (isProfileExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />)}
+                </button>
+
+                {/* Profile sub-options */}
+                {isProfileExpanded && sidebarOpen && (
+                  <div className="ml-6 mt-1 space-y-1">
+                    <button
+                      onClick={() => setActiveComponent('personal')}
+                      className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg transition-colors ${
+                        activeComponent === 'personal'
+                          ? 'bg-gray-100 text-blue-600 font-medium'
+                          : 'text-gray-700 hover:bg-gray-50'
+                      }`}
+                    >
+                      <User className="h-4 w-4" />
+                      <span>Personal</span>
+                    </button>
+                    <button
+                      onClick={() => setActiveComponent('academic')}
+                      className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg transition-colors ${
+                        activeComponent === 'academic'
+                          ? 'bg-gray-100 text-blue-600 font-medium'
+                          : 'text-gray-700 hover:bg-gray-50'
+                      }`}
+                    >
+                      <GraduationCap className="h-4 w-4" />
+                      <span>Academic</span>
+                    </button>
+                    <button
+                      onClick={() => setActiveComponent('professional')}
+                      className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg transition-colors ${
+                        activeComponent === 'professional'
+                          ? 'bg-gray-100 text-blue-600 font-medium'
+                          : 'text-gray-700 hover:bg-gray-50'
+                      }`}
+                    >
+                      <Briefcase className="h-4 w-4" />
+                      <span>Professional</span>
+                    </button>
+                  </div>
+                )}
+              </li>
+
+              {/* Verification status item */}
+              {profileExists && profileStatus !== 'APPROVED' && (
+                <li>
                   <button
-                    onClick={() => setActiveComponent(item.id)}
+                    onClick={() => setActiveComponent('verification')}
                     className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                      activeComponent === item.id
+                      activeComponent === 'verification'
                         ? 'bg-gray-100 text-blue-600 font-medium'
                         : 'text-gray-700 hover:bg-gray-50'
                     }`}
                   >
-                    {item.icon}
-                    {sidebarOpen && <span>{item.label}</span>}
+                    <AlertCircle className="h-5 w-5" />
+                    {sidebarOpen && <span>Verification Status</span>}
                   </button>
                 </li>
-              ))}
+              )}
+
+              {/* LogBook entries options - only if profile is approved */}
+              {canAccessLogBook && (
+                <>
+                  <li>
+                    <button
+                      onClick={() => setActiveComponent('LogBookEntries')}
+                      className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                        activeComponent === 'LogBookEntries'
+                          ? 'bg-gray-100 text-blue-600 font-medium'
+                          : 'text-gray-700 hover:bg-gray-50'
+                      }`}
+                    >
+                      <Book className="h-5 w-5" />
+                      {sidebarOpen && <span>Log Book Entries</span>}
+                    </button>
+                  </li>
+                  <li>
+                    <button
+                      onClick={() => setActiveComponent('EnteredlogBook')}
+                      className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                        activeComponent === 'EnteredlogBook'
+                          ? 'bg-gray-100 text-blue-600 font-medium'
+                          : 'text-gray-700 hover:bg-gray-50'
+                      }`}
+                    >
+                      <File className="h-5 w-5" />
+                      {sidebarOpen && <span>All Entries</span>}
+                    </button>
+                  </li>
+                </>
+              )}
             </ul>
           </div>
         </div>

@@ -1,4 +1,3 @@
-
 import { InferModel, relations } from "drizzle-orm";
 import {
   jsonb,
@@ -17,6 +16,7 @@ export const VerificationStatus = pgEnum("verification_status", [
   "APPROVED",
   "REJECTED",
 ]);
+
 export const FieldType = pgEnum("field_type", [
   "text", 
   "number", 
@@ -102,6 +102,7 @@ export const PasswordResetTokenTable = pgTable(
 export const StudentProfileTable = pgTable(
   "student_profiles",
   {
+    // Primary identifiers
     id: uuid("id").defaultRandom().primaryKey().notNull(),
     userId: uuid("user_id").references(() => UsersTable.id).notNull(),
     
@@ -111,40 +112,56 @@ export const StudentProfileTable = pgTable(
     mobileNo: text("mobile_no").notNull(),
     email: text("email").notNull(),
     profilePhoto: text("profile_photo"),
-    dateOfBirth:text("date_of_birth"),
+    dateOfBirth: text("date_of_birth"),
     
-    // Location Information
+    // Location & Personal Background Information
     localAddress: text("local_address"),
     permanentAddress: text("permanent_address"),
-    adharNo:text("adhar_no"),
-    previousInstitution:text("previous_institution"), 
-    yearOfPassing:text("year_of_passing"),
-    attempt:text("attempt"),
-    state:text("state"),
-    dateOfJoining:text("date_of_joining"),
-    previousExperience:text("perivious_experience"),
-    maritalStatus:text("merital_status"),
-    children:text("children"),
-    specialInterest:text("special_interest"),
-    dateOfCompletion:text("date_of_completion"),
-    nameAndOccpationOfSpouse:text("name_and_occpation_of_spouse"),
-    futurePlan:text("future_plan"),
-    // Academic Information
+    adharNo: text("adhar_no"),
+    previousInstitution: text("previous_institution"),
+    yearOfPassing: text("year_of_passing"),
+    attempt: text("attempt"),
+    state: text("state"),
+    maritalStatus: text("marital_status"),
+    children: text("children"),
+    specialInterest: text("special_interest"),
+    nameAndOccupationOfSpouse: text("name_and_occupation_of_spouse"),
+    futurePlan: text("future_plan"),
+    previousExperience: text("previous_experience"),
+    
+    // Enrollment Information
+    collegeId: uuid("college_id").references(() => CollegeTable.id).notNull(),
+    courseId: uuid("course_id").references(() => CourseTable.id).notNull(),
+    academicYearId: uuid("academic_year_id").references(() => AcademicYearTable.id).notNull(),
+    enrollmentNo: text("enrollment_no").notNull(),
+    currentSemester: text("current_semester"),
+    enrollmentStatus: text("enrollment_status").default("ACTIVE"), // ACTIVE, GRADUATED, DROPOUT, etc.
+    dateOfJoining: text("date_of_joining"),
+    dateOfCompletion: text("date_of_completion"),
+    graduationDate: text("graduation_date"),
+    
+    // Academic & Verification Information
     admissionBatch: text("admission_batch"),
-    course: text("course"),
-    subject: text("subject"),
     collegeIdProof: text("college_id_proof"),
-    status: VerificationStatus("verification_status").default("PENDING"),
+    verificationStatus: VerificationStatus("verification_status").default("PENDING"),
     teacherId: uuid("teacher_id").references(() => TeacherProfileTable.id),
-    rejection_reason: text("rejection_reason"),
+    rejectionReason: text("rejection_reason"),
+    isActive: text("is_active").default("true").notNull(),
     
     // Metadata
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },
   (table) => [
-    uniqueIndex("student_profile_user_id_key").on(table.userId),
-    uniqueIndex("student_profile_roll_no_key").on(table.rollNo),
+    uniqueIndex("student_user_id_key").on(table.userId),
+    uniqueIndex("student_roll_no_key").on(table.rollNo),
+    uniqueIndex("student_enrollment_no_key").on(table.enrollmentNo),
+    uniqueIndex("student_enrollment_key").on(
+      table.id,
+      table.collegeId,
+      table.courseId,
+      table.academicYearId
+    ),
   ]
 );
 
@@ -152,7 +169,7 @@ export const StudentProfileTable = pgTable(
 export const TeacherProfileTable = pgTable(
   "teacher_profiles",
   {
-    id: uuid("id").defaultRandom().primaryKey().notNull(),
+id: uuid("id").defaultRandom().primaryKey().notNull(),
     userId: uuid("user_id").references(() => UsersTable.id).notNull(),
     
     // Personal Information
@@ -161,19 +178,90 @@ export const TeacherProfileTable = pgTable(
     mobileNo: text("mobile_no").notNull(),
     profilePhoto: text("profile_photo"),
     teacherIdProof: text("teacher_id_proof"),
-    
-    // Location Information
     location: text("location"),
+    
+    // College Employment Information
+    collegeId: uuid("college_id").references(() => CollegeTable.id).notNull(),
+    branchId: uuid("branch_id").references(() => BranchTable.id).notNull(),
+    subjectId: uuid("subject_id").references(() => SubjectTable.id).notNull(),
+    courseId: uuid("course_id").references(() => CourseTable.id).notNull(),
+    academicYearId: uuid("academic_year_id").references(() => AcademicYearTable.id).notNull(),
+    phaseId : uuid("phase_id").references(() => PhaseTable.id).notNull(),
+    designation: text("designation").notNull(), // Professor, Assistant Professor, etc.
+    employeeId: text("employee_id").notNull(),
+    joiningDate: timestamp("joining_date").notNull(),
+    isActive: text("is_active").default("true").notNull(),
     
     // Metadata
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },
   (table) => [
-    uniqueIndex("teacher_profile_user_id_key").on(table.userId),
+    uniqueIndex("teacher_user_id_key").on(table.userId),
+    uniqueIndex("teacher_college_employee_id_key").on(
+      table.collegeId,
+      table.employeeId
+    ),
+ 
   ]
 );
 
+export const CollegeTable = pgTable(
+  "colleges",
+  {
+    id: uuid("id").defaultRandom().primaryKey().notNull(),
+    name: text("name").notNull(),
+    code: text("code").notNull(),
+    address: text("address"),
+    city: text("city"),
+    state: text("state"),
+    phone: text("phone"),
+    email: text("email"),
+    website: text("website"),
+    description: text("description"),
+    logo: text("logo"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex("college_code_key").on(table.code),
+  ]
+);
+
+// Branch/Department Table
+export const BranchTable = pgTable(
+  "branches",
+  {
+    id: uuid("id").defaultRandom().primaryKey().notNull(),
+    collegeId: uuid("college_id").references(() => CollegeTable.id).notNull(),
+    name: text("name").notNull(),
+    code: text("code").notNull(),
+    description: text("description"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex("branch_college_code_key").on(table.collegeId, table.code),
+  ]
+);
+
+export const CourseTable = pgTable(
+  "courses",
+  {
+    id: uuid("id").defaultRandom().primaryKey().notNull(),
+    branchId: uuid("branch_id").references(() => BranchTable.id).notNull(),
+    name: text("name").notNull(),
+    code: text("code").notNull(),
+    level: text("level").notNull(), // UG, PG, PhD, etc.
+    duration: text("duration").notNull(), // in years or semesters
+    description: text("description"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex("course_branch_code_key").on(table.branchId, table.code),
+  ]
+);
 // Academic Configuration Tables
 export const AcademicYearTable = pgTable(
   "academic_years",
@@ -318,7 +406,6 @@ export type TeacherProfile = InferModel<typeof TeacherProfileTable>;
 export type NewTeacherProfile = InferModel<typeof TeacherProfileTable, "insert">;
 
 
-
 export const academicYearRelations = relations(AcademicYearTable, ({ many }) => ({
   phases: many(PhaseTable),
   logBookTemplates: many(LogBookTemplateTable)
@@ -383,4 +470,16 @@ export const logBookEntryRelations = relations(LogBookEntryTable, ({ one }) => (
     fields: [LogBookEntryTable.studentId],
     references: [StudentProfileTable.id]
   })
+}));
+
+export const userRelations = relations(UsersTable, ({ one, many }) => ({
+  studentProfile: one(StudentProfileTable, {
+    fields: [UsersTable.id],
+    references: [StudentProfileTable.userId]
+  }),
+  teacherProfile: one(TeacherProfileTable, {
+    fields: [UsersTable.id],
+    references: [TeacherProfileTable.userId]
+  }),
+  createdTemplates: many(LogBookTemplateTable),
 }));
