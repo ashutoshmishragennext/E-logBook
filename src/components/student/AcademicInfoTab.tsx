@@ -379,6 +379,70 @@ export const AcademicInfo = ({
           </FormItem>
         )}
       />
+      <FormField
+                  control={form.control}
+                  name="teacherId"
+                  render={({ field }) => (
+                    <FormItem className="col-span-2">
+                      <FormLabel>
+                        <span className="flex items-center gap-2">
+                          <span>👨‍🏫 Assign Teacher for Verification</span>
+                          {existingProfile && existingProfile.status !== "PENDING" && (
+                            <span
+                              className={`rounded-full px-2 py-1 text-xs ${
+                                existingProfile.status === "APPROVED"
+                                  ? "bg-green-100 text-green-800"
+                                  : "bg-red-100 text-red-800"
+                              }`}
+                            >
+                              {existingProfile.status}
+                            </span>
+                          )}
+                        </span>
+                      </FormLabel>
+                      <FormControl>
+                        <Select
+                          onValueChange={field.onChange}
+                          defaultValue={field.value}
+                          value={field.value}
+                          disabled={
+                            !editMode ||
+                            (existingProfile &&
+                              existingProfile.status === "APPROVED") ||
+                            undefined
+                          }
+                        >
+                          <SelectTrigger
+                            className={
+                              !editMode ||
+                              (existingProfile && existingProfile.status === "APPROVED")
+                                ? "bg-gray-200 cursor-not-allowed text-black"
+                                : ""
+                            }
+                          >
+                            <SelectValue placeholder="Select a teacher for verification" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {/* Teacher items would be mapped here from the teachers state */}
+                          </SelectContent>
+                        </Select>
+                      </FormControl>
+                      {existingProfile && existingProfile.status === "APPROVED" && (
+                        <p className="text-sm text-gray-500 mt-1">
+                          Your profile has been {existingProfile.status.toLowerCase()} and can
+                          no longer be assigned to a different teacher.
+                        </p>
+                      )}
+                      {existingProfile && existingProfile.status === "REJECTED" && (
+                        <p className="text-sm text-gray-500 mt-1">
+                          Your profile has been {existingProfile.status.toLowerCase()} and
+                          Reason for rejection is: {existingProfile.rejection_reason}
+                        </p>
+                      )}
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
       {/* Date of Completion */}
       <FormField

@@ -30,7 +30,6 @@ import {
 import { signOut, useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
 type ProfileStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
@@ -52,7 +51,6 @@ export default function Dashboard() {
   const [profileStatus, setProfileStatus] = useState<ProfileStatus>('PENDING');
   const [profileExists, setProfileExists] = useState<boolean>(false);
   const [isProfileExpanded, setIsProfileExpanded] = useState<boolean>(true);
-  const [editMode, setEditMode] = useState<boolean>(true);
   const [existingProfile, setExistingProfile] = useState<StudentProfileData | null>(null);
 
   const handleLogout = async () => {
@@ -75,12 +73,10 @@ export default function Dashboard() {
         if ('message' in data && data.message === "Student not found") {
           setProfileExists(false);
           setProfileStatus('PENDING');
-          setEditMode(true);
         } else {
           setProfileExists(true);
           setProfileStatus((data as StudentProfileData).status || 'PENDING');
           setExistingProfile(data as StudentProfileData);
-          setEditMode(false);
         }
       }
     } catch (error) {
@@ -118,10 +114,12 @@ export default function Dashboard() {
       return (
         <StudentProfile 
           activeTab={activeComponent as "personal" | "academic" | "professional"}
-          editMode={editMode}
+          // No longer passing editMode prop - the component manages it internally
           existingProfile={existingProfile}
           userId={user?.id || ''}
           onProfileUpdate={fetchProfileData}
+          // Pass initialEditMode as true only for new profiles
+          initialEditMode={!profileExists}
         />
       );
     }
@@ -174,16 +172,7 @@ export default function Dashboard() {
           </div>
           
           <div className="flex items-center gap-4">
-            {profileExists && (
-              <Button
-                type="button"
-                variant={editMode ? "outline" : "default"}
-                onClick={() => setEditMode(!editMode)}
-                className="mr-2"
-              >
-                {editMode ? "Cancel Editing" : "Edit Profile"}
-              </Button>
-            )}
+            {/* Removed the Edit Profile button since it's now handled by the StudentProfile component */}
             
             <Popover>
               <PopoverTrigger asChild>

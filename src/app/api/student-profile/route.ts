@@ -36,7 +36,7 @@ export async function GET(req: NextRequest) {
         .select()
         .from(StudentProfileTable)
         .where(eq(StudentProfileTable.teacherId, teacherId));
-        
+
       console.log(`Found ${students.length} students with teacherId ${teacherId}`);
     }
     else {
@@ -71,8 +71,10 @@ export async function GET(req: NextRequest) {
 }
 export async function POST(req: NextRequest) {
   try {
-    const searchParams = req.nextUrl.searchParams;
-    const userId = searchParams.get("userId");
+    const body = await req.json();
+    const userId = body.userId;
+
+    console.log("User ID:", userId);
 
     if (!userId) {
       return NextResponse.json(
@@ -80,9 +82,6 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       );
     }
-
-    // Parse the request body
-    const body = await req.json();
 
     // Check if user exists
     const existingUser = await db
@@ -112,18 +111,23 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const sanitizedBody = {
+      ...body,
+      teacherId: body.teacherId?.trim() || null, // convert "" to null
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+
     // Create new student profile
     const newProfile = await db
       .insert(StudentProfileTable)
-      .values({
-        ...body,
-        userId,
-        createdAt: new Date(),
-        updatedAt: new Date()
-      })
+      .values(sanitizedBody)
       .returning();
 
+
     return NextResponse.json(newProfile[0], { status: 201 });
+
   } catch (error) {
     console.error("Student Profile Creation Error:", error);
     return NextResponse.json(
@@ -152,6 +156,13 @@ export async function PUT(req: NextRequest) {
     // Parse the request body
     const body = await req.json();
 
+    // 🔧 Sanitize UUID fields
+    const sanitizedBody = {
+      ...body,
+      teacherId: body.teacherId?.trim() || null,
+      updatedAt: new Date(),
+    };
+
     // Check if profile exists based on which parameter was provided
     let existingProfile;
     if (id) {
@@ -175,24 +186,18 @@ export async function PUT(req: NextRequest) {
       );
     }
 
-    // Update student profile using the same condition as the search
+    // Update student profile
     let updatedProfile;
     if (id) {
       updatedProfile = await db
         .update(StudentProfileTable)
-        .set({
-          ...body,
-          updatedAt: new Date()
-        })
+        .set(sanitizedBody)
         .where(eq(StudentProfileTable.id, id))
         .returning();
     } else {
       updatedProfile = await db
         .update(StudentProfileTable)
-        .set({
-          ...body,
-          updatedAt: new Date()
-        })
+        .set(sanitizedBody)
         .where(eq(StudentProfileTable.userId, userId!))
         .returning();
     }

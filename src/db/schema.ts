@@ -10,7 +10,7 @@ import {
 } from "drizzle-orm/pg-core";
 
 // ===== ENUMS =====
-export const UserRole = pgEnum("user_role", ["ADMIN", "TEACHER", "STUDENT","USER"]);
+export const UserRole = pgEnum("user_role", ["ADMIN", "TEACHER", "STUDENT", "USER"]);
 export const VerificationStatus = pgEnum("verification_status", [
   "PENDING",
   "APPROVED",
@@ -51,7 +51,6 @@ export const EmailVerificationTokenTable = pgTable(
   "email_verification_tokens",
   {
     id: uuid("id").defaultRandom().primaryKey().notNull(),
-    // userId: uuid("user_id").references(() => UsersTable.id).notNull(),
     email: text("email").notNull(),
     token: uuid("token").notNull(),
     expiresAt: timestamp("expires_at", { mode: "date" }).notNull(),
@@ -125,7 +124,7 @@ export const StudentProfileTable = pgTable(
     maritalStatus: text("marital_status"),
     children: text("children"),
     specialInterest: text("special_interest"),
-    nameAndOccupationOfSpouse: text("name_and_occupation_of_spouse"),
+    
     futurePlan: text("future_plan"),
     previousExperience: text("previous_experience"),
     
@@ -170,7 +169,7 @@ export const StudentProfileTable = pgTable(
 export const TeacherProfileTable = pgTable(
   "teacher_profiles",
   {
-id: uuid("id").defaultRandom().primaryKey().notNull(),
+    id: uuid("id").defaultRandom().primaryKey().notNull(),
     userId: uuid("user_id").references(() => UsersTable.id).notNull(),
     
     // Personal Information
@@ -184,7 +183,6 @@ id: uuid("id").defaultRandom().primaryKey().notNull(),
     // College Employment Information
     collegeId: uuid("college_id").references(() => CollegeTable.id).notNull(),
     branchId: uuid("branch_id").references(() => BranchTable.id).notNull(),
-    subjectId: uuid("subject_id").references(() => SubjectTable.id).notNull(),
     courseId: uuid("course_id").references(() => CourseTable.id).notNull(),
     academicYearId: uuid("academic_year_id").references(() => AcademicYearTable.id).notNull(),
     phaseId : uuid("phase_id").references(() => PhaseTable.id).notNull(),
@@ -203,7 +201,6 @@ id: uuid("id").defaultRandom().primaryKey().notNull(),
       table.collegeId,
       table.employeeId
     ),
- 
   ]
 );
 
@@ -263,6 +260,7 @@ export const CourseTable = pgTable(
     uniqueIndex("course_branch_code_key").on(table.branchId, table.code),
   ]
 );
+
 // Academic Configuration Tables
 export const AcademicYearTable = pgTable(
   "academic_years",
@@ -302,6 +300,66 @@ export const ModuleTable = pgTable(
   }
 );
 
+// NEW TABLE: Teacher-Subject Assignment (Many-to-Many relationship)
+export const TeacherSubjectTable = pgTable(
+  "teacher_subjects",
+  {
+    id: uuid("id").defaultRandom().primaryKey().notNull(),
+    teacherId: uuid("teacher_id").references(() => TeacherProfileTable.id).notNull(),
+    subjectId: uuid("subject_id").references(() => SubjectTable.id).notNull(),
+    academicYearId: uuid("academic_year_id").references(() => AcademicYearTable.id).notNull(),
+    phaseId: uuid("phase_id").references(() => PhaseTable.id).notNull(),
+    // isPrimary: text("is_primary").default("false"), // Identifies primary teacher for a subject
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    // Ensure unique teacher-subject combination per academic year and phase
+    uniqueIndex("teacher_subject_unique").on(
+      table.teacherId,
+      table.subjectId,
+      table.academicYearId,
+      table.phaseId
+    ),
+  ]
+);
+
+// NEW TABLE: Student Subject Selection with Teacher Assignment
+export const StudentSubjectTable = pgTable(
+  "student_subjects",
+  {
+    id: uuid("id").defaultRandom().primaryKey().notNull(),
+    studentId: uuid("student_id").references(() => StudentProfileTable.id).notNull(),
+    subjectId: uuid("subject_id").references(() => SubjectTable.id).notNull(),
+    teacherId: uuid("teacher_id").references(() => TeacherProfileTable.id).notNull(),
+    academicYearId: uuid("academic_year_id").references(() => AcademicYearTable.id).notNull(),
+    phaseId: uuid("phase_id").references(() => PhaseTable.id).notNull(),
+    
+    // Approval status for this specific subject-teacher pair
+    verificationStatus: VerificationStatus("verification_status").default("PENDING"),
+    rejectionReason: text("rejection_reason"),
+    
+    // Approval timestamp
+    approvedAt: timestamp("approved_at"),
+    
+    // Access control for e-logbook (only accessible after approval)
+    hasLogbookAccess: text("has_logbook_access").default("false"),
+    
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    // Ensure unique student-subject-teacher combination per academic year and phase
+    uniqueIndex("student_subject_teacher_unique").on(
+      table.studentId,
+      table.subjectId,
+      table.teacherId,
+      table.academicYearId,
+      table.phaseId
+    ),
+  ]
+);
+
 // Log Book Template Table
 export const LogBookTemplateTable = pgTable(
   "log_book_templates",
@@ -313,7 +371,6 @@ export const LogBookTemplateTable = pgTable(
     batchId: uuid("phase_id").references(() => PhaseTable.id).notNull(),
     subjectId: uuid("subject_id").references(() => SubjectTable.id).notNull(),
     moduleId: uuid("module_id").references(() => ModuleTable.id),
-
     
     // Template Configuration
     name: text("name").notNull(), // e.g., "Lab Experiments", "Project Work"
@@ -343,6 +400,9 @@ export const LogBookEntryTable = pgTable(
     // Student Information
     studentId: uuid("student_id").references(() => StudentProfileTable.id).notNull(),
     teacherId: uuid("teacher_id").references(() => TeacherProfileTable.id),
+    
+    // Link to the specific student-subject-teacher registration
+    studentSubjectId: uuid("student_subject_id").references(() => StudentSubjectTable.id).notNull(),
     
     // Dynamic Field Values
     dynamicFields: jsonb("dynamic_fields").default({}),
@@ -406,10 +466,19 @@ export type NewStudentProfile = InferModel<typeof StudentProfileTable, "insert">
 export type TeacherProfile = InferModel<typeof TeacherProfileTable>;
 export type NewTeacherProfile = InferModel<typeof TeacherProfileTable, "insert">;
 
+// New types for the relationship tables
+export type TeacherSubject = InferModel<typeof TeacherSubjectTable>;
+export type NewTeacherSubject = InferModel<typeof TeacherSubjectTable, "insert">;
 
+export type StudentSubject = InferModel<typeof StudentSubjectTable>;
+export type NewStudentSubject = InferModel<typeof StudentSubjectTable, "insert">;
+
+// Relations
 export const academicYearRelations = relations(AcademicYearTable, ({ many }) => ({
   phases: many(PhaseTable),
-  logBookTemplates: many(LogBookTemplateTable)
+  logBookTemplates: many(LogBookTemplateTable),
+  teacherSubjects: many(TeacherSubjectTable),
+  studentSubjects: many(StudentSubjectTable)
 }));
 
 export const phaseRelations = relations(PhaseTable, ({ one, many }) => ({
@@ -418,7 +487,9 @@ export const phaseRelations = relations(PhaseTable, ({ one, many }) => ({
     references: [AcademicYearTable.id]
   }),
   subjects: many(SubjectTable),
-  logBookTemplates: many(LogBookTemplateTable)
+  logBookTemplates: many(LogBookTemplateTable),
+  teacherSubjects: many(TeacherSubjectTable),
+  studentSubjects: many(StudentSubjectTable)
 }));
 
 export const subjectRelations = relations(SubjectTable, ({ one, many }) => ({
@@ -427,7 +498,9 @@ export const subjectRelations = relations(SubjectTable, ({ one, many }) => ({
     references: [PhaseTable.id]
   }),
   modules: many(ModuleTable),
-  logBookTemplates: many(LogBookTemplateTable)
+  logBookTemplates: many(LogBookTemplateTable),
+  teacherAssignments: many(TeacherSubjectTable),
+  studentSelections: many(StudentSubjectTable)
 }));
 
 export const moduleRelations = relations(ModuleTable, ({ one, many }) => ({
@@ -436,6 +509,105 @@ export const moduleRelations = relations(ModuleTable, ({ one, many }) => ({
     references: [SubjectTable.id]
   }),
   logBookTemplates: many(LogBookTemplateTable)
+}));
+
+export const teacherProfileRelations = relations(TeacherProfileTable, ({ one, many }) => ({
+  user: one(UsersTable, {
+    fields: [TeacherProfileTable.userId],
+    references: [UsersTable.id]
+  }),
+  college: one(CollegeTable, {
+    fields: [TeacherProfileTable.collegeId],
+    references: [CollegeTable.id]
+  }),
+  branch: one(BranchTable, {
+    fields: [TeacherProfileTable.branchId],
+    references: [BranchTable.id]
+  }),
+  course: one(CourseTable, {
+    fields: [TeacherProfileTable.courseId],
+    references: [CourseTable.id]
+  }),
+  academicYear: one(AcademicYearTable, {
+    fields: [TeacherProfileTable.academicYearId],
+    references: [AcademicYearTable.id]
+  }),
+  phase: one(PhaseTable, {
+    fields: [TeacherProfileTable.phaseId],
+    references: [PhaseTable.id]
+  }),
+  subjectAssignments: many(TeacherSubjectTable),
+  studentVerifications: many(StudentSubjectTable)
+}));
+
+export const studentProfileRelations = relations(StudentProfileTable, ({ one, many }) => ({
+  user: one(UsersTable, {
+    fields: [StudentProfileTable.userId],
+    references: [UsersTable.id]
+  }),
+  college: one(CollegeTable, {
+    fields: [StudentProfileTable.collegeId],
+    references: [CollegeTable.id]
+  }),
+  course: one(CourseTable, {
+    fields: [StudentProfileTable.courseId],
+    references: [CourseTable.id]
+  }),
+  academicYear: one(AcademicYearTable, {
+    fields: [StudentProfileTable.academicYearId],
+    references: [AcademicYearTable.id]
+  }),
+  branch: one(BranchTable, {
+    fields: [StudentProfileTable.branchId],
+    references: [BranchTable.id]
+  }),
+  subjectSelections: many(StudentSubjectTable),
+  logBookEntries: many(LogBookEntryTable)
+}));
+
+// New relation for TeacherSubject (many-to-many)
+export const teacherSubjectRelations = relations(TeacherSubjectTable, ({ one }) => ({
+  teacher: one(TeacherProfileTable, {
+    fields: [TeacherSubjectTable.teacherId],
+    references: [TeacherProfileTable.id]
+  }),
+  subject: one(SubjectTable, {
+    fields: [TeacherSubjectTable.subjectId],
+    references: [SubjectTable.id]
+  }),
+  academicYear: one(AcademicYearTable, {
+    fields: [TeacherSubjectTable.academicYearId],
+    references: [AcademicYearTable.id]
+  }),
+  phase: one(PhaseTable, {
+    fields: [TeacherSubjectTable.phaseId],
+    references: [PhaseTable.id]
+  })
+}));
+
+// New relation for StudentSubject
+export const studentSubjectRelations = relations(StudentSubjectTable, ({ one, many }) => ({
+  student: one(StudentProfileTable, {
+    fields: [StudentSubjectTable.studentId],
+    references: [StudentProfileTable.id]
+  }),
+  subject: one(SubjectTable, {
+    fields: [StudentSubjectTable.subjectId],
+    references: [SubjectTable.id]
+  }),
+  teacher: one(TeacherProfileTable, {
+    fields: [StudentSubjectTable.teacherId],
+    references: [TeacherProfileTable.id]
+  }),
+  academicYear: one(AcademicYearTable, {
+    fields: [StudentSubjectTable.academicYearId],
+    references: [AcademicYearTable.id]
+  }),
+  phase: one(PhaseTable, {
+    fields: [StudentSubjectTable.phaseId],
+    references: [PhaseTable.id]
+  }),
+  logBookEntries: many(LogBookEntryTable)
 }));
 
 export const logBookTemplateRelations = relations(LogBookTemplateTable, ({ one, many }) => ({
@@ -470,6 +642,14 @@ export const logBookEntryRelations = relations(LogBookEntryTable, ({ one }) => (
   student: one(StudentProfileTable, {
     fields: [LogBookEntryTable.studentId],
     references: [StudentProfileTable.id]
+  }),
+  teacher: one(TeacherProfileTable, {
+    fields: [LogBookEntryTable.teacherId],
+    references: [TeacherProfileTable.id]
+  }),
+  studentSubject: one(StudentSubjectTable, {
+    fields: [LogBookEntryTable.studentSubjectId],
+    references: [StudentSubjectTable.id]
   })
 }));
 

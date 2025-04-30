@@ -1,3 +1,4 @@
+// StudentProfile.jsx (Main Component)
 'use client';
 
 import { PersonalInfo } from '@/components/student/PersonalInfoTab';
@@ -8,14 +9,14 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Form } from "@/components/ui/form";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { Pencil } from "lucide-react"; // Import icons
 
 // Define types for the component props
 interface StudentProfileProps {
   activeTab: 'personal' | 'academic' | 'professional';
-  editMode: boolean;
+  initialEditMode?: boolean; // Changed to make this optional with a default
   existingProfile: any; // Consider replacing 'any' with a proper interface for your profile data
   userId: string;
   onProfileUpdate: () => void;
@@ -36,11 +37,11 @@ const profileSchema = z.object({
   teacherId: z.string().optional(),
   
   // Academic Info Fields
-  rollNo: z.string().min(1, "Roll number is required"),
-  enrollmentNo: z.string().min(1, "Enrollment number is required"),
-  admissionBatch: z.string().min(1, "Admission batch is required"),
-  course: z.string().min(1, "Course is required"),
-  currentSemester: z.string().min(1, "Current semester is required"),
+  rollNo: z.string().optional(),
+  enrollmentNo: z.string().optional(),
+  admissionBatch: z.string().optional(),
+  course: z.string().optional(),
+  currentSemester: z.string(),
   subject: z.string().optional(),
   branchId: z.string().optional(),
   previousInstitution: z.string().optional(),
@@ -63,15 +64,18 @@ type ProfileFormValues = z.infer<typeof profileSchema>;
 
 export default function StudentProfile({ 
   activeTab, 
-  editMode, 
+  initialEditMode = false, // Default to view mode if not specified
   existingProfile, 
   userId, 
   onProfileUpdate 
 }: StudentProfileProps) {
-  const [isLoading, setIsLoading] = useState<boolean>(false);
   const [profilePhotoFileName, setProfilePhotoFileName] = useState<string | null>(null);
   const [collegeIdProofFileName, setCollegeIdProofFileName] = useState<string | null>(null);
   const [userData, setUserData] = useState<any>(null); // Replace 'any' with a proper type if possible
+  const [editMode, setEditMode] = useState<boolean>(initialEditMode); // Local state for edit mode
+
+  // Enable edit mode
+  const enableEditMode = () => setEditMode(true);
   
   // Get user data from session
   useEffect(() => {
@@ -90,7 +94,6 @@ export default function StudentProfile({
         setUserData(data);
       } catch (err) {
         console.error("Error fetching user data:", err);
-        toast.error("Failed to fetch user data");
       }
     };
 
@@ -177,96 +180,41 @@ export default function StudentProfile({
     }
   }, [existingProfile, userData, form]);
 
-  const onSubmit = async (data: ProfileFormValues) => {
-    if (!userId) {
-      toast.error("User ID is required");
-      return;
-    }
-
-    setIsLoading(true);
-    console.log("Submitting form data:", data);
-    
-    try {
-      // Prepare the data for API
-      const apiData = {
-        userId,
-        ...data,
-        // Convert Date objects to ISO strings for API
-        dateOfBirth: data.dateOfBirth ? data.dateOfBirth.toISOString() : null,
-        dateOfJoining: data.dateOfJoining ? data.dateOfJoining.toISOString() : null,
-        dateOfCompletion: data.dateOfCompletion ? data.dateOfCompletion.toISOString() : null,
-        graduationDate: data.graduationDate ? data.graduationDate.toISOString() : null,
-      };
-
-      // Determine if creating or updating
-      const method = existingProfile?.id ? "PUT" : "POST";
-      const url = existingProfile?.id 
-        ? `/api/student-profile?id=${existingProfile.id}` 
-        : "/api/student-profile";
-
-      console.log(`Making ${method} request to ${url} with data:`, apiData);
-
-      const response = await fetch(url, {
-        method,
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(apiData),
-      });
-
-      // Handle non-2xx responses
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        console.error("API error response:", errorData);
-        throw new Error(errorData.message || "Failed to save profile data");
-      }
-
-      const responseData = await response.json();
-      console.log("API success response:", responseData);
-
-      // Call the update function from parent
-      onProfileUpdate();
-      
-      toast.success("Profile information saved successfully");
-      
-    } catch (error) {
-      console.error("Error saving profile information:", error);
-      toast.error(`Failed to save profile information: ${(error as Error).message || "Please try again."}`);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-  
   const renderContent = () => {
     switch (activeTab) {
       case 'personal':
         return (
           <Card>
-            <CardHeader>
-              <CardTitle>Personal Information</CardTitle>
-              <CardDescription>
-                Provide your basic personal details
-              </CardDescription>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <div>
+                <CardTitle>Personal Information</CardTitle>
+                <CardDescription>
+                  {editMode ? 'Provide your basic personal details' : 'View your personal information'}
+                </CardDescription>
+              </div>
+              {!editMode && (
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={enableEditMode}
+                  className="flex items-center gap-1"
+                >
+                  <Pencil size={16} /> Edit
+                </Button>
+              )}
             </CardHeader>
             <CardContent>
               <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)}>
-                  <PersonalInfo
-                    form={form}
-                    editMode={editMode}
-                    profilePhotoFileName={profilePhotoFileName}
-                    setProfilePhotoFileName={setProfilePhotoFileName}
-                    existingProfile={existingProfile}
-                  />
-                  <div className="flex justify-end mt-6">
-                    <Button 
-                      type="submit" 
-                      disabled={isLoading || !editMode}
-                    >
-                      {isLoading ? "Saving..." : "Save Changes"}
-                    </Button>
-                  </div>
-                </form>
+                <PersonalInfo
+                  form={form}
+                  editMode={editMode}
+                  setEditMode={setEditMode}
+                  profilePhotoFileName={profilePhotoFileName}
+                  setProfilePhotoFileName={setProfilePhotoFileName}
+                  existingProfile={existingProfile}
+                  userId={userId}
+                  onProfileUpdate={onProfileUpdate}
+                />
               </Form>
             </CardContent>
           </Card>
@@ -275,31 +223,36 @@ export default function StudentProfile({
       case 'academic':
         return (
           <Card>
-            <CardHeader>
-              <CardTitle>Academic Information</CardTitle>
-              <CardDescription>
-                Provide details about your academic background
-              </CardDescription>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <div>
+                <CardTitle>Academic Information</CardTitle>
+                <CardDescription>
+                  {editMode ? 'Provide details about your academic background' : 'View your academic information'}
+                </CardDescription>
+              </div>
+              {!editMode && (
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={enableEditMode}
+                  className="flex items-center gap-1"
+                >
+                  <Pencil size={16} /> Edit
+                </Button>
+              )}
             </CardHeader>
             <CardContent>
               <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)}>
-                  <AcademicInfo
-                    form={form}
-                    editMode={editMode}
-                    existingProfile={existingProfile}
-                    collegeIdProofFileName={collegeIdProofFileName}
-                    setCollegeIdProofFileName={setCollegeIdProofFileName}
-                  />
-                  <div className="flex justify-end mt-6">
-                    <Button 
-                      type="submit" 
-                      disabled={isLoading || !editMode}
-                    >
-                      {isLoading ? "Saving..." : "Save Changes"}
-                    </Button>
-                  </div>
-                </form>
+                <AcademicInfo
+                  form={form}
+                  editMode={editMode}
+                  setEditMode={setEditMode}
+                  existingProfile={existingProfile}
+                  collegeIdProofFileName={collegeIdProofFileName}
+                  setCollegeIdProofFileName={setCollegeIdProofFileName}
+                  userId={userId}
+                  onProfileUpdate={onProfileUpdate}
+                />
               </Form>
             </CardContent>
           </Card>
@@ -308,28 +261,34 @@ export default function StudentProfile({
       case 'professional':
         return (
           <Card>
-            <CardHeader>
-              <CardTitle>Professional Information</CardTitle>
-              <CardDescription>
-                Share your professional experiences and aspirations
-              </CardDescription>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <div>
+                <CardTitle>Professional Information</CardTitle>
+                <CardDescription>
+                  {editMode ? 'Share your professional experiences and aspirations' : 'View your professional information'}
+                </CardDescription>
+              </div>
+              {!editMode && (
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={enableEditMode}
+                  className="flex items-center gap-1"
+                >
+                  <Pencil size={16} /> Edit
+                </Button>
+              )}
             </CardHeader>
             <CardContent>
               <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)}>
-                  <ProfessionalInfo
-                    form={form}
-                    editMode={editMode}
-                  />
-                  <div className="flex justify-end mt-6">
-                    <Button 
-                      type="submit" 
-                      disabled={isLoading || !editMode}
-                    >
-                      {isLoading ? "Saving..." : "Save Changes"}
-                    </Button>
-                  </div>
-                </form>
+                <ProfessionalInfo
+                  form={form}
+                  editMode={editMode}
+                  setEditMode={setEditMode}
+                  existingProfile={existingProfile}
+                  userId={userId}
+                  onProfileUpdate={onProfileUpdate}
+                />
               </Form>
             </CardContent>
           </Card>

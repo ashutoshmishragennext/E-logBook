@@ -22,6 +22,13 @@
       "when": 1745992707622,
       "tag": "0002_bored_inhumans",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1746005427055,
+      "tag": "0003_mighty_stardust",
+      "breakpoints": true
     }
   ]
 }
