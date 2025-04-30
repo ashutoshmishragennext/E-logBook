@@ -2,7 +2,8 @@
 
 import DisplayLogBookEntries from "@/components/teacher/DisplayLogBookEntries";
 import Students from "@/components/teacher/Students";
-import TeacherProfilePage from "@/components/teacher/TeacherProfile";
+import { TeacherProfilePage } from "@/components/teacher/TeacherProfile";
+
 import {
   Popover,
   PopoverContent,
@@ -72,7 +73,7 @@ export default function Dashboard() {
   const renderMainContent = () => {
     switch (activeComponent) {
       case "profile":
-        return <TeacherProfilePage />;
+        return <TeacherProfilePage/>;
       case "logBooks":
         return <DisplayLogBookEntries />;
       case "students":

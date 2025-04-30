@@ -171,16 +171,12 @@ export const TeacherProfileTable = pgTable(
   {
     id: uuid("id").defaultRandom().primaryKey().notNull(),
     userId: uuid("user_id").references(() => UsersTable.id).notNull(),
-    
-    // Personal Information
     name: text("name").notNull(),
     email: text("email").notNull(),
     mobileNo: text("mobile_no").notNull(),
     profilePhoto: text("profile_photo"),
     teacherIdProof: text("teacher_id_proof"),
     location: text("location"),
-    
-    // College Employment Information
     collegeId: uuid("college_id").references(() => CollegeTable.id).notNull(),
     branchId: uuid("branch_id").references(() => BranchTable.id).notNull(),
     courseId: uuid("course_id").references(() => CourseTable.id).notNull(),
@@ -190,8 +186,6 @@ export const TeacherProfileTable = pgTable(
     employeeId: text("employee_id").notNull(),
     joiningDate: timestamp("joining_date").notNull(),
     isActive: text("is_active").default("true").notNull(),
-    
-    // Metadata
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },
