@@ -15,6 +15,13 @@
       "when": 1745841592420,
       "tag": "0001_unknown_quasimodo",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1745992707622,
+      "tag": "0002_bored_inhumans",
+      "breakpoints": true
     }
   ]
 }

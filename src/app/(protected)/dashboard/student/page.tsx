@@ -3,8 +3,8 @@
 
 import { StudentLogBookEntries } from '@/components/student/DisplayLogBookEntries';
 import LogBookManagement from '@/components/student/LogBookManagement';
-import StudentProfileTabs from '@/components/student/profileForm';
 import ProfileVerificationStatus from '@/components/student/ProfileVerificationStatus ';
+import StudentProfile from '@/components/student/profileForm';
 
 import {
   Popover,
@@ -25,51 +25,67 @@ import {
   Menu,
   Briefcase,
   Settings,
-  User,
-  Users
+  User
 } from 'lucide-react';
 import { signOut, useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
+
+type ProfileStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
+type ActiveComponent = 'personal' | 'academic' | 'professional' | 'verification' | 'LogBookEntries' | 'EnteredlogBook';
+
+interface StudentProfileData {
+  status?: ProfileStatus;
+  // Add other profile properties as needed
+  [key: string]: any;
+}
 
 export default function Dashboard() {
   const { status } = useSession();
   const router = useRouter();
   const user = useCurrentUser();
   
-  const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [activeComponent, setActiveComponent] = useState('personal');
-  const [profileStatus, setProfileStatus] = useState<'PENDING' | 'APPROVED' | 'REJECTED'>('PENDING');
-  const [profileExists, setProfileExists] = useState(false);
-  const [isProfileExpanded, setIsProfileExpanded] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState<boolean>(true);
+  const [activeComponent, setActiveComponent] = useState<ActiveComponent>('personal');
+  const [profileStatus, setProfileStatus] = useState<ProfileStatus>('PENDING');
+  const [profileExists, setProfileExists] = useState<boolean>(false);
+  const [isProfileExpanded, setIsProfileExpanded] = useState<boolean>(true);
+  const [editMode, setEditMode] = useState<boolean>(true);
+  const [existingProfile, setExistingProfile] = useState<StudentProfileData | null>(null);
 
   const handleLogout = async () => {
     await signOut({ redirectTo: "/auth/login" });
   };
 
-  // Fetch profile verification status
+  // Fetch profile data and status
   useEffect(() => {
     if (user?.id) {
-      fetchProfileStatus();
+      fetchProfileData();
     }
   }, [user?.id]);
 
-  const fetchProfileStatus = async () => {
+  const fetchProfileData = async () => {
     try {
       const response = await fetch(`/api/student-profile?byUserId=${user?.id}`);
-      const data = await response.json();
+      const data = await response.json() as StudentProfileData | { message: string };
       
       if (response.ok && data) {
-        if (data.message !== "Student not found") {
-          setProfileExists(true);
-          setProfileStatus(data.status || 'PENDING');
-        } else {
+        if ('message' in data && data.message === "Student not found") {
           setProfileExists(false);
           setProfileStatus('PENDING');
+          setEditMode(true);
+        } else {
+          setProfileExists(true);
+          setProfileStatus((data as StudentProfileData).status || 'PENDING');
+          setExistingProfile(data as StudentProfileData);
+          setEditMode(false);
         }
       }
     } catch (error) {
-      console.error("Error fetching profile status:", error);
+      console.error("Error fetching profile data:", error);
+      toast.error("Failed to load profile data");
     }
   };
 
@@ -97,17 +113,23 @@ export default function Dashboard() {
 
   // Render the appropriate component based on sidebar selection
   const renderMainContent = () => {
-    // Profile related components
+    // Profile tabs
     if (['personal', 'academic', 'professional'].includes(activeComponent)) {
-      return <StudentProfileTabs 
-              onProfileUpdate={fetchProfileStatus} 
-              activeTab={activeComponent === 'personal' ? 0 : activeComponent === 'academic' ? 1 : 2} 
-             />;
+      return (
+        <StudentProfile 
+          activeTab={activeComponent as "personal" | "academic" | "professional"}
+          editMode={editMode}
+          existingProfile={existingProfile}
+          userId={user?.id || ''}
+          onProfileUpdate={fetchProfileData}
+        />
+      );
     }
     
     switch (activeComponent) {
       case 'verification':
         return <ProfileVerificationStatus status={profileStatus} />;
+        
       case 'LogBookEntries':
         if (!canAccessLogBook) {
           return (
@@ -117,6 +139,7 @@ export default function Dashboard() {
           );
         }
         return <LogBookManagement />;
+        
       case 'EnteredlogBook':
         if (!canAccessLogBook) {
           return (
@@ -126,6 +149,7 @@ export default function Dashboard() {
           );
         }
         return <StudentLogBookEntries />;
+        
       default:
         return (
           <div className="text-center p-8 text-gray-500">
@@ -149,28 +173,41 @@ export default function Dashboard() {
             <h1 className="text-2xl font-semibold text-gray-800">Student Portal</h1>
           </div>
           
-          <Popover>
-            <PopoverTrigger asChild>
-              <button className="flex items-center gap-2 hover:bg-gray-50 rounded-lg p-2 transition-colors">
-                <span className="text-sm font-medium text-gray-700">{user?.name}</span>
-              </button>
-            </PopoverTrigger>
-            <PopoverContent className="w-56" align="end">
-              <div className="space-y-1">
-                <button className="w-full flex items-center gap-2 rounded-lg p-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors">
-                  <Settings className="h-4 w-4" />
-                  Profile Settings
+          <div className="flex items-center gap-4">
+            {profileExists && (
+              <Button
+                type="button"
+                variant={editMode ? "outline" : "default"}
+                onClick={() => setEditMode(!editMode)}
+                className="mr-2"
+              >
+                {editMode ? "Cancel Editing" : "Edit Profile"}
+              </Button>
+            )}
+            
+            <Popover>
+              <PopoverTrigger asChild>
+                <button className="flex items-center gap-2 hover:bg-gray-50 rounded-lg p-2 transition-colors">
+                  <span className="text-sm font-medium text-gray-700">{user?.name}</span>
                 </button>
-                <button 
-                  onClick={handleLogout}
-                  className="w-full flex items-center gap-2 rounded-lg p-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
-                >
-                  <LogOut className="h-4 w-4" />
-                  Logout
-                </button>
-              </div>
-            </PopoverContent>
-          </Popover>
+              </PopoverTrigger>
+              <PopoverContent className="w-56" align="end">
+                <div className="space-y-1">
+                  <button className="w-full flex items-center gap-2 rounded-lg p-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors">
+                    <Settings className="h-4 w-4" />
+                    Profile Settings
+                  </button>
+                  <button 
+                    onClick={handleLogout}
+                    className="w-full flex items-center gap-2 rounded-lg p-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                  >
+                    <LogOut className="h-4 w-4" />
+                    Logout
+                  </button>
+                </div>
+              </PopoverContent>
+            </Popover>
+          </div>
         </div>
       </nav>
 

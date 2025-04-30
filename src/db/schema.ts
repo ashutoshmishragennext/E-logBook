@@ -108,7 +108,7 @@ export const StudentProfileTable = pgTable(
     
     // Personal Information
     name: text("name").notNull(),
-    rollNo: text("roll_no").notNull(),
+    rollNo: text("roll_no"),
     mobileNo: text("mobile_no").notNull(),
     email: text("email").notNull(),
     profilePhoto: text("profile_photo"),
@@ -130,11 +130,11 @@ export const StudentProfileTable = pgTable(
     previousExperience: text("previous_experience"),
     
     // Enrollment Information
-    collegeId: uuid("college_id").references(() => CollegeTable.id).notNull(),
-    courseId: uuid("course_id").references(() => CourseTable.id).notNull(),
-    academicYearId: uuid("academic_year_id").references(() => AcademicYearTable.id).notNull(),
-    branchId: uuid("branch_id").references(() => BranchTable.id).notNull(),
-    enrollmentNo: text("enrollment_no").notNull(),
+    collegeId: uuid("college_id").references(() => CollegeTable.id),
+    courseId: uuid("course_id").references(() => CourseTable.id),
+    academicYearId: uuid("academic_year_id").references(() => AcademicYearTable.id),
+    branchId: uuid("branch_id").references(() => BranchTable.id),
+    enrollmentNo: text("enrollment_no"),
     currentSemester: text("current_semester"),
     enrollmentStatus: text("enrollment_status").default("ACTIVE"), // ACTIVE, GRADUATED, DROPOUT, etc.
     dateOfJoining: text("date_of_joining"),

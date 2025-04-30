@@ -1,118 +1,531 @@
-import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { UploadButton } from "@/utils/uploadthing";
+import { toast } from "sonner";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
+import { cn } from "@/lib/utils";
 
-interface AcademicInfoFormData {
-  rollNo?: string;
-  admissionBatch?: string;
-  department?: string;
-  currentSemester?: number;
-  collegeIdProof?: File;
-  cgpa?: number;
+interface AcademicInfoProps {
+  form: any;
+  editMode: boolean;
+  existingProfile: any | null;
+  collegeIdProofFileName: string | null;
+  setCollegeIdProofFileName: (name: string | null) => void;
 }
 
-interface AcademicInfoTabProps {
-  formData: AcademicInfoFormData;
-  handleChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
-  handleSubmit: (event: React.FormEvent<HTMLFormElement>, type: string) => void;
-  isLoading: boolean;
-}
-
-const AcademicInfoTab: React.FC<AcademicInfoTabProps> = ({ formData, handleChange, handleSubmit, isLoading }) => {
+export const AcademicInfo = ({
+  form,
+  editMode,
+  existingProfile,
+  collegeIdProofFileName,
+  setCollegeIdProofFileName,
+}: AcademicInfoProps) => {
   return (
-    <Card className="border shadow-sm">
-      <CardHeader>
-        <CardTitle className="text-xl font-semibold">Academic Information</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <form className="space-y-4" onSubmit={(e) => handleSubmit(e, 'academic')}>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Roll Number</label>
-              <Input 
-                name="rollNo" 
-                value={formData.rollNo || ''} 
-                onChange={handleChange} 
+    <div className="grid md:grid-cols-2 gap-4">
+      {/* Roll Number */}
+      <FormField
+        control={form.control}
+        name="rollNo"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Roll Number</FormLabel>
+            <FormControl>
+              <Input
                 placeholder="Enter your roll number"
-                required
+                {...field}
+                readOnly={!editMode || !!existingProfile}
+                className={
+                  !editMode || existingProfile
+                    ? "bg-gray-100 cursor-not-allowed"
+                    : ""
+                }
               />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Admission Batch</label>
-              <Input 
-                name="admissionBatch" 
-                value={formData.admissionBatch || ''} 
-                onChange={handleChange} 
-                placeholder="E.g., 2022-2026"
-                required
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+
+      {/* Enrollment Number */}
+      <FormField
+        control={form.control}
+        name="enrollmentNo"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Enrollment Number</FormLabel>
+            <FormControl>
+              <Input
+                placeholder="Enter your enrollment number"
+                {...field}
+                readOnly={!editMode || !!existingProfile}
+                className={
+                  !editMode || existingProfile
+                    ? "bg-gray-100 cursor-not-allowed"
+                    : ""
+                }
               />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Department</label>
-              <Input 
-                name="department" 
-                value={formData.department || ''} 
-                onChange={handleChange} 
-                placeholder="E.g., Computer Science"
-                required
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+
+      {/* Admission Batch */}
+      <FormField
+        control={form.control}
+        name="admissionBatch"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Admission Batch</FormLabel>
+            <Select
+              onValueChange={field.onChange}
+              defaultValue={field.value}
+              disabled={!editMode}
+            >
+              <FormControl>
+                <SelectTrigger
+                  className={
+                    !editMode
+                      ? "bg-gray-100 cursor-not-allowed"
+                      : ""
+                  }
+                >
+                  <SelectValue placeholder="Select admission batch" />
+                </SelectTrigger>
+              </FormControl>
+              <SelectContent>
+                {Array.from({ length: 10 }, (_, i) => {
+                  const year = 2020 + i;
+                  return (
+                    <SelectItem
+                      key={year}
+                      value={year.toString()}
+                    >
+                      {year}
+                    </SelectItem>
+                  );
+                })}
+              </SelectContent>
+            </Select>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+
+      {/* Course */}
+      <FormField
+        control={form.control}
+        name="course"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Course</FormLabel>
+            <Select
+              onValueChange={field.onChange}
+              defaultValue={field.value}
+              disabled={!editMode}
+            >
+              <FormControl>
+                <SelectTrigger
+                  className={
+                    !editMode
+                      ? "bg-gray-100 cursor-not-allowed"
+                      : ""
+                  }
+                >
+                  <SelectValue placeholder="Select course" />
+                </SelectTrigger>
+              </FormControl>
+              <SelectContent>
+                <SelectItem value="MBBS">MBBS</SelectItem>
+                <SelectItem value="MD">MD</SelectItem>
+                <SelectItem value="MS">MS</SelectItem>
+                <SelectItem value="BDS">BDS</SelectItem>
+                <SelectItem value="Pharm.D">Pharm.D</SelectItem>
+                <SelectItem value="BSc Nursing">BSc Nursing</SelectItem>
+                <SelectItem value="MSc Nursing">MSc Nursing</SelectItem>
+              </SelectContent>
+            </Select>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+
+      {/* Current Semester */}
+      <FormField
+        control={form.control}
+        name="currentSemester"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Current Semester</FormLabel>
+            <Select
+              onValueChange={field.onChange}
+              defaultValue={field.value}
+              disabled={!editMode}
+            >
+              <FormControl>
+                <SelectTrigger
+                  className={
+                    !editMode
+                      ? "bg-gray-100 cursor-not-allowed"
+                      : ""
+                  }
+                >
+                  <SelectValue placeholder="Select current semester" />
+                </SelectTrigger>
+              </FormControl>
+              <SelectContent>
+                {Array.from({ length: 12 }, (_, i) => (
+                  <SelectItem key={i+1} value={(i+1).toString()}>
+                    Semester {i+1}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+
+      {/* Subject/Specialization */}
+      <FormField
+        control={form.control}
+        name="subject"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Subject/Specialization</FormLabel>
+            <FormControl>
+              <Input
+                placeholder="Enter your subject or specialization"
+                {...field}
+                readOnly={!editMode}
+                className={
+                  !editMode
+                    ? "bg-gray-100 cursor-not-allowed"
+                    : ""
+                }
               />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Current Semester</label>
-              <Input 
-                name="currentSemester" 
-                type="number"
-                min="1"
-                max="8"
-                value={formData.currentSemester || ''} 
-                onChange={handleChange} 
-                placeholder="E.g., 5"
-                required
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+
+      {/* Branch */}
+      <FormField
+        control={form.control}
+        name="branchId"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Branch</FormLabel>
+            <Select
+              onValueChange={field.onChange}
+              defaultValue={field.value}
+              disabled={!editMode}
+            >
+              <FormControl>
+                <SelectTrigger
+                  className={
+                    !editMode
+                      ? "bg-gray-100 cursor-not-allowed"
+                      : ""
+                  }
+                >
+                  <SelectValue placeholder="Select branch" />
+                </SelectTrigger>
+              </FormControl>
+              <SelectContent>
+                {/* Branch items would be dynamically populated */}
+                <SelectItem value="branch-1">Branch 1</SelectItem>
+                <SelectItem value="branch-2">Branch 2</SelectItem>
+              </SelectContent>
+            </Select>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+
+      {/* Previous Institution */}
+      <FormField
+        control={form.control}
+        name="previousInstitution"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Previous Institution</FormLabel>
+            <FormControl>
+              <Input
+                placeholder="Enter your previous institution"
+                {...field}
+                readOnly={!editMode}
+                className={
+                  !editMode
+                    ? "bg-gray-100 cursor-not-allowed"
+                    : ""
+                }
               />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">College ID Proof</label>
-              <Input 
-                name="collegeIdProof" 
-                type="file"
-                onChange={(e) => {
-                  const file = e.target.files && e.target.files[0];
-                  handleChange({
-                    ...e,
-                    target: {
-                      ...e.target,
-                      name: "collegeIdProof",
-                      value: file ? file.name : ''
-                    }
-                  });
-                }}
-                accept="image/*"
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+
+      {/* Year of Passing */}
+      <FormField
+        control={form.control}
+        name="yearOfPassing"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Year of Passing</FormLabel>
+            <Select
+              onValueChange={field.onChange}
+              defaultValue={field.value}
+              disabled={!editMode}
+            >
+              <FormControl>
+                <SelectTrigger
+                  className={
+                    !editMode
+                      ? "bg-gray-100 cursor-not-allowed"
+                      : ""
+                  }
+                >
+                  <SelectValue placeholder="Select year of passing" />
+                </SelectTrigger>
+              </FormControl>
+              <SelectContent>
+                {Array.from({ length: 20 }, (_, i) => {
+                  const year = 2010 + i;
+                  return (
+                    <SelectItem
+                      key={year}
+                      value={year.toString()}
+                    >
+                      {year}
+                    </SelectItem>
+                  );
+                })}
+              </SelectContent>
+            </Select>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+
+      {/* Attempt */}
+      <FormField
+        control={form.control}
+        name="attempt"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Attempt</FormLabel>
+            <Select
+              onValueChange={field.onChange}
+              defaultValue={field.value}
+              disabled={!editMode}
+            >
+              <FormControl>
+                <SelectTrigger
+                  className={
+                    !editMode
+                      ? "bg-gray-100 cursor-not-allowed"
+                      : ""
+                  }
+                >
+                  <SelectValue placeholder="Select attempt" />
+                </SelectTrigger>
+              </FormControl>
+              <SelectContent>
+                {Array.from({ length: 10 }, (_, i) => {
+                  const attempt = i + 1;
+                  return (
+                    <SelectItem
+                      key={attempt}
+                      value={attempt.toString()}
+                    >
+                      {attempt}
+                    </SelectItem>
+                  );
+                })}
+              </SelectContent>
+            </Select>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+
+      {/* Date of Joining */}
+      <FormField
+        control={form.control}
+        name="dateOfJoining"
+        render={({ field }) => (
+          <FormItem className="flex flex-col">
+            <FormLabel>Date of Joining</FormLabel>
+            <FormControl>
+              <DatePicker
+                selected={field.value ? new Date(field.value) : null}
+                onChange={(date) => field.onChange(date)}
+                dateFormat="PPP"
+                placeholderText="Pick a date"
+                className={cn(
+                  "w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500",
+                  !editMode && "bg-gray-100 cursor-not-allowed"
+                )}
+                disabled={!editMode}
+                maxDate={new Date()}
               />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Current CGPA</label>
-              <Input 
-                name="cgpa" 
-                type="number"
-                step="0.01"
-                min="0"
-                max="10"
-                value={formData.cgpa || ''} 
-                onChange={handleChange} 
-                placeholder="E.g., 8.5"
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+
+      {/* Date of Completion */}
+      <FormField
+        control={form.control}
+        name="dateOfCompletion"
+        render={({ field }) => (
+          <FormItem className="flex flex-col">
+            <FormLabel>Expected Date of Completion</FormLabel>
+            <FormControl>
+              <DatePicker
+                selected={field.value ? new Date(field.value) : null}
+                onChange={(date) => field.onChange(date)}
+                dateFormat="PPP"
+                placeholderText="Pick a date"
+                className={cn(
+                  "w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500",
+                  !editMode && "bg-gray-100 cursor-not-allowed"
+                )}
+                disabled={!editMode}
               />
-            </div>
-          </div>
-          <div className="pt-4">
-            <Button type="submit" disabled={isLoading}>
-              {isLoading ? 'Saving...' : 'Save Academic Information'}
-            </Button>
-          </div>
-        </form>
-      </CardContent>
-    </Card>
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+
+      {/* Graduation Date */}
+      <FormField
+        control={form.control}
+        name="graduationDate"
+        render={({ field }) => (
+          <FormItem className="flex flex-col">
+            <FormLabel>Graduation Date</FormLabel>
+            <FormControl>
+              <DatePicker
+                selected={field.value ? new Date(field.value) : null}
+                onChange={(date) => field.onChange(date)}
+                dateFormat="PPP"
+                placeholderText="Pick a date"
+                className={cn(
+                  "w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500",
+                  !editMode && "bg-gray-100 cursor-not-allowed"
+                )}
+                disabled={!editMode}
+              />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+
+      {/* Enrollment Status */}
+      <FormField
+        control={form.control}
+        name="enrollmentStatus"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Enrollment Status</FormLabel>
+            <Select
+              onValueChange={field.onChange}
+              defaultValue={field.value || "ACTIVE"}
+              disabled={!editMode}
+            >
+              <FormControl>
+                <SelectTrigger
+                  className={
+                    !editMode
+                      ? "bg-gray-100 cursor-not-allowed"
+                      : ""
+                  }
+                >
+                  <SelectValue placeholder="Select enrollment status" />
+                </SelectTrigger>
+              </FormControl>
+              <SelectContent>
+                <SelectItem value="ACTIVE">Active</SelectItem>
+                <SelectItem value="GRADUATED">Graduated</SelectItem>
+                <SelectItem value="DROPOUT">Dropout</SelectItem>
+                <SelectItem value="ON_BREAK">On Break</SelectItem>
+              </SelectContent>
+            </Select>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+
+      {/* College ID Proof Upload */}
+      <FormField
+        control={form.control}
+        name="collegeIdProof"
+        render={({ field }) => (
+          <FormItem className="col-span-2">
+            <FormLabel>College ID Proof</FormLabel>
+            <FormControl>
+              <div className="flex flex-col items-start space-y-2 w-full">
+                {editMode && (
+                  <div className="w-full">
+                    <UploadButton
+                      endpoint="docUploader"
+                      onClientUploadComplete={(res) => {
+                        if (res.length > 0) {
+                          const uploadedFileUrl = res[0].serverData.fileUrl;
+                          form.setValue("collegeIdProof", uploadedFileUrl);
+                          setCollegeIdProofFileName(res[0].name);
+                          toast.success("ID Proof Uploaded");
+                        }
+                      }}
+                      onUploadError={(error) => {
+                        toast.error("Upload Error");
+                        console.log("Upload Error:", error);
+                      }}
+                    />
+                  </div>
+                )}
+
+                {field.value && (
+                  <div className="flex items-center gap-2">
+                    <a
+                      href={field.value}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 hover:underline flex items-center"
+                    >
+                      View Uploaded ID
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-4 w-4 ml-1"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                        />
+                      </svg>
+                    </a>
+                  </div>
+                )}
+              </div>
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+    </div>
   );
 };
-
-export default AcademicInfoTab;
