@@ -1,0 +1,2 @@
+ALTER TABLE "subjects" ADD COLUMN "phase_id" uuid;--> statement-breakpoint
+ALTER TABLE "subjects" ADD CONSTRAINT "subjects_phase_id_phase_id_fk" FOREIGN KEY ("phase_id") REFERENCES "public"."phase"("id") ON DELETE no action ON UPDATE no action;

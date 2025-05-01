@@ -3,7 +3,6 @@
 
 import { StudentLogBookEntries } from '@/components/student/DisplayLogBookEntries';
 import LogBookManagement from '@/components/student/LogBookManagement';
-import ProfileVerificationStatus from '@/components/student/ProfileVerificationStatus ';
 import StudentProfile from '@/components/student/profileForm';
 
 import {
@@ -27,6 +26,7 @@ import {
   Settings,
   User
 } from 'lucide-react';
+import { Profile } from 'next-auth';
 import { signOut, useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -34,12 +34,6 @@ import { toast } from "sonner";
 
 type ProfileStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
 type ActiveComponent = 'personal' | 'academic' | 'professional' | 'verification' | 'LogBookEntries' | 'EnteredlogBook';
-
-interface StudentProfileData {
-  status?: ProfileStatus;
-  // Add other profile properties as needed
-  [key: string]: any;
-}
 
 export default function Dashboard() {
   const { status } = useSession();
@@ -51,7 +45,10 @@ export default function Dashboard() {
   const [profileStatus, setProfileStatus] = useState<ProfileStatus>('PENDING');
   const [profileExists, setProfileExists] = useState<boolean>(false);
   const [isProfileExpanded, setIsProfileExpanded] = useState<boolean>(true);
-  const [existingProfile, setExistingProfile] = useState<StudentProfileData | null>(null);
+  
+  // We're still keeping this state for other functionality,
+  // but we won't pass it to the StudentProfile component
+  const [existingProfile, setExistingProfile] = useState<Profile | null>(null);
 
   const handleLogout = async () => {
     await signOut({ redirectTo: "/auth/login" });
@@ -67,7 +64,8 @@ export default function Dashboard() {
   const fetchProfileData = async () => {
     try {
       const response = await fetch(`/api/student-profile?byUserId=${user?.id}`);
-      const data = await response.json() as StudentProfileData | { message: string };
+      const data = await response.json() as Profile & { status?: ProfileStatus, message?: string };
+      console.log("Profile data:", data);
       
       if (response.ok && data) {
         if ('message' in data && data.message === "Student not found") {
@@ -75,8 +73,8 @@ export default function Dashboard() {
           setProfileStatus('PENDING');
         } else {
           setProfileExists(true);
-          setProfileStatus((data as StudentProfileData).status || 'PENDING');
-          setExistingProfile(data as StudentProfileData);
+          setProfileStatus(data.status || 'PENDING');
+          setExistingProfile(data);
         }
       }
     } catch (error) {
@@ -109,24 +107,23 @@ export default function Dashboard() {
 
   // Render the appropriate component based on sidebar selection
   const renderMainContent = () => {
-    // Profile tabs
+    // Profile tabs - now with only userId and activeTab props
     if (['personal', 'academic', 'professional'].includes(activeComponent)) {
       return (
         <StudentProfile 
           activeTab={activeComponent as "personal" | "academic" | "professional"}
-          // No longer passing editMode prop - the component manages it internally
-          existingProfile={existingProfile}
           userId={user?.id || ''}
-          onProfileUpdate={fetchProfileData}
-          // Pass initialEditMode as true only for new profiles
-          initialEditMode={!profileExists}
         />
       );
     }
     
     switch (activeComponent) {
       case 'verification':
-        return <ProfileVerificationStatus status={profileStatus} />;
+        return (
+          <div className="flex items-center justify-center p-8">
+            <p className="text-gray-500">Verification status: {profileStatus}</p>
+          </div>
+        );
         
       case 'LogBookEntries':
         if (!canAccessLogBook) {
@@ -172,8 +169,6 @@ export default function Dashboard() {
           </div>
           
           <div className="flex items-center gap-4">
-            {/* Removed the Edit Profile button since it's now handled by the StudentProfile component */}
-            
             <Popover>
               <PopoverTrigger asChild>
                 <button className="flex items-center gap-2 hover:bg-gray-50 rounded-lg p-2 transition-colors">
