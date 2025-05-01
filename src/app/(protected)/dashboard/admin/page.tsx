@@ -1,17 +1,19 @@
-'use client';
+"use client";
 
-import Academicyear from '@/components/admin/Academic year';
-import Batch from '@/components/admin/Batch';
-import DisplayTemplates from '@/components/admin/DisplayTemplates';
-import LogBookTemplateForm from '@/components/admin/LogFormTemplate';
-import Module from '@/components/admin/Module';
-import Subject from '@/components/admin/Subject';
+import AcademicYear from "@/components/admin/Academic year";
+import Batch from "@/components/admin/Batch";
+import Faculty from "@/components/admin/college/Faculty";
+import Profile from "@/components/admin/college/Profile";
+import DisplayTemplates from "@/components/admin/DisplayTemplates";
+import LogBookTemplateForm from "@/components/admin/LogFormTemplate";
+import Subject from "@/components/admin/Subject";
+
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { useCurrentUser } from '@/hooks/auth';
+import { useCurrentUser } from "@/hooks/auth";
 import {
   Activity,
   ChevronLeft,
@@ -21,94 +23,124 @@ import {
   LogOut,
   Menu,
   Settings,
-  Users
-} from 'lucide-react';
-import { signOut, useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
-
+  Users,
+} from "lucide-react";
+import { signOut, useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 
 export default function Dashboard() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const user = useCurrentUser();
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [activeComponent, setActiveComponent] = useState('createlogTemplate');
+  const [activeComponent, setActiveComponent] = useState("college");
+  const [collegeSubComponent, setCollegeSubComponent] =
+    useState("collegeProfile");
 
   const handleLogout = async () => {
     await signOut({ redirectTo: "/auth/login" });
   };
 
-  // Redirect if not authenticatedclear
   useEffect(() => {
-    if (status === 'unauthenticated') {
-      router.push('/auth/login');
+    if (status === "unauthenticated") {
+      router.push("/auth/login");
     }
   }, [status, router]);
 
-  if (status === 'loading') {
-    return <div className="flex items-center justify-center h-screen">Loading...</div>;
+  if (status === "loading") {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        Loading...
+      </div>
+    );
   }
 
-  if (!session) {
-    
-    return null;
-  }
+  if (!session) return null;
 
+  const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
 
-  const toggleSidebar = () => {
-    setSidebarOpen(!sidebarOpen);
-  };
-
-  // Navigation items for sidebar
   const navItems = [
-    { id: 'createlogTemplate', label: 'Create Template', icon: <File className="h-5 w-5" /> },
-    { id: 'templates', label: 'Templates', icon: <Users className="h-5 w-5" /> },
-    { id: 'academicYear', label: 'Academic Year', icon: <FolderOpen className="h-5 w-5" /> },
-    { id: 'batch', label: 'Batch', icon: <Activity className="h-5 w-5" /> },
-    { id: 'subject', label: 'Subject', icon: <FolderOpen className="h-5 w-5" /> },
-    { id: 'module', label: 'Module', icon: <Activity className="h-5 w-5" /> },
-
+    {
+      id: "college",
+      label: "College",
+      icon: <Activity className="h-5 w-5" />,
+      hasSubMenu: true,
+    },
+    {
+      id: "createlogTemplate",
+      label: "Create Template",
+      icon: <File className="h-5 w-5" />,
+    },
+    {
+      id: "templates",
+      label: "Templates",
+      icon: <Users className="h-5 w-5" />,
+    },
+    {
+      id: "academicYear",
+      label: "Academic Year",
+      icon: <FolderOpen className="h-5 w-5" />,
+    },
+    {
+      id: "batch",
+      label: "Batch",
+      icon: <Activity className="h-5 w-5" />,
+    },
+    {
+      id: "subject",
+      label: "Subject",
+      icon: <FolderOpen className="h-5 w-5" />,
+    },
   ];
 
-  // Render the appropriate component based on sidebar selection
   const renderMainContent = () => {
-    switch (activeComponent) {
-      case 'createlogTemplate':
-        return (
-            <LogBookTemplateForm/>
-        );
-      case 'templates':
-        return (
-          <DisplayTemplates/>
-        );
-      case 'academicYear':
-        return (
-            <Academicyear/>
-        );
-
-      case 'batch':
-        return (
-           <Batch/>
-        );
-      case 'subject':
-        return (
-            <Subject/>
-        );
-      case 'module':
-        return (
-            <Module/>
-        );
-      case 'activity':
-        return (
-          <div>
-            <h1 className="text-2xl font-bold mb-6">Recent Activity</h1>
-            <div className="border rounded-lg p-6">
-              <h2 className="text-lg font-semibold mb-4">Activity Log</h2>
-              {/* Activity logs and timeline */}
-            </div>
+    if (activeComponent === "college") {
+      return (
+        <div className="p-6">
+          <div className="mb-4 flex gap-4">
+            <button
+              onClick={() => setCollegeSubComponent("collegeProfile")}
+              className={`px-4 py-2 rounded-lg text-sm ${
+                collegeSubComponent === "collegeProfile"
+                  ? "bg-blue-600 text-white"
+                  : "bg-gray-200 text-gray-700"
+              }`}
+            >
+              College Profile
+            </button>
+            <button
+              onClick={() => setCollegeSubComponent("facultyAssignment")}
+              className={`px-4 py-2 rounded-lg text-sm ${
+                collegeSubComponent === "facultyAssignment"
+                  ? "bg-blue-600 text-white"
+                  : "bg-gray-200 text-gray-700"
+              }`}
+            >
+              Faculty Assignment
+            </button>
           </div>
-        );
+          {collegeSubComponent === "collegeProfile" && (
+            <Profile/>
+          )}
+          {collegeSubComponent === "facultyAssignment" && (
+            <Faculty/>
+          )}
+        </div>
+      );
+    }
+
+    switch (activeComponent) {
+      case "createlogTemplate":
+        return <LogBookTemplateForm />;
+      case "templates":
+        return <DisplayTemplates />;
+      case "academicYear":
+        return <AcademicYear />;
+      case "batch":
+        return <Batch />;
+      case "subject":
+        return <Subject />;
       default:
         return (
           <div className="text-center p-8 text-gray-500">
@@ -129,17 +161,17 @@ export default function Dashboard() {
             >
               <Menu className="h-5 w-5" />
             </button>
-            <h1 className="text-2xl font-semibold text-gray-800"> Admin Portal</h1>
+            <h1 className="text-2xl font-semibold text-gray-800">
+              Admin Portal
+            </h1>
           </div>
-          
+
           <Popover>
             <PopoverTrigger asChild>
               <button className="flex items-center gap-2 hover:bg-gray-50 rounded-lg p-2 transition-colors">
-                {/* <Avatar className="h-8 w-8">
-                  <AvatarImage src="/images/user_alt_icon.png" alt="User" />
-                  
-                </Avatar> */}
-                <span className="text-sm font-medium text-gray-700">{user?.name}</span>
+                <span className="text-sm font-medium text-gray-700">
+                  {user?.name ?? "Admin"}
+                </span>
               </button>
             </PopoverTrigger>
             <PopoverContent className="w-56" align="end">
@@ -148,7 +180,7 @@ export default function Dashboard() {
                   <Settings className="h-4 w-4" />
                   Profile Settings
                 </button>
-                <button 
+                <button
                   onClick={handleLogout}
                   className="w-full flex items-center gap-2 rounded-lg p-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
                 >
@@ -163,18 +195,22 @@ export default function Dashboard() {
 
       <div className="flex">
         {/* Sidebar */}
-        <div 
+        <div
           className={`${
-            sidebarOpen ? 'w-64' : 'w-20'
+            sidebarOpen ? "w-64" : "w-20"
           } bg-white border-r transition-all duration-300 ease-in-out h-[calc(100vh-64px)] flex flex-col justify-between`}
         >
           <div>
             <div className="flex justify-end p-2">
-              <button 
-                onClick={toggleSidebar} 
+              <button
+                onClick={toggleSidebar}
                 className="p-1 text-gray-500 hover:bg-gray-100 rounded-full"
               >
-                {sidebarOpen ? <ChevronLeft size={18} /> : <ChevronRight size={18} />}
+                {sidebarOpen ? (
+                  <ChevronLeft size={18} />
+                ) : (
+                  <ChevronRight size={18} />
+                )}
               </button>
             </div>
             <ul className="space-y-2 px-3 py-4">
@@ -184,8 +220,8 @@ export default function Dashboard() {
                     onClick={() => setActiveComponent(item.id)}
                     className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
                       activeComponent === item.id
-                        ? 'bg-gray-100 text-blue-600 font-medium'
-                        : 'text-gray-700 hover:bg-gray-50'
+                        ? "bg-gray-100 text-blue-600 font-medium"
+                        : "text-gray-700 hover:bg-gray-50"
                     }`}
                   >
                     {item.icon}
@@ -198,9 +234,7 @@ export default function Dashboard() {
         </div>
 
         {/* Main content */}
-        <div className="flex-1 p-6 overflow-auto">
-          {renderMainContent()}
-        </div>
+        <div className="flex-1 p-6 overflow-auto">{renderMainContent()}</div>
       </div>
     </div>
   );
