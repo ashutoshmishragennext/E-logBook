@@ -1,12 +1,14 @@
 import { InferModel, relations } from "drizzle-orm";
 import {
+  boolean,
   jsonb,
   pgEnum,
   pgTable,
   text,
   timestamp,
   uniqueIndex,
-  uuid
+  uuid,
+  integer
 } from "drizzle-orm/pg-core";
 
 // ===== ENUMS =====
@@ -24,6 +26,15 @@ export const FieldType = pgEnum("field_type", [
   "select", 
   "textarea", 
   "file"
+]);
+
+// New enum for log book entry status
+export const LogBookEntryStatus = pgEnum("logbook_entry_status", [
+  "DRAFT",
+  "SUBMITTED",
+  "REVIEWED",
+  "APPROVED",
+  "REJECTED"
 ]);
 
 // ===== USERS =====
@@ -102,6 +113,7 @@ export const CollegeTable = pgTable(
   "colleges",
   {
     id: uuid("id").defaultRandom().primaryKey().notNull(),
+    userId : uuid("user_id").references(() => UsersTable.id).notNull(),
     name: text("name").notNull(),
     code: text("code").notNull(),
     address: text("address"),
@@ -118,6 +130,7 @@ export const CollegeTable = pgTable(
   },
   (table) => [
     uniqueIndex("college_code_key").on(table.code),
+    uniqueIndex("college_user_id_key").on(table.userId),
   ]
 );
 
@@ -145,14 +158,14 @@ export const CourseTable = pgTable(
     id: uuid("id").defaultRandom().primaryKey().notNull(),
     branchId: uuid("branch_id").references(() => BranchTable.id).notNull(),
     name: text("name").notNull(),
-   
     duration: text("duration").notNull(), // in years or semesters
     description: text("description"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },
   (table) => [
-    uniqueIndex("course_branch_code_key").on(table.branchId),
+    uniqueIndex("course_branch_code_key").on(table.branchId, table.name)
+
   ]
 );
 
@@ -176,7 +189,7 @@ export const PhaseTable = pgTable(
   }
 );
 
-// Subject Table - Now linking subjects to courses
+// Subject Table - Now linked to courses
 export const SubjectTable = pgTable(
   "subjects",
   {
@@ -186,7 +199,6 @@ export const SubjectTable = pgTable(
     phaseId: uuid("phase_id").references(() => PhaseTable.id),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
-
   },
   (table) => [
     // Ensure subject code is unique within a course
@@ -209,8 +221,6 @@ export const TeacherProfileTable = pgTable(
     collegeId: uuid("college_id").references(() => CollegeTable.id).notNull(),
     designation: text("designation").notNull(), // Professor, Assistant Professor, etc.
     employeeId: text("employee_id").notNull(),
-    // isActive: text("is_active").default("true"),
-    // joiningDate: timestamp("joining_date"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },
@@ -237,15 +247,13 @@ export const StudentProfileTable = pgTable(
     mobileNo: text("mobile_no").notNull(),
     email: text("email").notNull(),
     profilePhoto: text("profile_photo"),
-    dateOfBirth: text("date_of_birth"),
+    dateOfBirth: text("date_of_birth"), // Changed to timestamp
     Address: text("local_address"),
     country: text("country"),
     state: text("state"),
     city: text("city"),
     adharNo: text("adhar_no"),
     maritalStatus: text("marital_status"),
-
-    // enrollmentNo: text("enrollment_no"),
     
     // Academic Information
     collegeId: uuid("college_id").references(() => CollegeTable.id),
@@ -253,7 +261,7 @@ export const StudentProfileTable = pgTable(
     courseId: uuid("course_id").references(() => CourseTable.id),
     academicYearId: uuid("academic_year_id").references(() => AcademicYearTable.id),
     collegeIdProof: text("college_id_proof"),
-    yearOfPassing: text("year_of_passing"),    
+    yearOfPassing: text("year_of_passing"), // Changed from text to integer
     
     // Verification Information
     verificationStatus: VerificationStatus("verification_status").default("PENDING"),
@@ -285,8 +293,6 @@ export const TeacherSubjectTable = pgTable(
     subjectId: uuid("subject_id").references(() => SubjectTable.id).notNull(),
     academicYearId: uuid("academic_year_id").references(() => AcademicYearTable.id),
     phaseId: uuid("phase_id").references(() => PhaseTable.id),
-    // isPrimary: text("is_primary").default("false"), // Identifies primary teacher for a subject
-    // maxStudents: text("max_students"), // Optional student capacity
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },
@@ -308,7 +314,6 @@ export const StudentSubjectTable = pgTable(
     id: uuid("id").defaultRandom().primaryKey().notNull(),
     studentId: uuid("student_id").references(() => StudentProfileTable.id).notNull(),
     subjectId: uuid("subject_id").references(() => SubjectTable.id).notNull(),
-    teacherId: uuid("teacher_id").references(() => TeacherProfileTable.id).notNull(),
     teacherSubjectId: uuid("teacher_subject_id").references(() => TeacherSubjectTable.id).notNull(), // Reference to the teacher-subject assignment
     academicYearId: uuid("academic_year_id").references(() => AcademicYearTable.id).notNull(),
     phaseId: uuid("phase_id").references(() => PhaseTable.id).notNull(),
@@ -321,7 +326,7 @@ export const StudentSubjectTable = pgTable(
     approvedAt: timestamp("approved_at"),
     
     // Access control for e-logbook (only accessible after approval)
-    hasLogbookAccess: text("has_logbook_access").default("false"),
+    hasLogbookAccess: text("has_logbook_access").default("false"), // Changed from text to boolean
     
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
@@ -331,7 +336,7 @@ export const StudentSubjectTable = pgTable(
     uniqueIndex("student_subject_teacher_unique").on(
       table.studentId,
       table.subjectId,
-      table.teacherId,
+      table.teacherSubjectId,
       table.academicYearId,
       table.phaseId
     ),
@@ -342,7 +347,6 @@ export const StudentSubjectTable = pgTable(
 export const LogBookTemplateTable = pgTable(
   "log_book_templates",
   {
-
     id: uuid("id").defaultRandom().primaryKey().notNull(),
     
     // Academic Specifics
@@ -389,7 +393,7 @@ export const LogBookEntryTable = pgTable(
     // Tracking and Feedback
     studentRemarks: text("student_remarks"),
     teacherRemarks: text("teacher_remarks"),
-    status: text("verification_status").default("DRAFT"), // e.g., DRAFT, SUBMITTED, REVIEWED
+    status: text("status").default("DRAFT"), // Changed to use the proper enum
     
     // Metadata
     createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -471,12 +475,15 @@ export const courseRelations = relations(CourseTable, ({ one, many }) => ({
     references: [BranchTable.id]
   }),
   subjects: many(SubjectTable),
-  students: many(StudentProfileTable),
-  teacherSubjects: many(TeacherSubjectTable)
+  students: many(StudentProfileTable)
 }));
 
 export const subjectRelations = relations(SubjectTable, ({ one, many }) => ({
 
+  phase: one(PhaseTable, {
+    fields: [SubjectTable.phaseId],
+    references: [PhaseTable.id]
+  }),
   teacherAssignments: many(TeacherSubjectTable),
   studentSelections: many(StudentSubjectTable),
   logBookTemplates: many(LogBookTemplateTable)
@@ -494,6 +501,7 @@ export const phaseRelations = relations(PhaseTable, ({ one, many }) => ({
     fields: [PhaseTable.academicYearId],
     references: [AcademicYearTable.id]
   }),
+  subjects: many(SubjectTable), // Added subjects relation
   teacherSubjects: many(TeacherSubjectTable),
   studentSubjects: many(StudentSubjectTable),
   logBookTemplates: many(LogBookTemplateTable)
@@ -509,7 +517,8 @@ export const teacherProfileRelations = relations(TeacherProfileTable, ({ one, ma
     references: [CollegeTable.id]
   }),
   subjectAssignments: many(TeacherSubjectTable),
-  studentVerifications: many(StudentSubjectTable)
+  studentVerifications: many(StudentProfileTable), // Added student verification relation
+  studentSubjectVerifications: many(StudentSubjectTable)
 }));
 
 export const studentProfileRelations = relations(StudentProfileTable, ({ one, many }) => ({
@@ -573,14 +582,11 @@ export const studentSubjectRelations = relations(StudentSubjectTable, ({ one, ma
     fields: [StudentSubjectTable.subjectId],
     references: [SubjectTable.id]
   }),
-  teacher: one(TeacherProfileTable, {
-    fields: [StudentSubjectTable.teacherId],
-    references: [TeacherProfileTable.id]
-  }),
   teacherSubject: one(TeacherSubjectTable, {
     fields: [StudentSubjectTable.teacherSubjectId],
     references: [TeacherSubjectTable.id]
   }),
+  // Link to teacher through teacherSubject
   academicYear: one(AcademicYearTable, {
     fields: [StudentSubjectTable.academicYearId],
     references: [AcademicYearTable.id]
@@ -643,6 +649,10 @@ export const userRelations = relations(UsersTable, ({ one, many }) => ({
   teacherProfile: one(TeacherProfileTable, {
     fields: [UsersTable.id],
     references: [TeacherProfileTable.userId]
+  }),
+  college: one(CollegeTable, { // Added college relation
+    fields: [UsersTable.id],
+    references: [CollegeTable.userId]
   }),
   createdTemplates: many(LogBookTemplateTable),
 }));
