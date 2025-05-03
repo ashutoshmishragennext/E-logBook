@@ -1,0 +1,1 @@
+DROP INDEX "college_user_id_key";

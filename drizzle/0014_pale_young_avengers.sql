@@ -1,0 +1,1 @@
+ALTER TABLE "courses" ALTER COLUMN "branch_id" DROP NOT NULL;

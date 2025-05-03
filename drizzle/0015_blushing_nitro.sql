@@ -1,0 +1,1 @@
+DROP INDEX "course_branch_code_key";

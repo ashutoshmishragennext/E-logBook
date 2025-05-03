@@ -130,7 +130,6 @@ export const CollegeTable = pgTable(
   },
   (table) => [
     uniqueIndex("college_code_key").on(table.code),
-    uniqueIndex("college_user_id_key").on(table.userId),
   ]
 );
 
@@ -139,16 +138,13 @@ export const BranchTable = pgTable(
   "branches",
   {
     id: uuid("id").defaultRandom().primaryKey().notNull(),
-    collegeId: uuid("college_id").references(() => CollegeTable.id).notNull(),
+    collegeId: uuid("college_id").references(() => CollegeTable.id),
     name: text("name").notNull(),
     code: text("code").notNull(),
     description: text("description"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },
-  (table) => [
-    uniqueIndex("branch_college_code_key").on(table.collegeId, table.code),
-  ]
 );
 
 // Course Table
@@ -156,17 +152,13 @@ export const CourseTable = pgTable(
   "courses",
   {
     id: uuid("id").defaultRandom().primaryKey().notNull(),
-    branchId: uuid("branch_id").references(() => BranchTable.id).notNull(),
+    branchId: uuid("branch_id").references(() => BranchTable.id),
     name: text("name").notNull(),
     duration: text("duration").notNull(), // in years or semesters
     description: text("description"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
-  },
-  (table) => [
-    uniqueIndex("course_branch_code_key").on(table.branchId, table.name)
-
-  ]
+  }
 );
 
 // Academic Configuration Tables

@@ -28,9 +28,11 @@ export async function POST(request: Request) {
 
     const newCollege = await db.insert(CollegeTable).values(body).returning();
     return NextResponse.json(newCollege[0], { status: 201 });
-  } catch (error) {
-    return NextResponse.json({ message: "Failed to create college" }, { status: 500 });
+  }  catch (error) {
+    console.error("Error creating college:", error);
+    return NextResponse.json({ message: "Failed to create college", error: String(error) }, { status: 500 });
   }
+  
 }
 
 // PUT: Update college by ID

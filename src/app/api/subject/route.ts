@@ -39,3 +39,42 @@ import { NextRequest, NextResponse } from "next/server";
       }, { status: 500 });
     }
   }
+
+
+export async function PUT(request: Request) {
+  const id = new URL(request.url).searchParams.get('id');
+  if (!id) return NextResponse.json({ message: "Missing ID" }, { status: 400 });
+  try {
+    const {...data } = await request.json();
+    const updated = await db.update(SubjectTable).set(data).where(eq(SubjectTable.id, id)).returning();
+    if (!updated.length) return NextResponse.json({ message: "Subject not found" }, { status: 404 });
+
+    return NextResponse.json(updated[0]);
+  } catch (error) {
+    return NextResponse.json({ message: "Failed to update subject" }, { status: 500 });
+  }
+}
+
+
+export async function DELETE(request: Request) {
+  const id = new URL(request.url).searchParams.get('id');
+  if (!id) {
+    return NextResponse.json({ message: "Missing ID" }, { status: 400 });
+  }
+
+  try {
+    const deleted = await db
+      .delete(SubjectTable)
+      .where(eq(SubjectTable.id, id))
+      .returning();
+
+    if (!deleted.length) {
+      return NextResponse.json({ message: "Subject not found" }, { status: 404 });
+    }
+
+    return NextResponse.json({ message: "Subject deleted successfully", deleted: deleted[0] }, { status: 200 });
+  } catch (error) {
+    console.error("Error deleting subject:", error);
+    return NextResponse.json({ message: "Failed to delete subject", error }, { status: 500 });
+  }
+}
