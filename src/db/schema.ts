@@ -12,7 +12,7 @@ import {
 } from "drizzle-orm/pg-core";
 
 // ===== ENUMS =====
-export const UserRole = pgEnum("user_role", ["ADMIN", "TEACHER", "STUDENT", "USER"]);
+export const UserRole = pgEnum("user_role", ["ADMIN", "TEACHER", "STUDENT", "USER" , "COLLEGE_ADMIN"]);
 export const VerificationStatus = pgEnum("verification_status", [
   "PENDING",
   "APPROVED",

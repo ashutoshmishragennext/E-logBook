@@ -29,8 +29,8 @@ export default function Dashboard() {
 
 
     switch (role) {
-      case "ADMIN":
-        router.push("/dashboard/admin/");
+      case "COLLEGE_ADMIN":
+        router.push("/dashboard/clg-admin/");
         break;
       case "USER":
           router.push("/dashboard/user");
@@ -41,6 +41,8 @@ export default function Dashboard() {
       case "TEACHER":
           router.push("/dashboard/teacher");
           break;
+      case "ADMIN":
+          router.push("/dashboard/admin");
       default:
         setIsRedirecting(false);
         break;
