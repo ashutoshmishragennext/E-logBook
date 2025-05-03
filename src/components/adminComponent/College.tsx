@@ -22,6 +22,8 @@ import {
   Plus,
   Search,
   Trash2,
+  User,
+  UserPlus,
   X,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
@@ -43,6 +45,12 @@ const College: React.FC = () => {
     description?: string;
     logo?: string;
     createdAt?: string;
+    collegeAdminId?: string;
+    collegeAdmin?: {
+      id: string;
+      name: string;
+      email: string;
+    };
   }
 
   const [colleges, setColleges] = useState<College[]>([]);
@@ -53,6 +61,7 @@ const College: React.FC = () => {
   const [error, setError] = useState("");
   const [isEditing, setIsEditing] = useState(false);
   const [isViewing, setIsViewing] = useState(false);
+  const [isCreatingAdmin, setIsCreatingAdmin] = useState(false);
   const [formData, setFormData] = useState({
     userId: userId,
     name: "",
@@ -67,8 +76,21 @@ const College: React.FC = () => {
     description: "",
     logo: "",
   });
+
+  const [adminFormData, setAdminFormData] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    password: "",
+    generatePassword: true,
+    collegeId: "",
+  });
+
+  const [adminCreationSuccess, setAdminCreationSuccess] = useState("");
+  const [adminCreationError, setAdminCreationError] = useState("");
   const [profilePhotoFileName, setProfilePhotoFileName] = useState("");
   const formRef = useRef<HTMLFormElement>(null);
+  const adminFormRef = useRef<HTMLDivElement>(null);
 
   // Close form when clicking outside
   useEffect(() => {
@@ -83,13 +105,24 @@ const College: React.FC = () => {
           handleCancelEdit();
         }
       }
+
+      if (
+        adminFormRef.current &&
+        !adminFormRef.current.contains(event.target) &&
+        isCreatingAdmin
+      ) {
+        // Only close if we're not in the middle of saving
+        if (!isLoading) {
+          handleCancelAdminCreation();
+        }
+      }
     }
 
     document.addEventListener("mousedown", handleClickOutside);
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [isEditing, isLoading]);
+  }, [isEditing, isCreatingAdmin, isLoading]);
 
   // Fetch colleges on initial load
   useEffect(() => {
@@ -108,7 +141,9 @@ const College: React.FC = () => {
           college.code.toLowerCase().includes(query) ||
           college.city?.toLowerCase().includes(query) ||
           college.country?.toLowerCase().includes(query) ||
-          college.state?.toLowerCase().includes(query)
+          college.state?.toLowerCase().includes(query) ||
+          college.collegeAdmin?.name?.toLowerCase().includes(query) ||
+          college.collegeAdmin?.email?.toLowerCase().includes(query)
       );
       setFilteredColleges(filtered);
     }
@@ -153,12 +188,42 @@ const College: React.FC = () => {
     setProfilePhotoFileName("");
   };
 
+  const resetAdminForm = () => {
+    setAdminFormData({
+      name: "",
+      email: "",
+      phone: "",
+      password: "",
+      generatePassword: true,
+      collegeId: "",
+    });
+    setAdminCreationSuccess("");
+    setAdminCreationError("");
+  };
+
   const handleInputChange = (e: { target: { name: any; value: any } }) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
       [name]: value,
     }));
+  };
+
+  const handleAdminInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    
+    if (name === "generatePassword") {
+      setAdminFormData((prev) => ({
+        ...prev,
+        [name]: e.target.checked,
+        password: e.target.checked ? "" : prev.password,
+      }));
+    } else {
+      setAdminFormData((prev) => ({
+        ...prev,
+        [name]: value,
+      }));
+    }
   };
 
   const handleCancelEdit = () => {
@@ -183,6 +248,12 @@ const College: React.FC = () => {
       resetForm();
     }
     setIsEditing(false);
+  };
+
+  const handleCancelAdminCreation = () => {
+    resetAdminForm();
+    setIsCreatingAdmin(false);
+    setSelectedCollege(null);
   };
 
   const handleSubmit = async (e: { preventDefault: () => void }) => {
@@ -241,6 +312,93 @@ const College: React.FC = () => {
     }
   };
 
+  const handleCreateAdmin = async (e: { preventDefault: () => void }) => {
+    e.preventDefault();
+    setAdminCreationError("");
+    setAdminCreationSuccess("");
+
+    if (!adminFormData.name || !adminFormData.email) {
+      setAdminCreationError("Name and email are required");
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      
+      // Prepare data for API
+      const payload = {
+        name: adminFormData.name,
+        email: adminFormData.email,
+        phone: adminFormData.phone || null,
+        role: "COLLEGE_ADMIN", // Set role to COLLEGE_ADMIN
+        password: adminFormData.generatePassword ? undefined : adminFormData.password,
+        teacherData: {
+          collegeId: selectedCollege?.id,
+          employeeId: "CLG-ADMIN", // Default employee ID for college admins
+          designation: "College Administrator"
+        }
+      };
+
+      // Create user with teacher profile
+      const userResponse = await fetch("/api/user", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (userResponse.ok) {
+        const userData = await userResponse.json();
+        
+        // Update college with admin ID
+        const collegeResponse = await fetch(`/api/college?id=${selectedCollege?.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            collegeAdminId: userData.userId
+          }),
+        });
+
+        if (collegeResponse.ok) {
+          // Update college in state
+          const updatedCollege = await collegeResponse.json();
+          setColleges((prev) =>
+            prev.map((c) => (c.id === updatedCollege.id ? {
+              ...updatedCollege,
+              collegeAdmin: {
+                id: userData.userId,
+                name: userData.name,
+                email: userData.email
+              }
+            } : c))
+          );
+
+          // Show success message
+          setAdminCreationSuccess(
+            `College admin created successfully${userData.tempPassword ? ` with temporary password: ${userData.tempPassword}` : ""}. An email has been sent to ${userData.email} with login details.`
+          );
+          
+          // Close form after a delay
+          setTimeout(() => {
+            handleCancelAdminCreation();
+          }, 5000);
+        } else {
+          const errorData = await collegeResponse.json();
+          setAdminCreationError(errorData.message || "Failed to update college with admin info");
+        }
+      } else {
+        const errorData = await userResponse.json();
+        setAdminCreationError(errorData.error || "Failed to create admin account");
+      }
+    } catch (err) {
+      setAdminCreationError(
+        "Error creating admin: " +
+          (err instanceof Error ? err.message : "Unknown error")
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleDeleteCollege = async (collegeId: string) => {
     const collegeToDelete = colleges.find((c) => c.id === collegeId);
     if (!collegeToDelete) return;
@@ -292,6 +450,7 @@ const College: React.FC = () => {
     });
     setIsEditing(true);
   };
+  
   const handleViewCollege = (college: College) => {
     setSelectedCollege(college);
     setFormData({
@@ -311,6 +470,20 @@ const College: React.FC = () => {
     setIsViewing(true);
     setIsEditing(false);
   };
+
+  const handleCreateCollegeAdmin = (college: College) => {
+    setSelectedCollege(college);
+    setAdminFormData({
+      name: "",
+      email: college.email || "", // Pre-fill with college email if available
+      phone: college.phone || "",
+      password: "",
+      generatePassword: true,
+      collegeId: college.id,
+    });
+    setIsCreatingAdmin(true);
+  };
+
   const renderCollegeForm = () => (
     <div className="space-y-4 overflow-y-auto max-h-[80vh] p-4">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -529,6 +702,130 @@ const College: React.FC = () => {
     </div>
   );
 
+  const renderAdminForm = () => (
+    <div className="space-y-4 overflow-y-auto max-h-[80vh] p-4">
+      {adminCreationSuccess && (
+        <Alert className="mb-4 bg-green-50 border-green-200">
+          <AlertDescription className="text-green-700">{adminCreationSuccess}</AlertDescription>
+        </Alert>
+      )}
+      
+      {adminCreationError && (
+        <Alert variant="destructive" className="mb-4">
+          <AlertDescription>{adminCreationError}</AlertDescription>
+        </Alert>
+      )}
+      
+      <div className="space-y-2">
+        <div className="flex items-center gap-2 mb-4">
+          <div className="h-10 w-10 bg-blue-100 rounded-full flex items-center justify-center">
+            <Building className="h-5 w-5 text-blue-600" />
+          </div>
+          <div>
+            <h3 className="font-medium text-sm text-gray-500">College</h3>
+            <p className="font-medium">{selectedCollege?.name}</p>
+          </div>
+        </div>
+      </div>
+      
+      <div className="grid grid-cols-1 gap-4">
+        <div className="space-y-2">
+          <label htmlFor="admin-name" className="text-sm font-medium text-gray-700">
+            Admin Name*
+          </label>
+          <Input
+            id="admin-name"
+            name="name"
+            value={adminFormData.name}
+            onChange={handleAdminInputChange}
+            placeholder="Enter admin name"
+            required
+          />
+        </div>
+
+        <div className="space-y-2">
+          <label htmlFor="admin-email" className="text-sm font-medium text-gray-700">
+            Admin Email*
+          </label>
+          <Input
+            id="admin-email"
+            name="email"
+            type="email"
+            value={adminFormData.email}
+            onChange={handleAdminInputChange}
+            placeholder="admin@example.com"
+            required
+          />
+        </div>
+        
+        <div className="space-y-2">
+          <label htmlFor="admin-phone" className="text-sm font-medium text-gray-700">
+            Phone Number
+          </label>
+          <Input
+            id="admin-phone"
+            name="phone"
+            value={adminFormData.phone}
+            onChange={handleAdminInputChange}
+            placeholder="Enter phone number"
+          />
+        </div>
+      </div>
+
+      <div className="space-y-2 mt-4">
+        <div className="flex items-center space-x-2">
+          <input
+            type="checkbox"
+            id="generate-password"
+            name="generatePassword"
+            checked={adminFormData.generatePassword}
+            onChange={(e) => handleAdminInputChange(e)}
+            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+          />
+          <label htmlFor="generate-password" className="text-sm font-medium text-gray-700">
+            Auto-generate secure password
+          </label>
+        </div>
+        
+        {!adminFormData.generatePassword && (
+          <div className="mt-2">
+            <label htmlFor="admin-password" className="text-sm font-medium text-gray-700">
+              Password*
+            </label>
+            <Input
+              id="admin-password"
+              name="password"
+              type="password"
+              value={adminFormData.password}
+              onChange={handleAdminInputChange}
+              placeholder="Enter password"
+              required={!adminFormData.generatePassword}
+            />
+          </div>
+        )}
+      </div>
+      
+      <div className="pt-6 flex justify-end space-x-2">
+        <Button
+          variant="outline"
+          onClick={handleCancelAdminCreation}
+          disabled={isLoading}
+        >
+          Cancel
+        </Button>
+        <Button type="submit" disabled={isLoading} className="min-w-24">
+          {isLoading ? (
+            <Loader className="h-4 w-4 animate-spin mr-2" />
+          ) : adminFormData.generatePassword ? (
+            "Create & Send Credentials"
+          ) : (
+            "Create Admin"
+          )}
+        </Button>
+      </div>
+    </div>
+  );
+
   // Format the address for the compact table display
   const formatAddress = (college: College) => {
     const addressParts = [];
@@ -636,7 +933,6 @@ const College: React.FC = () => {
                 >
                   College Details
                 </th>
-
                 <th
                   scope="col"
                   className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell min-w-[160px]"
@@ -651,147 +947,197 @@ const College: React.FC = () => {
                 </th>
                 <th
                   scope="col"
-                  className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell w-28"
+                  className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell min-w-[200px]"
                 >
-                  Created
+                  College Admin
                 </th>
                 <th
                   scope="col"
-                  className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-24"
+                  className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider text-center w-28"
                 >
                   Actions
                 </th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {isLoading ? (
+              {isLoading && colleges.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-4 py-6 text-center">
-                    <div className="flex justify-center items-center gap-2">
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      <span>Loading colleges...</span>
-                    </div>
+                  <td colSpan={5} className="px-4 py-8 text-center text-gray-500">
+                    <Loader2 className="h-8 w-8 mx-auto animate-spin text-blue-500 mb-2" />
+                    <p>Loading colleges...</p>
                   </td>
                 </tr>
               ) : filteredColleges.length === 0 ? (
                 <tr>
-                  <td
-                    colSpan={6}
-                    className="px-4 py-6 text-center text-sm text-gray-500"
-                  >
+                  <td colSpan={5} className="px-4 py-8 text-center text-gray-500">
                     {searchQuery ? (
-                      "No colleges match your search criteria."
+                      <>
+                        <Search className="h-8 w-8 mx-auto text-gray-400 mb-2" />
+                        <p>No colleges found matching "{searchQuery}"</p>
+                        <Button
+                          variant="link"
+                          onClick={() => setSearchQuery("")}
+                          className="mt-1"
+                        >
+                          Clear search
+                        </Button>
+                      </>
                     ) : (
-                      <div className="flex flex-col items-center gap-2">
-                        <Building className="h-8 w-8 text-gray-300" />
-                        <span>
-                          No colleges found. Add your first college to get
-                          started.
-                        </span>
-                      </div>
+                      <>
+                        <Building className="h-8 w-8 mx-auto text-gray-400 mb-2" />
+                        <p>No colleges added yet</p>
+                        <Button
+                          variant="link"
+                          onClick={() => {
+                            setSelectedCollege(null);
+                            resetForm();
+                            setIsEditing(true);
+                          }}
+                          className="mt-1"
+                        >
+                          Add your first college
+                        </Button>
+                      </>
                     )}
                   </td>
                 </tr>
               ) : (
                 filteredColleges.map((college) => (
-                  <tr key={college.id} className="hover:bg-gray-50 group">
+                  <tr
+                    key={college.id}
+                    className="hover:bg-gray-50 cursor-pointer transition-colors"
+                    onClick={() => handleViewCollege(college)}
+                  >
                     <td className="px-4 py-3 whitespace-nowrap">
-                      <div className="flex items-center justify-center">
-                        {college.logo ? (
-                          <img
-                            src={college.logo}
-                            alt={`${college.name} Logo`}
-                            className="h-10 w-10 object-contain rounded-md border shadow-sm"
-                          />
-                        ) : (
-                          <div className="h-10 w-10 bg-gray-100 flex items-center justify-center rounded-md border">
-                            <Building className="h-5 w-5 text-gray-400" />
-                          </div>
-                        )}
-                      </div>
+                      {college.logo ? (
+                        <img
+                          src={college.logo}
+                          alt={`${college.name} logo`}
+                          className="h-10 w-10 rounded-full object-cover border border-gray-200"
+                        />
+                      ) : (
+                        <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
+                          <Building className="h-5 w-5 text-blue-600" />
+                        </div>
+                      )}
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex flex-col">
-                        <div className="font-medium text-gray-900">
+                        <span className="font-medium text-gray-900">
                           {college.name}
-                        </div>
-                        <div className="text-xs text-gray-500 mt-1">
-                          <span className="font-medium">Code:</span>{" "}
-                          {college.code || "N/A"}
-                        </div>
+                        </span>
+                        <span className="text-xs text-gray-500">
+                          Code: {college.code}
+                        </span>
+                        {college.createdAt && (
+                          <span className="text-xs text-gray-500 flex items-center mt-1">
+                            <Calendar className="h-3 w-3 mr-1" />
+                            Added {formatDate(college.createdAt)}
+                          </span>
+                        )}
                       </div>
                     </td>
-                    <td className="px-4 py-3 whitespace-nowrap hidden md:table-cell">
-                      <div className="text-sm text-gray-600">
+                    <td className="px-4 py-3 hidden md:table-cell">
+                      <div className="text-sm text-gray-900 line-clamp-2">
                         {formatAddress(college)}
                       </div>
                     </td>
                     <td className="px-4 py-3 hidden lg:table-cell">
-                      <div className="flex flex-col gap-1 text-sm text-gray-600">
+                      <div className="text-sm">
                         {college.email && (
-                          <div className="flex items-center gap-1">
-                            <Mail className="h-3.5 w-3.5 text-gray-400" />
-                            <span className="truncate max-w-[180px]">
+                          <div className="flex items-center text-gray-600 mb-1">
+                            <Mail className="h-3 w-3 mr-1" />
+                            <span className="truncate max-w-[230px]">
                               {college.email}
                             </span>
                           </div>
                         )}
                         {college.phone && (
-                          <div className="flex items-center gap-1">
-                            <Phone className="h-3.5 w-3.5 text-gray-400" />
-                            <span>{college.phone}</span>
+                          <div className="flex items-center text-gray-600 mb-1">
+                            <Phone className="h-3 w-3 mr-1" />
+                            {college.phone}
                           </div>
                         )}
                         {college.website && (
-                          <div className="flex items-center gap-1">
-                            <Globe className="h-3.5 w-3.5 text-gray-400" />
-                            <a
-                              href={
-                                college.website.startsWith("http")
-                                  ? college.website
-                                  : `https://${college.website}`
-                              }
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-blue-600 hover:underline truncate max-w-[180px]"
-                            >
-                              {college.website.replace(/^https?:\/\//, "")}
-                            </a>
+                          <div className="flex items-center text-gray-600">
+                            <Globe className="h-3 w-3 mr-1" />
+                            <span className="truncate max-w-[230px]">
+                              {college.website}
+                            </span>
                           </div>
                         )}
-                        {!college.email &&
-                          !college.phone &&
-                          !college.website && (
-                            <span className="text-gray-400">
-                              No contact info
-                            </span>
-                          )}
+                        {!college.email && !college.phone && !college.website && (
+                          <span className="text-gray-500 text-sm italic">
+                            No contact info
+                          </span>
+                        )}
                       </div>
                     </td>
-                    <td className="px-4 py-3 whitespace-nowrap hidden sm:table-cell">
-                      <div className="text-xs text-gray-500">
-                        {formatDate(college.createdAt)}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap">
-                      <div className="flex justify-center gap-1">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="h-8 w-8 p-0"
-                          onClick={() => handleEditCollege(college)}
-                          title="Edit"
+                    <td className="px-4 py-3 hidden lg:table-cell">
+                      {college.collegeAdmin ? (
+                        <div className="flex items-center">
+                          <div className="h-8 w-8 rounded-full bg-green-100 flex items-center justify-center mr-2">
+                            <User className="h-4 w-4 text-green-600" />
+                          </div>
+                          <div>
+                            <div className="font-medium text-sm">
+                              {college.collegeAdmin.name}
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              {college.collegeAdmin.email}
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <div 
+                          className="flex items-center text-blue-600 hover:text-blue-800"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleCreateCollegeAdmin(college);
+                          }}
                         >
-                          <Edit className="h-4 w-4" />
+                          <UserPlus className="h-4 w-4 mr-1" />
+                          <span className="text-sm font-medium">Add Admin</span>
+                        </div>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap text-center">
+                      <div className="flex items-center space-x-1 justify-center" onClick={(e) => e.stopPropagation()}>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 p-0"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleViewCollege(college);
+                          }}
+                        >
+                          <Eye className="h-4 w-4 text-gray-500" />
+                          <span className="sr-only">View</span>
                         </Button>
                         <Button
-                          size="sm"
                           variant="ghost"
-                          className="h-8 w-8 p-0 text-red-500 hover:text-red-600 hover:bg-red-50"
-                          onClick={() => handleDeleteCollege(college.id)}
-                          title="Delete"
+                          size="sm"
+                          className="h-8 w-8 p-0"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleEditCollege(college);
+                          }}
                         >
-                          <Trash2 className="h-4 w-4" />
+                          <Edit className="h-4 w-4 text-blue-500" />
+                          <span className="sr-only">Edit</span>
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 p-0"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteCollege(college.id);
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4 text-red-500" />
+                          <span className="sr-only">Delete</span>
                         </Button>
                       </div>
                     </td>
@@ -801,80 +1147,256 @@ const College: React.FC = () => {
             </tbody>
           </table>
         </div>
-      </div>
+        </div>
 
-      {/* Edit Panel */}
+
+      {/* Detail View Modal */}
       <AnimatePresence>
-        {isEditing && (
-          <>
+        {isViewing && selectedCollege && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4"
+            onClick={() => setIsViewing(false)}
+          >
             <motion.div
-              initial={{ opacity: 0, x: "100%" }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: "100%" }}
-              transition={{ type: "spring", stiffness: 300, damping: 30 }}
-              className="fixed inset-y-0 right-0 w-full sm:w-2/3 md:w-1/2 lg:w-[40%] xl:w-1/3 bg-white shadow-2xl z-50 border-l"
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
             >
-              <div className="flex flex-col h-full">
-                <div className="p-4 border-b flex justify-between items-center sticky top-0 bg-white z-10">
-                  <h2 className="text-lg font-semibold">
-                    {selectedCollege ? "Edit College" : "Add New College"}
-                  </h2>
+              <div className="flex justify-between items-center border-b p-4">
+                <h2 className="text-xl font-semibold">College Details</h2>
+                <div className="flex space-x-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setIsViewing(false);
+                      handleEditCollege(selectedCollege);
+                    }}
+                  >
+                    <Edit className="h-4 w-4 mr-2" />
+                    Edit
+                  </Button>
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={handleCancelEdit}
-                    className="h-8 w-8 p-0"
+                    onClick={() => setIsViewing(false)}
                   >
                     <X className="h-4 w-4" />
                   </Button>
                 </div>
+              </div>
 
-                <form
-                  onSubmit={handleSubmit}
-                  ref={formRef}
-                  className="flex-grow overflow-y-auto"
-                >
-                  <div className="p-4 md:p-6 space-y-4">
-                    {/* Form fields would go here */}
-                    {renderCollegeForm()}
-                  </div>
-
-                  <div className="p-4 border-t sticky bottom-0 bg-white">
-                    <div className="flex justify-end gap-3">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={handleCancelEdit}
-                        className="min-w-[80px]"
-                      >
-                        Cancel
-                      </Button>
-                      <Button
-                        type="submit"
-                        disabled={isLoading}
-                        className="min-w-[80px]"
-                      >
-                        {isLoading ? (
-                          <Loader className="h-4 w-4 animate-spin" />
-                        ) : selectedCollege ? (
-                          "Update"
-                        ) : (
-                          "Create"
-                        )}
-                      </Button>
+              <div className="p-6 overflow-y-auto max-h-[calc(90vh-80px)]">
+                <div className="flex flex-col md:flex-row gap-6">
+                  {/* College Logo and Basic Info */}
+                  <div className="md:w-1/3">
+                    <div className="flex flex-col items-center mb-6">
+                      {formData.logo ? (
+                        <img
+                          src={formData.logo}
+                          alt={`${formData.name} logo`}
+                          className="h-32 w-32 object-cover rounded-lg border border-gray-200 shadow-sm"
+                        />
+                      ) : (
+                        <div className="h-32 w-32 rounded-lg bg-blue-100 flex items-center justify-center">
+                          <Building className="h-16 w-16 text-blue-600" />
+                        </div>
+                      )}
+                      <h3 className="text-xl font-semibold mt-4">{formData.name}</h3>
+                      <p className="text-gray-500">Code: {formData.code}</p>
                     </div>
+
+                    {selectedCollege.collegeAdmin ? (
+                      <div className="border rounded-lg p-4 mb-6">
+                        <h4 className="font-medium mb-2 flex items-center">
+                          <User className="h-4 w-4 mr-2 text-blue-600" />
+                          College Administrator
+                        </h4>
+                        <div className="space-y-2">
+                          <p className="text-sm">
+                            <span className="font-medium">Name:</span>{" "}
+                            {selectedCollege.collegeAdmin.name}
+                          </p>
+                          <p className="text-sm">
+                            <span className="font-medium">Email:</span>{" "}
+                            {selectedCollege.collegeAdmin.email}
+                          </p>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="border rounded-lg p-4 mb-6 border-dashed">
+                        <div className="text-center">
+                          <UserPlus className="h-8 w-8 mx-auto text-gray-400 mb-2" />
+                          <p className="text-sm text-gray-600 mb-2">No administrator assigned</p>
+                          <Button
+                            size="sm"
+                            onClick={() => {
+                              setIsViewing(false);
+                              handleCreateCollegeAdmin(selectedCollege);
+                            }}
+                          >
+                            Add Admin
+                          </Button>
+                        </div>
+                      </div>
+                    )}
                   </div>
-                </form>
+
+                  {/* College Details */}
+                  <div className="md:w-2/3 space-y-6">
+                    {formData.description && (
+                      <div>
+                        <h4 className="text-sm font-medium text-gray-500 mb-2">Description</h4>
+                        <p className="text-gray-700">{formData.description}</p>
+                      </div>
+                    )}
+
+                    <div>
+                      <h4 className="text-sm font-medium text-gray-500 mb-2">Contact Information</h4>
+                      <div className="space-y-2">
+                        {formData.email && (
+                          <div className="flex items-center">
+                            <Mail className="h-4 w-4 text-gray-500 mr-2" />
+                            <span>{formData.email}</span>
+                          </div>
+                        )}
+                        {formData.phone && (
+                          <div className="flex items-center">
+                            <Phone className="h-4 w-4 text-gray-500 mr-2" />
+                            <span>{formData.phone}</span>
+                          </div>
+                        )}
+                        {formData.website && (
+                          <div className="flex items-center">
+                            <Globe className="h-4 w-4 text-gray-500 mr-2" />
+                            <a
+                              href={formData.website}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-blue-600 hover:text-blue-800 flex items-center"
+                            >
+                              {formData.website}
+                              <ExternalLink className="h-3 w-3 ml-1" />
+                            </a>
+                          </div>
+                        )}
+                        {!formData.email && !formData.phone && !formData.website && (
+                          <p className="text-gray-500 italic">No contact information provided</p>
+                        )}
+                      </div>
+                    </div>
+
+                    <div>
+                      <h4 className="text-sm font-medium text-gray-500 mb-2">Address</h4>
+                      {formData.address || formData.city || formData.state || formData.country ? (
+                        <div className="space-y-1">
+                          {formData.address && <p>{formData.address}</p>}
+                          <p>
+                            {[
+                              formData.city,
+                              formData.state,
+                              formData.country,
+                            ]
+                              .filter(Boolean)
+                              .join(", ")}
+                          </p>
+                        </div>
+                      ) : (
+                        <p className="text-gray-500 italic">No address provided</p>
+                      )}
+                    </div>
+
+                    {selectedCollege.createdAt && (
+                      <div className="text-sm text-gray-500 flex items-center mt-8 pt-4 border-t">
+                        <Calendar className="h-4 w-4 mr-2" />
+                        College added on {formatDate(selectedCollege.createdAt)}
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
             </motion.div>
-
-            <div
-              onClick={handleCancelEdit}
-              className="fixed inset-0 bg-black/30 backdrop-blur-sm z-40"
-            />
-          </>
+          </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Edit College Modal */}
+      <AnimatePresence>
+        {isEditing && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-white rounded-lg shadow-xl w-full max-w-4xl"
+              onClick={(e) => e.stopPropagation()}
+              ref={formRef as unknown as React.RefObject<HTMLDivElement>}
+            >
+              <div className="flex justify-between items-center border-b p-4">
+                <h2 className="text-xl font-semibold">
+                  {selectedCollege ? "Edit College" : "Add New College"}
+                </h2>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleCancelEdit}
+                  disabled={isLoading}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+
+              <form onSubmit={handleSubmit}>{renderCollegeForm()}</form>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Create Admin Modal */}
+      <AnimatePresence>
+        {isCreatingAdmin && selectedCollege && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-white rounded-lg shadow-xl w-full max-w-md"
+              onClick={(e) => e.stopPropagation()}
+              ref={adminFormRef as React.RefObject<HTMLDivElement>}
+            >
+              <div className="flex justify-between items-center border-b p-4">
+                <h2 className="text-xl font-semibold">Create College Admin</h2>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleCancelAdminCreation}
+                  disabled={isLoading}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+
+              <form onSubmit={handleCreateAdmin}>{renderAdminForm()}</form>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
     </div>
   );
 };

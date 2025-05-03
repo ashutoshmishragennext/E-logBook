@@ -113,7 +113,8 @@ export const CollegeTable = pgTable(
   "colleges",
   {
     id: uuid("id").defaultRandom().primaryKey().notNull(),
-    userId : uuid("user_id").references(() => UsersTable.id).notNull(),
+    createdBy : uuid("user_id").references(() => UsersTable.id).notNull(),
+    collegeAdminId: uuid("college_admin_id").references(() => UsersTable.id),
     name: text("name").notNull(),
     code: text("code").notNull(),
     address: text("address"),
@@ -130,6 +131,7 @@ export const CollegeTable = pgTable(
   },
   (table) => [
     uniqueIndex("college_code_key").on(table.code),
+    uniqueIndex("college_Admin_key").on(table.collegeAdminId),
   ]
 );
 
@@ -655,9 +657,14 @@ export const userRelations = relations(UsersTable, ({ one, many }) => ({
     fields: [UsersTable.id],
     references: [TeacherProfileTable.userId]
   }),
-  college: one(CollegeTable, { // Added college relation
+  createdColleges: one(CollegeTable, { 
     fields: [UsersTable.id],
-    references: [CollegeTable.userId]
+    references: [CollegeTable.createdBy] 
   }),
+  collegeAdmin: one(CollegeTable, {
+    fields: [UsersTable.id],
+    references: [CollegeTable.collegeAdminId]
+  }),
+
   createdTemplates: many(LogBookTemplateTable),
 }));
