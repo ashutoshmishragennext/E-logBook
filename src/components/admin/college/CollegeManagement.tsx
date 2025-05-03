@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import BranchManagement from "./BranchManegement";
+import Faculty from "./Faculty";
 
 interface CollegeManagementProps {
   selectedCollegeId: string | null;
@@ -575,9 +576,10 @@ const CollegeManagement = ({ selectedCollegeId, onCollegeChange }: CollegeManage
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid grid-cols-2 w-full md:w-64">
+          <TabsList className="grid grid-cols-3  w-full md:w-64">
             <TabsTrigger value="profile">Profile</TabsTrigger>
             <TabsTrigger value="branches">Branches</TabsTrigger>
+            <TabsTrigger value="Faculty">Faculty</TabsTrigger>
           </TabsList>
           
           <TabsContent value="profile" className="pt-4">
@@ -685,6 +687,9 @@ const CollegeManagement = ({ selectedCollegeId, onCollegeChange }: CollegeManage
           
           <TabsContent value="branches" className="pt-4">
             <BranchManagement collegeId={selectedCollege.id} />
+          </TabsContent>
+          <TabsContent value="Faculty" className="pt-4">
+            <Faculty collegeId={selectedCollege.id}/>
           </TabsContent>
         </Tabs>
       </div>

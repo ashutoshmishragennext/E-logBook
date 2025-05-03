@@ -293,6 +293,8 @@ export const TeacherSubjectTable = pgTable(
     subjectId: uuid("subject_id").references(() => SubjectTable.id).notNull(),
     academicYearId: uuid("academic_year_id").references(() => AcademicYearTable.id),
     phaseId: uuid("phase_id").references(() => PhaseTable.id),
+    branchId: uuid("branch_id").references(() => BranchTable.id),
+    courseId: uuid("course_id").references(() => CourseTable.id),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },
@@ -302,7 +304,9 @@ export const TeacherSubjectTable = pgTable(
       table.teacherId,
       table.subjectId,
       table.academicYearId,
-      table.phaseId
+      table.phaseId,
+      table.branchId,
+      table.courseId
     ),
   ]
 );
@@ -338,7 +342,8 @@ export const StudentSubjectTable = pgTable(
       table.subjectId,
       table.teacherSubjectId,
       table.academicYearId,
-      table.phaseId
+      table.phaseId,
+      
     ),
   ]
 );
@@ -567,6 +572,14 @@ export const teacherSubjectRelations = relations(TeacherSubjectTable, ({ one, ma
   phase: one(PhaseTable, {
     fields: [TeacherSubjectTable.phaseId],
     references: [PhaseTable.id]
+  }),
+  branch: one(BranchTable, {
+    fields: [TeacherSubjectTable.branchId],
+    references: [BranchTable.id]
+  }),
+  course: one(CourseTable, {
+    fields: [TeacherSubjectTable.courseId],
+    references: [CourseTable.id]
   }),
   studentEnrollments: many(StudentSubjectTable),
   logBookTemplates: many(LogBookTemplateTable)

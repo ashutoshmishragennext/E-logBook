@@ -16,21 +16,23 @@ export async function GET(req: NextRequest) {
       );
     }
     
-    let query = db.select().from(BranchTable).where(eq(BranchTable.collegeId, collegeId));
-    
-    if (search) {
-      query = query.where(
+    const query = db
+      .select()
+      .from(BranchTable)
+      .where(
         and(
           eq(BranchTable.collegeId, collegeId),
-          or(
-            like(BranchTable.name, `%${search}%`),
-            like(BranchTable.code, `%${search}%`)
-          )
+          search
+            ? or(
+                like(BranchTable.name, `%${search}%`),
+                like(BranchTable.code, `%${search}%`)
+              )
+            : undefined
         )
-      );
-    }
+      )
+      .limit(10);
     
-    const branches = await query.limit(10);
+    const branches = await query;
     return NextResponse.json(branches);
   } catch (error) {
     console.error("Error fetching branches:", error);

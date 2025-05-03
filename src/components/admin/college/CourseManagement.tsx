@@ -1,29 +1,28 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
-import {
-  BookOpen,
-  Edit,
-  Plus,
-  Trash2,
-  X,
-  Clock,
-  FileText
-} from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Card,
   CardContent,
+  CardFooter,
   CardHeader,
   CardTitle,
-  CardFooter,
 } from "@/components/ui/card";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { AnimatePresence, motion } from "framer-motion";
+import {
+  BookOpen,
+  Clock,
+  Edit,
+  FileText,
+  Plus,
+  Trash2,
+  X
+} from "lucide-react";
+import { useEffect, useState } from "react";
 
 interface CourseManagementProps {
   branchId: string;
