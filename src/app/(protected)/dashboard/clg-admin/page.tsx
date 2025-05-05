@@ -468,9 +468,10 @@ import College from "@/components/adminComponent/College";
 import Course from "@/components/adminComponent/Course";
 import Department from "@/components/adminComponent/Department";
 import Subject from "@/components/adminComponent/Subject";
+import Profile from "@/components/clgAdmin/Profile";
 
 const sidebarItems = [
-  { id: "college", label: "Profile", icon: <School size={20} />, component: <College /> },
+  { id: "college", label: "Profile", icon: <School size={20} />, component: <Profile /> },
   { id: "department", label: "Batch", icon: <Building2 size={20} />, component: <Department /> },
   { id: "courses", label: "Courses", icon: <GraduationCap size={20} />, component: <Course /> },
   { id: "subject", label: "Subject", icon: <Book size={20} />, component: <Subject /> },

@@ -20,12 +20,14 @@ import College from "@/components/adminComponent/College";
 import Course from "@/components/adminComponent/Course";
 import Department from "@/components/adminComponent/Department";
 import Subject from "@/components/adminComponent/Subject";
+import Academicyear from "@/components/adminComponent/Academicyear";
 
 const sidebarItems = [
   { id: "college", label: "College", icon: <School size={20} />, component: <College /> },
   { id: "department", label: "Department", icon: <Building2 size={20} />, component: <Department /> },
   { id: "courses", label: "Courses", icon: <GraduationCap size={20} />, component: <Course /> },
   { id: "subject", label: "Subject", icon: <Book size={20} />, component: <Subject /> },
+  {id : "AcademicYear" , label: "Academic Year", icon: <Book size={20} />, component: <Academicyear /> },
 ];
 
 const Sidebar = () => {

@@ -1,6 +1,7 @@
 import { db } from "@/db";
 import { AcademicYearTable } from "@/db/schema";
-import { NextResponse } from "next/server";
+import { eq } from "drizzle-orm";
+import { NextResponse  , NextRequest} from "next/server";
 
 
 export async function GET(){
@@ -14,6 +15,35 @@ export async function GET(){
         status:500
     })
  }
+}
+
+export async function PUT(request: NextRequest ) {
+ const id = new URL(request.url).searchParams.get('id');
+ if (!id) {
+   return NextResponse.json({ message: 'ID is required' }, { status: 400 });
+ }
+
+  try {
+    const body = await request.json()
+
+    const updatedYear = await db
+      .update(AcademicYearTable)
+      .set({
+        ...body,
+        endDate: new Date(body.endDate),
+      })
+      .where(eq(AcademicYearTable.id, id!))
+      .returning()
+
+    if (!updatedYear.length) {
+      return NextResponse.json({ message: 'Academic year not found' }, { status: 404 })
+    }
+
+    return NextResponse.json(updatedYear[0])
+  } catch (error) {
+    console.error('Error updating academic year:', error)
+    return NextResponse.json({ message: 'Failed to update', error }, { status: 500 })
+  }
 }
 export async function POST(request: Request) {
   try {
@@ -35,3 +65,28 @@ export async function POST(request: Request) {
     }, { status: 500 });
   }
 }
+
+export async function DELETE(request: NextRequest) {
+  const id = new URL(request.url).searchParams.get('id')
+  
+  if (!id) {
+    return NextResponse.json({ message: 'ID is required' }, { status: 400 })
+  }
+
+  try {
+    const deletedYear = await db
+      .delete(AcademicYearTable)
+      .where(eq(AcademicYearTable.id, id))
+      .returning()
+
+    if (!deletedYear.length) {
+      return NextResponse.json({ message: 'Academic year not found' }, { status: 404 })
+    }
+
+    return NextResponse.json({ message: 'Academic year deleted successfully' })
+  } catch (error) {
+    console.error('Error deleting academic year:', error)
+    return NextResponse.json({ message: 'Failed to delete', error }, { status: 500 })
+  }
+}
+
