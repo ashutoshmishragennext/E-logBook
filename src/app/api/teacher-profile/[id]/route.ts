@@ -10,25 +10,49 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const teacherId = searchParams.get("teacherId");
+    const collegeId = searchParams.get("collegeId");
 
-    if (!teacherId) {
-      return NextResponse.json({ error: "Teacher ID is required" }, { status: 400 });
+    // Validate query params
+    if (!teacherId && collegeId) {
+      return NextResponse.json(
+        { error: "Either teacherId or clgId is required." },
+        { status: 400 }
+      );
     }
 
-    const subjects = await db
-      .select()
-      .from(TeacherSubjectTable)
-      .where(eq(TeacherSubjectTable.teacherId, teacherId))
-      .then(res => res[0]);
+    // If teacherId is provided, fetch single teacher's subjects
+    if (teacherId) {
+      const teacher = await db
+        .select()
+        .from(TeacherSubjectTable)
+        .where(eq(TeacherSubjectTable.teacherId, teacherId));
 
-    if (!subjects) {
-      return NextResponse.json({ error: "No subjects found for this teacher" }, { status: 404 });
+      if (!teacher || teacher.length === 0) {
+        return NextResponse.json({ error: "Teacher not found" }, { status: 404 });
+      }
+
+      return NextResponse.json({ data: teacher }, { status: 200 });
     }
 
-    return NextResponse.json(subjects, { status: 200 });
+    // If clgId is provided, fetch all teachers related to that college
+    if (collegeId) {
+      const teachers = await db
+        .select()
+        .from(TeacherSubjectTable)
+        .where(eq(TeacherSubjectTable.collegeId,collegeId));
+
+      if (!teachers || teachers.length === 0) {
+        return NextResponse.json({ error: "No teachers found for this college" }, { status: 404 });
+      }
+
+      return NextResponse.json({ data: teachers }, { status: 200 });
+    }
   } catch (error) {
-    console.error("Error fetching subjects:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    console.error("Error fetching teacher data:", error);
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
   }
 }
 export async function POST(req: Request, { params }: { params: { id: string } }) {

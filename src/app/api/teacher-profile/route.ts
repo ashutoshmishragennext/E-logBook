@@ -160,20 +160,42 @@ export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const id = searchParams.get("id");
-    
-    if (!id) {
+    const collegeId = searchParams.get("collegeId");
+
+    if (!id && !collegeId) {
       return NextResponse.json(
-        { error: "User ID is required" },
+        { error: "Either 'id' or 'collegeId' query parameter is required." },
         { status: 400 }
       );
     }
-    
-    const profile = await db
-      .select()
-      .from(TeacherProfileTable)
-      .where(eq(TeacherProfileTable.userId, id));
-    
-    return NextResponse.json(profile);
+
+    // Fetch by teacher ID
+    if (id) {
+      const profile = await db
+        .select()
+        .from(TeacherProfileTable)
+        .where(eq(TeacherProfileTable.userId, id));
+
+      if (!profile || profile.length === 0) {
+        return NextResponse.json({ error: "Teacher not found" }, { status: 404 });
+      }
+
+      return NextResponse.json({ data: profile }, { status: 200 });
+    }
+
+    // Fetch all teachers by college ID
+    if (collegeId) {
+      const profiles = await db
+        .select()
+        .from(TeacherProfileTable)
+        .where(eq(TeacherProfileTable.collegeId, collegeId));
+
+      if (!profiles || profiles.length === 0) {
+        return NextResponse.json({ error: "No teachers found for this college" }, { status: 404 });
+      }
+
+      return NextResponse.json({ data: profiles }, { status: 200 });
+    }
   } catch (error) {
     console.error("Error fetching teacher profile:", error);
     return NextResponse.json(
@@ -182,6 +204,7 @@ export async function GET(req: NextRequest) {
     );
   }
 }
+
 
 export async function POST(req: NextRequest) {
   try {

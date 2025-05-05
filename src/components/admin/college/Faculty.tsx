@@ -355,7 +355,7 @@ const Faculty = ({ collegeId }: { collegeId: string }) => {
     setAssignStatus("Assigning...");
 
     try {
-      const res = await fetch(`/api/teacher-profile/${teacherId}`, {
+      const res = await fetch(`/api/teacher-profile/${result.teacherId}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

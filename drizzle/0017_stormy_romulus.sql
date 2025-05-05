@@ -1,0 +1,2 @@
+ALTER TABLE "phase" ADD COLUMN "college_id" uuid NOT NULL;--> statement-breakpoint
+ALTER TABLE "phase" ADD CONSTRAINT "phase_college_id_colleges_id_fk" FOREIGN KEY ("college_id") REFERENCES "public"."colleges"("id") ON DELETE no action ON UPDATE no action;

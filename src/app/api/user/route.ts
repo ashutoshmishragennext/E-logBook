@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
     const user = await db
       .select()
       .from(UsersTable)
-      .where(eq(UsersTable.id, userId)) // if `id` is number, convert `userId` to number
+      .where(eq(UsersTable.id, userId))
       .limit(1)
       .then(res => res[0]);
 
@@ -31,91 +31,221 @@ export async function GET(request: NextRequest) {
   }
 }
 
+function generateTempPassword(length = 10) {
+  const charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*";
+  let password = "";
+  for (let i = 0; i < length; i++) {
+    const randomIndex = Math.floor(Math.random() * charset.length);
+    password += charset[randomIndex];
+  }
+  return password;
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-
-    // Validate request
-    if (!body.email || !body.name) {
+    
+    // Check if the request is for bulk user creation (array of users)
+    const isBulkOperation = Array.isArray(body);
+    
+    if (isBulkOperation) {
+      return handleBulkUserCreation(body);
+    } else {
+      return handleSingleUserCreation(body);
+    }
+  } catch (error) {
+    console.error("Error creating user(s):", error);
+    
+    // Check for specific error types
+    const errorMessage = error instanceof Error ? error.message : "Internal server error";
+    
+    // Handle duplicate email error (database specific - this example is for PostgreSQL)
+    if (errorMessage.includes("duplicate key") && errorMessage.includes("email")) {
       return NextResponse.json(
-        { error: "Name and email are required" },
+        { error: "Email already exists" },
         { status: 400 }
       );
     }
-
-    // Default to USER role if not specified
-    const role = body.role || "USER";
-    const password = body.password || generateTempPassword();
-    console.log("Generated password:", password);
-
-    // Create user
-    const [user] = await db.insert(UsersTable)
-      .values({
-        name: body.name,
-        email: body.email,
-        password: await hash(password, 10),
-        role: role,
-        phone: body.phone || null
-      })
-      .returning({ 
-        id: UsersTable.id,
-        email: UsersTable.email,
-        role: UsersTable.role
-      });
-
-    console.log("User created:", user);
-
-    let teacherId = null;
-
-    // Handle teacher profile creation
-    if (role === "TEACHER" && body.teacherData) {
-      if (!body.teacherData.collegeId || !body.teacherData.employeeId) {
-        return NextResponse.json(
-          { error: "College ID and Employee ID are required for teachers" },
-          { status: 400 }
-        );
-      }
-
-      const [teacher] = await db.insert(TeacherProfileTable)
-        .values({
-          userId: user.id,
-          name: body.name,
-          email: body.email,
-          collegeId: body.teacherData.collegeId,
-          designation: body.teacherData.designation || "Lecturer",
-          employeeId: body.teacherData.employeeId,
-          mobileNo: body.phone || ""
-        })
-        .returning({ id: TeacherProfileTable.id });
-
-      teacherId = teacher.id;
-      console.log("Teacher profile created with ID:", teacherId);
-    }
-
-    return NextResponse.json({
-      teacherId: body.teacherData ? teacherId : null,
-      userId: user.id,
-          name: body.name,
-          email: body.email,
-          collegeId: body.teacherData.collegeId,
-          designation: body.teacherData.designation || "Lecturer",
-          employeeId: body.teacherData.employeeId,
-          mobileNo: body.phone || "",
-      ...(!body.password && { tempPassword: password })
-    });
-
-  } catch (error) {
-    console.error("Error creating user:", error);
+    
     return NextResponse.json(
-      { error: "Internal server error" },
+      { error: errorMessage },
       { status: 500 }
     );
   }
 }
 
-// Helper functions
-function generateTempPassword(): string {
-  return Math.random().toString(36).slice(-8);
+async function handleSingleUserCreation(userData: any) {
+  // Validate request
+  if (!userData.email || !userData.name) {
+    return NextResponse.json(
+      { error: "Name and email are required" },
+      { status: 400 }
+    );
+  }
+
+  // Default to USER role if not specified
+  const role = userData.role || "USER";
+  const password = userData.password || generateTempPassword();
+  console.log("Generated password:", password);
+
+  // Create user
+  const [user] = await db.insert(UsersTable)
+    .values({
+      name: userData.name,
+      email: userData.email,
+      password: await hash(password, 10),
+      role: role,
+      phone: userData.phone || null
+    })
+    .returning({ 
+      id: UsersTable.id,
+      email: UsersTable.email,
+      role: UsersTable.role
+    });
+
+  console.log("User created:", user);
+
+  let teacherId = null;
+
+  // Handle teacher profile creation
+  if (role === "TEACHER" && userData.teacherData) {
+    if (!userData.teacherData.collegeId || !userData.teacherData.employeeId) {
+      return NextResponse.json(
+        { error: "College ID and Employee ID are required for teachers" },
+        { status: 400 }
+      );
+    }
+
+    const [teacher] = await db.insert(TeacherProfileTable)
+      .values({
+        userId: user.id,
+        name: userData.name,
+        email: userData.email,
+        collegeId: userData.teacherData.collegeId,
+        designation: userData.teacherData.designation || "Lecturer",
+        employeeId: userData.teacherData.employeeId,
+        mobileNo: userData.teacherData.mobileNo || userData.phone || ""
+      })
+      .returning({ id: TeacherProfileTable.id });
+
+    teacherId = teacher.id;
+    console.log("Teacher profile created with ID:", teacherId);
+  }
+
+  return NextResponse.json({
+    teacherId: teacherId,
+    userId: user.id,
+    name: userData.name,
+    email: userData.email,
+    role: user.role,
+    ...(userData.teacherData && { 
+      collegeId: userData.teacherData.collegeId,
+      designation: userData.teacherData.designation || "Lecturer",
+      employeeId: userData.teacherData.employeeId
+    }),
+    ...(!userData.password && { tempPassword: password })
+  });
+}
+
+async function handleBulkUserCreation(usersData: any[]) {
+  if (!usersData.length) {
+    return NextResponse.json(
+      { error: "No users provided for bulk creation" },
+      { status: 400 }
+    );
+  }
+
+  const results = {
+    successful: 0,
+    failed: 0,
+    errors: [] as string[],
+    users: [] as any[]
+  };
+
+  // Process each user sequentially
+  for (const userData of usersData) {
+    try {
+      // Validate minimum required fields
+      if (!userData.email || !userData.name) {
+        results.failed++;
+        results.errors.push(`Missing name or email for entry: ${JSON.stringify(userData)}`);
+        continue;
+      }
+
+      // Generate password if not provided
+      const password = userData.password || generateTempPassword();
+      
+      // Default to USER role if not specified
+      const role = userData.role || "USER";
+
+      // Create user
+      const [user] = await db.insert(UsersTable)
+        .values({
+          name: userData.name,
+          email: userData.email,
+          password: await hash(password, 10),
+          role: role,
+          phone: userData.phone || null
+        })
+        .returning({ 
+          id: UsersTable.id,
+          email: UsersTable.email,
+          role: UsersTable.role
+        });
+
+      let teacherId = null;
+
+      // Handle teacher profile creation if applicable
+      if (role === "TEACHER" && userData.teacherData) {
+        // Validate teacher-specific required fields
+        if (!userData.teacherData.collegeId || !userData.teacherData.employeeId) {
+          results.failed++;
+          results.errors.push(`Teacher data missing collegeId or employeeId for: ${userData.email}`);
+          
+          // Delete the created user since we couldn't complete the teacher profile
+          await db.delete(UsersTable).where(eq(UsersTable.id, user.id));
+          continue;
+        }
+
+        const [teacher] = await db.insert(TeacherProfileTable)
+          .values({
+            userId: user.id,
+            name: userData.name,
+            email: userData.email,
+            collegeId: userData.teacherData.collegeId,
+            designation: userData.teacherData.designation || "Lecturer",
+            employeeId: userData.teacherData.employeeId,
+            mobileNo: userData.teacherData.mobileNo || userData.phone || ""
+          })
+          .returning({ id: TeacherProfileTable.id });
+
+        teacherId = teacher.id;
+      }
+
+      // Add successful user to results
+      results.successful++;
+      results.users.push({
+        userId: user.id,
+        email: userData.email,
+        role: role,
+        ...(teacherId && { teacherId }),
+        tempPassword: !userData.password ? password : undefined
+      });
+
+    } catch (error) {
+      results.failed++;
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      results.errors.push(`Failed to create user ${userData.email}: ${errorMessage}`);
+      
+      // Log for debugging
+      console.error(`Error creating user ${userData.email}:`, error);
+    }
+  }
+
+  return NextResponse.json({
+    message: `Processed ${usersData.length} users. Created: ${results.successful}, Failed: ${results.failed}`,
+    results
+  });
 }
 
 // async function sendWelcomeEmail(email: string, tempPassword: string) {

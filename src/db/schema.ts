@@ -180,6 +180,7 @@ export const PhaseTable = pgTable(
     id: uuid("id").defaultRandom().primaryKey().notNull(),
     name: text("name").notNull(), // e.g., "Batch A", "Batch B"
     academicYearId: uuid("academic_year_id").references(() => AcademicYearTable.id).notNull(),
+    collegeId: uuid("college_id").references(() => CollegeTable.id).notNull(),
   }
 );
 

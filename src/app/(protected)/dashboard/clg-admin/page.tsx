@@ -464,15 +464,15 @@ import { useRouter } from "next/navigation";
 import { SetStateAction, useEffect, useState } from "react";
 
 // Import your components for each sidebar item
-import College from "@/components/adminComponent/College";
 import Course from "@/components/adminComponent/Course";
-import Department from "@/components/adminComponent/Department";
 import Subject from "@/components/adminComponent/Subject";
+import Batch from "@/components/clgAdmin/Batch";
+import Faculty from "@/components/clgAdmin/Faculty";
 import Profile from "@/components/clgAdmin/Profile";
-
 const sidebarItems = [
-  { id: "college", label: "Profile", icon: <School size={20} />, component: <Profile /> },
-  { id: "department", label: "Batch", icon: <Building2 size={20} />, component: <Department /> },
+  { id: "Profile", label: "Profile", icon: <School size={20} />, component: <Profile /> },
+  { id: "Batch", label: "Batch", icon: <Building2 size={20} />, component: <Batch/> },
+  { id: "Faculty", label: "Faculty", icon: <Building2 size={20} />, component: <Faculty /> },
   { id: "courses", label: "Courses", icon: <GraduationCap size={20} />, component: <Course /> },
   { id: "subject", label: "Subject", icon: <Book size={20} />, component: <Subject /> },
 ];
@@ -481,7 +481,7 @@ const Sidebar = () => {
   const { data: session, status } = useSession();
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [activeComponent, setActiveComponent] = useState("college");
+  const [activeComponent, setActiveComponent] = useState("Profile");
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
