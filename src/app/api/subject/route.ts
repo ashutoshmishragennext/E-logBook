@@ -51,6 +51,7 @@ export async function PUT(request: Request) {
 
     return NextResponse.json(updated[0]);
   } catch (error) {
+    console.error("Error updating subject:", error);
     return NextResponse.json({ message: "Failed to update subject" }, { status: 500 });
   }
 }

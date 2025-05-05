@@ -1,3 +1,4 @@
+/* eslint-disable @react-hooks/exhaustive-deps */
 "use client";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -54,7 +55,6 @@ const BranchManagement = ({ collegeId }: { collegeId: string }) => {
   });
   const [showCourses, setShowCourses] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [uploadProgress, setUploadProgress] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
 
   // const { startUpload, permittedFileInfo } = useUploadThing("branchLogo", {
@@ -128,13 +128,13 @@ const BranchManagement = ({ collegeId }: { collegeId: string }) => {
     }));
   };
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setIsUploading(true);
-      // startUpload([file]);
-    }
-  };
+  // const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  //   const file = e.target.files?.[0];
+  //   if (file) {
+  //     setIsUploading(true);
+  //     // startUpload([file]);
+  //   }
+  // };
 
   const handleSubmit = async (e: { preventDefault: () => void }) => {
     e.preventDefault();

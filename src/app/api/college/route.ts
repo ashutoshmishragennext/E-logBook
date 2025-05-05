@@ -1,4 +1,5 @@
 // /api/colleges/route.ts
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { db } from "@/db";
 import { BranchTable, CollegeTable, CourseTable } from "@/db/schema";
 import { eq , inArray } from "drizzle-orm";
@@ -10,7 +11,7 @@ export async function GET(req: NextRequest) {
 
   try {
     const data = userId
-      ? await db.select().from(CollegeTable).where(eq(CollegeTable.userId, userId))
+      ? await db.select().from(CollegeTable).where(eq(CollegeTable.createdBy, userId))
       : await db.select().from(CollegeTable);
     return NextResponse.json(data);
   } catch (error) {

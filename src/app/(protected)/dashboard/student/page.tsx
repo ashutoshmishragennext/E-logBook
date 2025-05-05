@@ -49,6 +49,7 @@ export default function Dashboard() {
   // We're still keeping this state for other functionality,
   // but we won't pass it to the StudentProfile component
   const [existingProfile, setExistingProfile] = useState<Profile | null>(null);
+  console.log(existingProfile);
 
   const handleLogout = async () => {
     await signOut({ redirectTo: "/auth/login" });

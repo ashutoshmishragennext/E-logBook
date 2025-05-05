@@ -1,3 +1,5 @@
+/* eslint-disable  @typescript-eslint/no-explicit-any */
+
 "use client";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -29,6 +31,7 @@ import {
 import { useEffect, useRef, useState } from "react";
 import BranchManagement from "./BranchManegement";
 import Faculty from "./Faculty";
+import Image from "next/image";
 
 interface CollegeManagementProps {
   selectedCollegeId: string | null;
@@ -94,7 +97,7 @@ const CollegeManagement = ({ selectedCollegeId, onCollegeChange }: CollegeManage
 
   // Close form when clicking outside
   useEffect(() => {
-    function handleClickOutside(event: { target: any; }) {
+    function handleClickOutside(event: { target :any;}) {
       if (formRef.current && !formRef.current.contains(event.target) && isEditing) {
         // Only close if we're not in the middle of saving
         if (!isLoading) {
@@ -330,7 +333,10 @@ const CollegeManagement = ({ selectedCollegeId, onCollegeChange }: CollegeManage
         <div className="flex flex-col space-y-2">
           {formData.logo && (
             <div className="flex items-center">
-              <img 
+              <Image
+                width={48}
+                height={48}
+
                 src={formData.logo} 
                 alt="College Logo" 
                 className="h-12 w-12 object-cover rounded-md"
@@ -538,10 +544,12 @@ const CollegeManagement = ({ selectedCollegeId, onCollegeChange }: CollegeManage
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-4">
             {selectedCollege.logo ? (
-              <img 
+              <Image
                 src={selectedCollege.logo} 
                 alt={selectedCollege.name}
                 className="h-16 w-16 object-cover rounded-md border shadow-sm"
+                width={64}
+                height={64}
               />
             ) : (
               <div className="h-16 w-16 bg-gray-100 flex items-center justify-center rounded-md border">

@@ -118,6 +118,6 @@ function generateTempPassword(): string {
   return Math.random().toString(36).slice(-8);
 }
 
-async function sendWelcomeEmail(email: string, tempPassword: string) {
-  // Implement your email logic
-}
+// async function sendWelcomeEmail(email: string, tempPassword: string) {
+//   // Implement your email logic
+// }

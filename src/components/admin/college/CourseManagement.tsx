@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -122,7 +123,7 @@ const CourseManagement = ({ branchId, branchName }: CourseManagementProps) => {
       }
   
       if (response.ok) {
-        const updatedCourse = await response.json();
+        // const updatedCourse = await response.json();
         
         // Instead of manually updating the state, refetch the courses
         await fetchCourses(); // Add this line to refresh the list

@@ -1,4 +1,5 @@
 // /api/courses/route.ts
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { db } from "@/db";
 import { CourseTable } from "@/db/schema";
 import { eq } from "drizzle-orm";

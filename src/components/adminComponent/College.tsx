@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -50,7 +51,8 @@ const College: React.FC = () => {
       id: string;
       name: string;
       email: string;
-    };
+      phone: string;
+    } | null;
   }
 
   const [colleges, setColleges] = useState<College[]>([]);
@@ -89,10 +91,138 @@ const College: React.FC = () => {
   const [adminCreationSuccess, setAdminCreationSuccess] = useState("");
   const [adminCreationError, setAdminCreationError] = useState("");
   const [profilePhotoFileName, setProfilePhotoFileName] = useState("");
+  const [loadingAdminIds, setLoadingAdminIds] = useState<string[]>([]);
   const formRef = useRef<HTMLFormElement>(null);
   const adminFormRef = useRef<HTMLDivElement>(null);
+  console.log(profilePhotoFileName)
 
   // Close form when clicking outside
+
+  // Function to fetch admin data from user API
+
+  // Fetch colleges on initial load
+  useEffect(() => {
+    fetchColleges();
+  }, []);
+
+  // Add this state to track failed fetches
+  const [failedAdminFetches, setFailedAdminFetches] = useState<
+    Record<string, boolean>
+  >({});
+
+  // Modified fetch function
+ // Add this console log in the component to track data
+useEffect(() => {
+  console.log("Current colleges state:", colleges);
+  console.log("Failed admin fetches:", failedAdminFetches);
+  console.log("Loading admin IDs:", loadingAdminIds);
+}, [colleges, failedAdminFetches, loadingAdminIds]);
+
+// Fix the fetchCollegeAdminData function to properly update the state
+const fetchCollegeAdminData = async (college: College) => {
+  if (!college.collegeAdminId || failedAdminFetches[college.id]) return;
+
+  try {
+    setLoadingAdminIds((prev) => [...prev, college.id]);
+
+    const response = await fetch(
+      `/api/user?userId=${college.collegeAdminId}`
+    );
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const userData = await response.json();
+
+    if (!userData?.id) {
+      throw new Error("Invalid admin data received");
+    }
+
+    // Important fix: update both colleges and filteredColleges
+    setColleges((prev) =>
+      prev.map((c) =>
+        c.id === college.id
+          ? {
+              ...c,
+              collegeAdmin: {
+                id: userData.id,
+                name: userData.name,
+                email: userData.email,
+                phone: userData.phone || "",
+              },
+            }
+          : c
+      )
+    );
+
+    // Also update filteredColleges to ensure UI reflects the change
+    setFilteredColleges((prev) =>
+      prev.map((c) =>
+        c.id === college.id
+          ? {
+              ...c,
+              collegeAdmin: {
+                id: userData.id,
+                name: userData.name,
+                email: userData.email,
+                phone: userData.phone || "",
+              },
+            }
+          : c
+      )
+    );
+    
+  } catch (err) {
+    console.error(`Error fetching admin for college ${college.id}:`, err);
+    setFailedAdminFetches((prev) => ({ ...prev, [college.id]: true }));
+  } finally {
+    setLoadingAdminIds((prev) => prev.filter((id) => id !== college.id));
+  }
+};
+  // Auto-fetch effect
+  useEffect(() => {
+    filteredColleges.forEach((college) => {
+      if (
+        college.collegeAdminId &&
+        !college.collegeAdmin &&
+        !loadingAdminIds.includes(college.id) &&
+        !failedAdminFetches[college.id]
+      ) {
+        fetchCollegeAdminData(college);
+      }
+    });
+  }, [filteredColleges, loadingAdminIds, failedAdminFetches]);
+
+  // Filter colleges based on search query
+  const fetchColleges = async () => {
+    try {
+      setIsLoading(true);
+      const response = await fetch("/api/college");
+      if (!response.ok) throw new Error("Failed to fetch colleges");
+
+      const data = await response.json();
+      setColleges(data);
+      setFilteredColleges(data);
+
+      // Fetch admin data for colleges that have collegeAdminId but no collegeAdmin
+      const collegesNeedingAdminData = data.filter(
+        (college: College) => college.collegeAdminId && !college.collegeAdmin
+      );
+
+      // Fetch admin data in parallel
+      await Promise.all(
+        collegesNeedingAdminData.map((college: College) =>
+          fetchCollegeAdminData(college)
+        )
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unknown error");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   useEffect(() => {
     function handleClickOutside(event: { target: any }) {
       if (
@@ -124,51 +254,25 @@ const College: React.FC = () => {
     };
   }, [isEditing, isCreatingAdmin, isLoading]);
 
-  // Fetch colleges on initial load
-  useEffect(() => {
-    fetchColleges();
-  }, []);
-
-  // Filter colleges based on search query
-  useEffect(() => {
-    if (searchQuery.trim() === "") {
-      setFilteredColleges(colleges);
-    } else {
-      const query = searchQuery.toLowerCase();
-      const filtered = colleges.filter(
-        (college) =>
-          college.name.toLowerCase().includes(query) ||
-          college.code.toLowerCase().includes(query) ||
-          college.city?.toLowerCase().includes(query) ||
-          college.country?.toLowerCase().includes(query) ||
-          college.state?.toLowerCase().includes(query) ||
-          college.collegeAdmin?.name?.toLowerCase().includes(query) ||
-          college.collegeAdmin?.email?.toLowerCase().includes(query)
-      );
-      setFilteredColleges(filtered);
-    }
-  }, [searchQuery, colleges]);
-
-  const fetchColleges = async () => {
-    try {
-      setIsLoading(true);
-      const response = await fetch("/api/college");
-      if (response.ok) {
-        const data = await response.json();
-        setColleges(data);
-        setFilteredColleges(data);
-      } else {
-        setError("Failed to fetch colleges");
-      }
-    } catch (err) {
-      setError(
-        "Error fetching colleges: " +
-          (err instanceof Error ? err.message : "Unknown error")
-      );
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  // Add this useEffect to handle search filtering
+useEffect(() => {
+  if (searchQuery.trim() === "") {
+    setFilteredColleges(colleges);
+  } else {
+    const query = searchQuery.toLowerCase();
+    const filtered = colleges.filter(
+      (college) =>
+        college.name.toLowerCase().includes(query) ||
+        college.code.toLowerCase().includes(query) ||
+        (college.email && college.email.toLowerCase().includes(query)) ||
+        (college.city && college.city.toLowerCase().includes(query)) ||
+        (college.state && college.state.toLowerCase().includes(query)) ||
+        (college.country && college.country.toLowerCase().includes(query)) ||
+        (college.collegeAdmin && college.collegeAdmin.name.toLowerCase().includes(query))
+    );
+    setFilteredColleges(filtered);
+  }
+}, [searchQuery, colleges]);
 
   const resetForm = () => {
     setFormData({
@@ -211,7 +315,7 @@ const College: React.FC = () => {
 
   const handleAdminInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    
+
     if (name === "generatePassword") {
       setAdminFormData((prev) => ({
         ...prev,
@@ -324,19 +428,21 @@ const College: React.FC = () => {
 
     try {
       setIsLoading(true);
-      
+
       // Prepare data for API
       const payload = {
         name: adminFormData.name,
         email: adminFormData.email,
         phone: adminFormData.phone || null,
         role: "COLLEGE_ADMIN", // Set role to COLLEGE_ADMIN
-        password: adminFormData.generatePassword ? undefined : adminFormData.password,
+        password: adminFormData.generatePassword
+          ? undefined
+          : adminFormData.password,
         teacherData: {
           collegeId: selectedCollege?.id,
           employeeId: "CLG-ADMIN", // Default employee ID for college admins
-          designation: "College Administrator"
-        }
+          designation: "College Administrator",
+        },
       };
 
       // Create user with teacher profile
@@ -348,46 +454,61 @@ const College: React.FC = () => {
 
       if (userResponse.ok) {
         const userData = await userResponse.json();
-        
+
         // Update college with admin ID
-        const collegeResponse = await fetch(`/api/college?id=${selectedCollege?.id}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            collegeAdminId: userData.userId
-          }),
-        });
+        const collegeResponse = await fetch(
+          `/api/college?id=${selectedCollege?.id}`,
+          {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              collegeAdminId: userData.userId,
+            }),
+          }
+        );
 
         if (collegeResponse.ok) {
           // Update college in state
           const updatedCollege = await collegeResponse.json();
           setColleges((prev) =>
-            prev.map((c) => (c.id === updatedCollege.id ? {
-              ...updatedCollege,
-              collegeAdmin: {
-                id: userData.userId,
-                name: userData.name,
-                email: userData.email
-              }
-            } : c))
+            prev.map((c) =>
+              c.id === updatedCollege.id
+                ? {
+                    ...updatedCollege,
+                    collegeAdmin: {
+                      id: userData.userId,
+                      name: userData.name,
+                      email: userData.email,
+                    },
+                  }
+                : c
+            )
           );
 
           // Show success message
           setAdminCreationSuccess(
-            `College admin created successfully${userData.tempPassword ? ` with temporary password: ${userData.tempPassword}` : ""}. An email has been sent to ${userData.email} with login details.`
+            `College admin created successfully${
+              userData.tempPassword
+                ? ` with temporary password: ${userData.tempPassword}`
+                : ""
+            }. An email has been sent to ${userData.email} with login details.`
           );
-          
+
           // Close form after a delay
           setTimeout(() => {
             handleCancelAdminCreation();
           }, 5000);
         } else {
           const errorData = await collegeResponse.json();
-          setAdminCreationError(errorData.message || "Failed to update college with admin info");
+          setAdminCreationError(
+            errorData.message || "Failed to update college with admin info"
+          );
         }
       } else {
         const errorData = await userResponse.json();
-        setAdminCreationError(errorData.error || "Failed to create admin account");
+        setAdminCreationError(
+          errorData.error || "Failed to create admin account"
+        );
       }
     } catch (err) {
       setAdminCreationError(
@@ -450,7 +571,7 @@ const College: React.FC = () => {
     });
     setIsEditing(true);
   };
-  
+
   const handleViewCollege = (college: College) => {
     setSelectedCollege(college);
     setFormData({
@@ -706,16 +827,18 @@ const College: React.FC = () => {
     <div className="space-y-4 overflow-y-auto max-h-[80vh] p-4">
       {adminCreationSuccess && (
         <Alert className="mb-4 bg-green-50 border-green-200">
-          <AlertDescription className="text-green-700">{adminCreationSuccess}</AlertDescription>
+          <AlertDescription className="text-green-700">
+            {adminCreationSuccess}
+          </AlertDescription>
         </Alert>
       )}
-      
+
       {adminCreationError && (
         <Alert variant="destructive" className="mb-4">
           <AlertDescription>{adminCreationError}</AlertDescription>
         </Alert>
       )}
-      
+
       <div className="space-y-2">
         <div className="flex items-center gap-2 mb-4">
           <div className="h-10 w-10 bg-blue-100 rounded-full flex items-center justify-center">
@@ -727,10 +850,13 @@ const College: React.FC = () => {
           </div>
         </div>
       </div>
-      
+
       <div className="grid grid-cols-1 gap-4">
         <div className="space-y-2">
-          <label htmlFor="admin-name" className="text-sm font-medium text-gray-700">
+          <label
+            htmlFor="admin-name"
+            className="text-sm font-medium text-gray-700"
+          >
             Admin Name*
           </label>
           <Input
@@ -744,7 +870,10 @@ const College: React.FC = () => {
         </div>
 
         <div className="space-y-2">
-          <label htmlFor="admin-email" className="text-sm font-medium text-gray-700">
+          <label
+            htmlFor="admin-email"
+            className="text-sm font-medium text-gray-700"
+          >
             Admin Email*
           </label>
           <Input
@@ -757,9 +886,12 @@ const College: React.FC = () => {
             required
           />
         </div>
-        
+
         <div className="space-y-2">
-          <label htmlFor="admin-phone" className="text-sm font-medium text-gray-700">
+          <label
+            htmlFor="admin-phone"
+            className="text-sm font-medium text-gray-700"
+          >
             Phone Number
           </label>
           <Input
@@ -782,14 +914,20 @@ const College: React.FC = () => {
             onChange={(e) => handleAdminInputChange(e)}
             className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
           />
-          <label htmlFor="generate-password" className="text-sm font-medium text-gray-700">
+          <label
+            htmlFor="generate-password"
+            className="text-sm font-medium text-gray-700"
+          >
             Auto-generate secure password
           </label>
         </div>
-        
+
         {!adminFormData.generatePassword && (
           <div className="mt-2">
-            <label htmlFor="admin-password" className="text-sm font-medium text-gray-700">
+            <label
+              htmlFor="admin-password"
+              className="text-sm font-medium text-gray-700"
+            >
               Password*
             </label>
             <Input
@@ -804,7 +942,7 @@ const College: React.FC = () => {
           </div>
         )}
       </div>
-      
+
       <div className="pt-6 flex justify-end space-x-2">
         <Button
           variant="outline"
@@ -837,14 +975,6 @@ const College: React.FC = () => {
     return addressParts.join(", ") || "Not specified";
   };
 
-  // Format the contact details for the compact table display
-  const formatContactDetails = (college: College) => {
-    if (college.email) return college.email;
-    if (college.phone) return college.phone;
-    if (college.website) return "Website available";
-    return "Not specified";
-  };
-
   // Format the date for display
   const formatDate = (dateString: string | number | Date | undefined) => {
     if (!dateString) return "N/A";
@@ -855,6 +985,10 @@ const College: React.FC = () => {
       day: "numeric",
     });
   };
+  console.log("Colleges:", colleges);
+  function handleAddAdmin(id: string): void {
+    throw new Error("Function not implemented.");
+  }
 
   return (
     <div className="relative min-h-screen ">
@@ -962,14 +1096,20 @@ const College: React.FC = () => {
             <tbody className="bg-white divide-y divide-gray-200">
               {isLoading && colleges.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-4 py-8 text-center text-gray-500">
+                  <td
+                    colSpan={5}
+                    className="px-4 py-8 text-center text-gray-500"
+                  >
                     <Loader2 className="h-8 w-8 mx-auto animate-spin text-blue-500 mb-2" />
                     <p>Loading colleges...</p>
                   </td>
                 </tr>
               ) : filteredColleges.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-4 py-8 text-center text-gray-500">
+                  <td
+                    colSpan={5}
+                    className="px-4 py-8 text-center text-gray-500"
+                  >
                     {searchQuery ? (
                       <>
                         <Search className="h-8 w-8 mx-auto text-gray-400 mb-2" />
@@ -1042,7 +1182,7 @@ const College: React.FC = () => {
                         {formatAddress(college)}
                       </div>
                     </td>
-                    <td className="px-4 py-3 hidden lg:table-cell">
+                    <td className="px-4 py-3 lg:table-cell">
                       <div className="text-sm">
                         {college.email && (
                           <div className="flex items-center text-gray-600 mb-1">
@@ -1066,43 +1206,72 @@ const College: React.FC = () => {
                             </span>
                           </div>
                         )}
-                        {!college.email && !college.phone && !college.website && (
-                          <span className="text-gray-500 text-sm italic">
-                            No contact info
-                          </span>
-                        )}
+                        {!college.email &&
+                          !college.phone &&
+                          !college.website && (
+                            <span className="text-gray-500 text-sm italic">
+                              No contact info
+                            </span>
+                          )}
                       </div>
                     </td>
-                    <td className="px-4 py-3 hidden lg:table-cell">
-                      {college.collegeAdmin ? (
-                        <div className="flex items-center">
-                          <div className="h-8 w-8 rounded-full bg-green-100 flex items-center justify-center mr-2">
-                            <User className="h-4 w-4 text-green-600" />
-                          </div>
-                          <div>
-                            <div className="font-medium text-sm">
-                              {college.collegeAdmin.name}
-                            </div>
-                            <div className="text-xs text-gray-500">
-                              {college.collegeAdmin.email}
-                            </div>
-                          </div>
-                        </div>
-                      ) : (
-                        <div 
-                          className="flex items-center text-blue-600 hover:text-blue-800"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleCreateCollegeAdmin(college);
-                          }}
-                        >
-                          <UserPlus className="h-4 w-4 mr-1" />
-                          <span className="text-sm font-medium">Add Admin</span>
-                        </div>
-                      )}
-                    </td>
+                    {/* College Admin column fix */}
+                   {/* Fixed College Admin column */}
+<td className="px-4 py-2 text-sm text-gray-700">
+  {college.collegeAdmin ? (
+    // Admin data is available
+    <div>
+      <div className="font-semibold">{college.collegeAdmin.name}</div>
+      <div className="text-gray-500 text-xs">{college.collegeAdmin.email}</div>
+      {college.collegeAdmin.phone && (
+        <div className="text-gray-500 text-xs">{college.collegeAdmin.phone}</div>
+      )}
+    </div>
+  ) : college.collegeAdminId ? (
+    // Admin ID exists but data isn't loaded yet
+    loadingAdminIds.includes(college.id) ? (
+      <div className="flex items-center space-x-2">
+        <Loader2 className="h-4 w-4 animate-spin text-gray-500" />
+        <span className="text-gray-400 text-sm">Loading admin...</span>
+      </div>
+    ) : (
+      <div className="text-sm">
+        <div className="text-gray-500">Admin assigned</div>
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            // Reset failed state and retry fetching
+            setFailedAdminFetches((prev) => ({
+              ...prev,
+              [college.id]: false,
+            }));
+            fetchCollegeAdminData(college);
+          }}
+          className="text-blue-600 hover:underline text-xs"
+        >
+          Load admin info
+        </button>
+      </div>
+    )
+  ) : (
+    // No admin assigned
+    <button
+      onClick={(e) => {
+        e.stopPropagation();
+        handleCreateCollegeAdmin(college);
+      }}
+      className="flex items-center text-blue-600 hover:underline text-sm"
+    >
+      <UserPlus className="h-3 w-3 mr-1" />
+      Add Admin
+    </button>
+  )}
+</td>
                     <td className="px-4 py-3 whitespace-nowrap text-center">
-                      <div className="flex items-center space-x-1 justify-center" onClick={(e) => e.stopPropagation()}>
+                      <div
+                        className="flex items-center space-x-1 justify-center"
+                        onClick={(e) => e.stopPropagation()}
+                      >
                         <Button
                           variant="ghost"
                           size="sm"
@@ -1147,8 +1316,7 @@ const College: React.FC = () => {
             </tbody>
           </table>
         </div>
-        </div>
-
+      </div>
 
       {/* Detail View Modal */}
       <AnimatePresence>
@@ -1207,7 +1375,9 @@ const College: React.FC = () => {
                           <Building className="h-16 w-16 text-blue-600" />
                         </div>
                       )}
-                      <h3 className="text-xl font-semibold mt-4">{formData.name}</h3>
+                      <h3 className="text-xl font-semibold mt-4">
+                        {formData.name}
+                      </h3>
                       <p className="text-gray-500">Code: {formData.code}</p>
                     </div>
 
@@ -1232,7 +1402,9 @@ const College: React.FC = () => {
                       <div className="border rounded-lg p-4 mb-6 border-dashed">
                         <div className="text-center">
                           <UserPlus className="h-8 w-8 mx-auto text-gray-400 mb-2" />
-                          <p className="text-sm text-gray-600 mb-2">No administrator assigned</p>
+                          <p className="text-sm text-gray-600 mb-2">
+                            No administrator assigned
+                          </p>
                           <Button
                             size="sm"
                             onClick={() => {
@@ -1251,13 +1423,17 @@ const College: React.FC = () => {
                   <div className="md:w-2/3 space-y-6">
                     {formData.description && (
                       <div>
-                        <h4 className="text-sm font-medium text-gray-500 mb-2">Description</h4>
+                        <h4 className="text-sm font-medium text-gray-500 mb-2">
+                          Description
+                        </h4>
                         <p className="text-gray-700">{formData.description}</p>
                       </div>
                     )}
 
                     <div>
-                      <h4 className="text-sm font-medium text-gray-500 mb-2">Contact Information</h4>
+                      <h4 className="text-sm font-medium text-gray-500 mb-2">
+                        Contact Information
+                      </h4>
                       <div className="space-y-2">
                         {formData.email && (
                           <div className="flex items-center">
@@ -1285,29 +1461,36 @@ const College: React.FC = () => {
                             </a>
                           </div>
                         )}
-                        {!formData.email && !formData.phone && !formData.website && (
-                          <p className="text-gray-500 italic">No contact information provided</p>
-                        )}
+                        {!formData.email &&
+                          !formData.phone &&
+                          !formData.website && (
+                            <p className="text-gray-500 italic">
+                              No contact information provided
+                            </p>
+                          )}
                       </div>
                     </div>
 
                     <div>
-                      <h4 className="text-sm font-medium text-gray-500 mb-2">Address</h4>
-                      {formData.address || formData.city || formData.state || formData.country ? (
+                      <h4 className="text-sm font-medium text-gray-500 mb-2">
+                        Address
+                      </h4>
+                      {formData.address ||
+                      formData.city ||
+                      formData.state ||
+                      formData.country ? (
                         <div className="space-y-1">
                           {formData.address && <p>{formData.address}</p>}
                           <p>
-                            {[
-                              formData.city,
-                              formData.state,
-                              formData.country,
-                            ]
+                            {[formData.city, formData.state, formData.country]
                               .filter(Boolean)
                               .join(", ")}
                           </p>
                         </div>
                       ) : (
-                        <p className="text-gray-500 italic">No address provided</p>
+                        <p className="text-gray-500 italic">
+                          No address provided
+                        </p>
                       )}
                     </div>
 
@@ -1396,7 +1579,6 @@ const College: React.FC = () => {
           </motion.div>
         )}
       </AnimatePresence>
-
     </div>
   );
 };
