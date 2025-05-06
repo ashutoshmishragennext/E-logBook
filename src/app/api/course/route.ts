@@ -7,8 +7,13 @@ import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(req: NextRequest) {
   const branchId = req.nextUrl.searchParams.get('branchId');
+  const id = req.nextUrl.searchParams.get('id');
 
   try {
+    if (id) {
+      const course = await db.select().from(CourseTable).where(eq(CourseTable.id, id));
+      return NextResponse.json(course[0]);
+    }
     const data = branchId
       ? await db.select().from(CourseTable).where(eq(CourseTable.branchId, branchId))
       : await db.select().from(CourseTable);

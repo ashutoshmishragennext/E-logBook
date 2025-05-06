@@ -469,12 +469,14 @@ import Subject from "@/components/adminComponent/Subject";
 import Batch from "@/components/clgAdmin/Batch";
 import Faculty from "@/components/clgAdmin/Faculty";
 import Profile from "@/components/clgAdmin/Profile";
+import SubjectSelector from "@/components/clgAdmin/Settings";
 const sidebarItems = [
   { id: "Profile", label: "Profile", icon: <School size={20} />, component: <Profile /> },
   { id: "Batch", label: "Batch", icon: <Building2 size={20} />, component: <Batch/> },
   { id: "Faculty", label: "Faculty", icon: <Building2 size={20} />, component: <Faculty /> },
   { id: "courses", label: "Courses", icon: <GraduationCap size={20} />, component: <Course /> },
   { id: "subject", label: "Subject", icon: <Book size={20} />, component: <Subject /> },
+  { id: "settings", label: "Settings", icon: <User size={20} />, component: <SubjectSelector/> },
 ];
 
 const Sidebar = () => {

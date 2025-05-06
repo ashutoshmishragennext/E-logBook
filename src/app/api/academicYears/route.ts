@@ -4,8 +4,15 @@ import { eq } from "drizzle-orm";
 import { NextResponse  , NextRequest} from "next/server";
 
 
-export async function GET(){
+export async function GET(request:NextRequest){
+  const searchParams = request.nextUrl.searchParams;
+  const id = searchParams.get('id')
+
  try {
+    if(id){
+      const academicYear = await db.select().from(AcademicYearTable).where(eq(AcademicYearTable.id,id))
+      return NextResponse.json(academicYear[0])
+    }
     const academicYear=await db.select().from(AcademicYearTable)
     return NextResponse.json(academicYear)
     

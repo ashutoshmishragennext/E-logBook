@@ -7,6 +7,17 @@ import { NextRequest, NextResponse } from "next/server";
     try {
         const searchParams = req.nextUrl.searchParams;
         const PhaseId = searchParams.get('PhaseId');
+        const SubjectId = searchParams.get('SubjectId');
+        const Approved = searchParams.get('Approved');
+
+        if (Approved){
+            const subject = await db.select().from(SubjectTable).where(eq(SubjectTable.approved, Approved === 'true'))
+            return NextResponse.json(subject)
+        }
+        if(SubjectId){
+            const subject = await db.select().from(SubjectTable).where(eq(SubjectTable.id,SubjectId))
+            return NextResponse.json(subject[0])
+        }
         let subject = await db.select().from(SubjectTable)
         if(PhaseId){
              subject= await db.select().from(SubjectTable).where(eq(SubjectTable.phaseId,PhaseId))

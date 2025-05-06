@@ -144,6 +144,7 @@ export const BranchTable = pgTable(
     name: text("name").notNull(),
     code: text("code").notNull(),
     description: text("description"),
+    approved: boolean("approved").default(false),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },
@@ -158,6 +159,7 @@ export const CourseTable = pgTable(
     name: text("name").notNull(),
     duration: text("duration").notNull(), // in years or semesters
     description: text("description"),
+    approved: boolean("approved").default(false),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   }
@@ -192,6 +194,7 @@ export const SubjectTable = pgTable(
     name: text("name").notNull(),
     code: text("code").notNull(),
     phaseId: uuid("phase_id").references(() => PhaseTable.id),
+    approved: boolean("approved").default(false),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },

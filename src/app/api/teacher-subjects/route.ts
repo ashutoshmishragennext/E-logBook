@@ -34,42 +34,35 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const data = await req.json();
-    const { teacherId, subjectIds, academicYearId, phaseId } = data;
-    
-    if (!teacherId || !subjectIds || !academicYearId || !phaseId) {
-      return NextResponse.json(
-        { error: "Missing required fields" },
-        { status: 400 }
-      );
+    if (!data || (Array.isArray(data) && data.length === 0)) {
+      return NextResponse.json({ error: "Invalid data format" }, { status: 400 });
     }
+
+    // Handle the case where the frontend sends an array of assignments
+    const assignments = Array.isArray(data) ? data : [data];
     
-    // Clear existing assignments for this teacher, academic year, and phase
-    await db.delete(TeacherSubjectTable)
-      .where(
-        and(
-          eq(TeacherSubjectTable.teacherId, teacherId),
-          eq(TeacherSubjectTable.academicYearId, academicYearId),
-          eq(TeacherSubjectTable.phaseId, phaseId)
-        )
-      );
-    
-    // Insert new assignments
-    const assignmentsToInsert = subjectIds.map((subjectId: string) => ({
-      teacherId,
-      subjectId,
-      academicYearId,
-      phaseId,
-    }));
-    
-    // If no subjects selected, just return success after deletion
-    if (assignmentsToInsert.length === 0) {
-      return NextResponse.json({ success: true });
+    // Validate only the required fields from the first assignment
+    const firstAssignment = assignments[0];
+    const { teacherId, academicYearId, phaseId } = firstAssignment;
+
+    if (!teacherId || !academicYearId || !phaseId) {
+      return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
-    
+
+    // Delete existing assignments for this teacher in this academic year and phase
+    await db.delete(TeacherSubjectTable).where(
+      and(
+        eq(TeacherSubjectTable.teacherId, teacherId),
+        eq(TeacherSubjectTable.academicYearId, academicYearId),
+        eq(TeacherSubjectTable.phaseId, phaseId)
+      )
+    );
+
+    // Insert all new assignments with all fields including courseId and branchId
     const result = await db.insert(TeacherSubjectTable)
-      .values(assignmentsToInsert)
+      .values(assignments)
       .returning();
-    
+
     return NextResponse.json(result);
   } catch (error) {
     console.error("Error assigning teacher subjects:", error);

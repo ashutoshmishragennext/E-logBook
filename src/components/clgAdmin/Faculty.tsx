@@ -1,4 +1,4 @@
-// Faculty.tsx - Refactored with reusable components
+// Faculty.tsx - Updated with Subject Assignment functionality
 import { useCurrentUser } from "@/hooks/auth";
 import { useCollegeStore } from "@/store/college";
 import React, { useEffect, useState } from "react";
@@ -7,7 +7,9 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2, Search } from "lucide-react";
 import { useTeacherStore } from "@/store/teacherProfile";
-import { FileImporter, FileExporter } from "@/components/common/FileHandler"
+import { FileImporter, FileExporter } from "@/components/common/FileHandler";
+import SubjectAssignment from "./subjectAsignment";
+
 // Form schema remains the same
 const formSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -33,6 +35,9 @@ const Faculty = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [uploadStatus, setUploadStatus] = useState("");
   const [activeTab, setActiveTab] = useState("list");
+  const [showAssignSubjects, setShowAssignSubjects] = useState(false);
+  const [selectedTeacher, setSelectedTeacher] = useState<any>(null);
+  
   const exportHeaders = {
     name: "Name",
     email: "Email",
@@ -201,7 +206,17 @@ const Faculty = () => {
     );
   });
 
-  
+  // Handle Assign Subject click
+  const handleAssignSubject = (teacher: any) => {
+    setSelectedTeacher(teacher);
+    setShowAssignSubjects(true);
+  };
+
+  // Close assignment modal
+  const handleCloseAssignment = () => {
+    setShowAssignSubjects(false);
+    setSelectedTeacher(null);
+  };
 
   return (
     <div className="p-6 bg-white rounded-lg shadow-md">
@@ -320,6 +335,9 @@ const Faculty = () => {
                     <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 border-b">
                       Mobile Number
                     </th>
+                    <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 border-b">
+                      Actions 
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -342,6 +360,14 @@ const Faculty = () => {
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-900 border-b">
                         {teacher.mobileNo}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-900 border-b">
+                        <button 
+                          onClick={() => handleAssignSubject(teacher)} 
+                          className="text-blue-600 hover:underline"
+                        >
+                          Assign Subject
+                        </button>
                       </td>
                     </tr>
                   ))}
@@ -463,6 +489,17 @@ const Faculty = () => {
             </button>
           </form>
         </div>
+      )}
+
+      {/* Subject Assignment Modal */}
+      {showAssignSubjects && selectedTeacher && (
+        <SubjectAssignment
+          teacherId={selectedTeacher.id}
+          teacherName={selectedTeacher.name}
+          teacherDesignation={selectedTeacher.designation}
+          teacherEmail={selectedTeacher.email}
+          onClose={handleCloseAssignment}
+        />
       )}
     </div>
   );

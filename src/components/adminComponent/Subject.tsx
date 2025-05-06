@@ -4,42 +4,39 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useSubjectStore } from "@/store/subject";
 import { Edit, Plus, Save, Search, Trash2, X } from "lucide-react";
 import { useEffect, useState } from "react";
 
+
 const Subject = () => {
-  const [subjects, setSubjects] = useState<{ id: string; name: string; code?: string; }[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState("");
+  // Get state and methods from Zustand store
+  const { 
+    subjects, 
+    isLoading, 
+    error, 
+    currentSubject, 
+    sidebarOpen,
+    fetchSubjects, 
+    setError, 
+    setCurrentSubject, 
+    setSidebarOpen,
+    removeSubjectById
+  } = useSubjectStore();
+
+  // Keep local state for form and filtering
   const [searchTerm, setSearchTerm] = useState("");
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [currentSubject, setCurrentSubject] = useState<{ id: string; name: string; code?:string; } | null>(null);
   const [formData, setFormData] = useState({
     name: "",
-    code:""
+    code: "",
+    approved: true
   });
-  
-  // Fetch branches on component mount - adding empty dependency array to run only once
+  const [approvedFilter, setApprovedFilter] = useState<"all" | "approved" | "pending">("all");
+
+  // Fetch subjects on component mount
   useEffect(() => {
     fetchSubjects();
-  }, []); // This empty array is crucial - it tells React to run this effect only once
-  
-  const fetchSubjects = async () => {
-    try {
-      setIsLoading(true);
-      const response = await fetch(`/api/subject`);
-      if (response.ok) {
-        const data = await response.json();
-        setSubjects(data);
-      } else {
-        setError("Failed to fetch Subjects");
-      }
-    } catch (err) {
-      setError("Error fetching Subjects: " + (err instanceof Error ? err.message : "Unknown error"));
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  }, [fetchSubjects]);
 
   const handleInputChange = (e: { target: { name: any; value: any; }; }) => {
     const { name, value } = e.target;
@@ -49,16 +46,20 @@ const Subject = () => {
   const resetForm = () => {
     setFormData({
       name: "",
-      code: ""
+      code: "",
+      approved: true
     });
   };
 
-  const openSidebar = (subject: { id: string; name: string; code:string } | null = null) => {
+  const openSidebar = (subject: {
+    approved: boolean; id: string; name: string; code?: string 
+} | null = null) => {
     if (subject) {
       setCurrentSubject(subject);
       setFormData({
         name: subject.name,
-        code: subject.code || ""
+        code: subject.code || "",
+        approved: subject.approved ?? true
       });
     } else {
       setCurrentSubject(null);
@@ -86,23 +87,22 @@ const Subject = () => {
       setError("Subject code is required");
       return;
     }
+    if(formData.approved == false){
+      formData.approved = true
+    }
 
     try {
-      // Set loading state only for the form submission
       const isEditing = !!currentSubject;
-      const submitButtonLoading = true;
-      
       let response;
+      console.log("Form Data", formData);
 
-      if (isEditing) {
-        // Update existing branch
+      if (isEditing && currentSubject) {
         response = await fetch(`/api/subject?id=${currentSubject.id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(formData),
         });
       } else {
-        // Create new branch
         response = await fetch("/api/subject", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -119,23 +119,24 @@ const Subject = () => {
       }
     } catch (err) {
       setError("Error saving subject: " + (err instanceof Error ? err.message : "Unknown error"));
-    } finally {
-      // Not needed as fetchBranches will handle the loading state
-      // and closeSidebar will reset the form
     }
   };
 
-  const handleDelete = async (id: string | undefined) => {
+  const handleDelete = async (id: string) => {
     if (!confirm("Are you sure you want to delete this subject?")) return;
 
     try {
-      setIsLoading(true);
       const response = await fetch(`/api/subject?id=${id}`, {
         method: "DELETE",
       });
 
       if (response.ok) {
+        // Update local store immediately for better UX
+        removeSubjectById(id);
+        
+        // Refresh data from server
         await fetchSubjects();
+        
         if (currentSubject?.id === id) {
           closeSidebar();
         }
@@ -145,15 +146,23 @@ const Subject = () => {
       }
     } catch (err) {
       setError("Error deleting Subject: " + (err instanceof Error ? err.message : "Unknown error"));
-    } finally {
-      setIsLoading(false);
     }
   };
 
-  const filteredCoures = subjects.filter(subject => 
-    subject.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (subject.code ?? "").toLowerCase().includes(searchTerm.toLowerCase()) 
-  );
+  const filteredSubjects = subjects.filter(subject => {
+    // Search filter
+    const matchesSearch = 
+      subject.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (subject.code ?? "").toLowerCase().includes(searchTerm.toLowerCase());
+    
+    // Approved status filter
+    const matchesApprovedFilter = 
+      approvedFilter === "all" ||
+      (approvedFilter === "approved" && subject.approved) ||
+      (approvedFilter === "pending" && !subject.approved);
+    
+    return matchesSearch && matchesApprovedFilter;
+  });
 
   return (
     <div className="relative space-y-4">
@@ -175,6 +184,15 @@ const Subject = () => {
               className="pl-9 w-full"
             />
           </div>
+          <select
+            value={approvedFilter}
+            onChange={(e) => setApprovedFilter(e.target.value as "all" | "approved" | "pending")}
+            className="border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="all">All Statuses</option>
+            <option value="approved">Approved Only</option>
+            <option value="pending">Pending Only</option>
+          </select>
           <Button onClick={() => openSidebar()} className="w-full md:w-auto">
             <Plus className="h-4 w-4 mr-2" />
             Add Subject
@@ -191,29 +209,32 @@ const Subject = () => {
                 <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-12">#</th>
                 <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[120px]">Name</th>
                 <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[80px]">Code</th>
+                <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[100px]">Status</th>
                 <th scope="col" className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[100px]">Actions</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {isLoading && subjects.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="text-center py-10">
+                  <td colSpan={5} className="text-center py-10">
                     <div className="flex justify-center mb-2">
                       <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
                     </div>
                     <p className="text-gray-500">Loading subjects...</p>
                   </td>
                 </tr>
-              ) : filteredCoures.length === 0 ? (
+              ) : filteredSubjects.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="text-center py-10">
+                  <td colSpan={5} className="text-center py-10">
                     <p className="text-gray-500">
-                      {searchTerm ? "No subjects match your search" : "No subjects found"}
+                      {searchTerm || approvedFilter !== "all" 
+                        ? "No subjects match your filters" 
+                        : "No subjects found"}
                     </p>
                   </td>
                 </tr>
               ) : (
-                filteredCoures.map((subject, index) => (
+                filteredSubjects.map((subject, index) => (
                   <tr key={subject.id} className="hover:bg-gray-50">
                     <td className="px-3 py-1 whitespace-nowrap text-sm text-gray-500">{index + 1}</td>
                     <td className="px-3 py-1 whitespace-nowrap text-sm font-medium">{subject.name}</td>
@@ -222,13 +243,20 @@ const Subject = () => {
                         {subject.code || "—"}
                       </Badge>
                     </td>
+                    <td className="px-3 py-1 whitespace-nowrap text-sm font-medium">
+                      {subject.approved ? (
+                        <Badge variant="default" className="text-xs">Approved</Badge>
+                      ) : (
+                        <Badge variant="destructive" className="text-xs">Pending</Badge>
+                      )}
+                    </td>
                     <td className="px-3 py-1 whitespace-nowrap text-right text-sm font-medium">
                       <div className="flex justify-end gap-1">
                         <Button 
                           variant="ghost" 
                           size="sm" 
                           className="h-8 w-8 p-0" 
-                          onClick={() => openSidebar({ ...subject, code: subject.code || "" })}
+                          onClick={() => openSidebar({ ...subject, approved: subject.approved ?? false })}
                         >
                           <Edit className="h-4 w-4" />
                         </Button>

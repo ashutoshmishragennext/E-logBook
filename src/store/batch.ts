@@ -22,23 +22,26 @@ export const useBatchStore = create<BatchState>((set) => ({
   loading: false,
   error: null,
 
-  fetchBatches: async (collegeId, academicYearId) => {
+  fetchBatches: async (collegeId?: string, academicYearId?: string) => {
     set({ loading: true, error: null });
+  
     try {
-      const query = new URLSearchParams({
-        collegeId,
-        academicYears: academicYearId,
-      }).toString();
-
+      const queryParams: Record<string, string> = {};
+      if (collegeId) queryParams.collegeId = collegeId;
+      if (academicYearId) queryParams.academicYears = academicYearId;
+  
+      const query = new URLSearchParams(queryParams).toString();
       const res = await fetch(`/api/phase?${query}`);
+  
       if (!res.ok) throw new Error("Failed to fetch batches");
-
+  
       const data = await res.json();
       set({ batches: data, loading: false });
     } catch (err: any) {
       set({ error: err.message, loading: false });
     }
   },
+  
 
   createBatch: async (batch) => {
     try {

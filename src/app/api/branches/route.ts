@@ -6,9 +6,15 @@ import { eq } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(req: NextRequest) {
+  const searchParams = req.nextUrl.searchParams;
+  const id = searchParams.get('id');
   const collegeId = req.nextUrl.searchParams.get('collegeId');
 
   try {
+    if (id) {
+      const branch = await db.select().from(BranchTable).where(eq(BranchTable.id, id));
+      return NextResponse.json(branch[0]);
+    }
     const data = collegeId
       ? await db.select().from(BranchTable).where(eq(BranchTable.collegeId, collegeId))
       : await db.select().from(BranchTable);

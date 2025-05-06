@@ -8,9 +8,17 @@ export async function GET(req: NextRequest) {
   const searchParams = req.nextUrl.searchParams;
   const academicYearId = searchParams.get("academicYears");
   const collegeId = searchParams.get("collegeId");
+  const id = searchParams.get("id");
 
   try {
     // If both academicYearId and collegeId are present, filter
+    if (id) {
+      const phase = await db
+        .select()
+        .from(PhaseTable)
+        .where(eq(PhaseTable.id, id));
+      return NextResponse.json(phase[0]);
+    }
     if (academicYearId && collegeId) {
       const phases = await db
         .select()
@@ -22,6 +30,18 @@ export async function GET(req: NextRequest) {
           )
         );
 
+      return NextResponse.json(phases);
+    }
+    if (academicYearId) {
+      const phases = await db.select().from(PhaseTable).where(
+        eq(PhaseTable.academicYearId, academicYearId) 
+      );
+      return NextResponse.json(phases);
+    }
+    if (collegeId) {
+      const phases = await db.select().from(PhaseTable).where(
+        eq(PhaseTable.collegeId, collegeId) 
+      );
       return NextResponse.json(phases);
     }
 
