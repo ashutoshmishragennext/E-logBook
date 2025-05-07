@@ -5,13 +5,12 @@ import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
-  CardTitle,
+  CardTitle
 } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -19,12 +18,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { PlusCircle, Trash2, MoveDown, MoveUp } from "lucide-react";
+import { MoveDown, MoveUp, PlusCircle, Trash2 } from "lucide-react";
 
 // Import types
-import { LogBookTemplateSchema, FieldDefinition, FieldGroup } from "./types";
-import { Key } from "react";
+import { FieldDefinition, LogBookTemplateSchema } from "./types";
 
 interface FieldBuilderProps {
   templateSchema: LogBookTemplateSchema;

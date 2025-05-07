@@ -1,12 +1,12 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
-import { useAcademicYearStore } from '@/store/academicYear'
+import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import { Button } from '@/components/ui/button'
-import { format } from 'date-fns'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { useAcademicYearStore } from '@/store/academicYear'
+import { format } from 'date-fns'
+import React, { useEffect, useState } from 'react'
 
 const Academicyear = () => {
   const { years, fetchYears, addYear, deleteYear } = useAcademicYearStore()

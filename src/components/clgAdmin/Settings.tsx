@@ -1,7 +1,7 @@
 "use client";
 
 import { Check } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 
 interface SubjectSelectorProps {
   onSubjectSelect: (subjectId: string) => void;

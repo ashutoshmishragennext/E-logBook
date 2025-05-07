@@ -1,8 +1,7 @@
-import { useCurrentUser } from "@/hooks/auth";
-import React, { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
+import { useCurrentUser } from "@/hooks/auth";
 import { useCollegeStore } from "@/store/college";
+import { useEffect } from "react";
 
 interface College {
   id: string;

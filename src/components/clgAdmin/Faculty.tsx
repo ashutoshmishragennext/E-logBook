@@ -1,13 +1,13 @@
 // Faculty.tsx - Updated with Subject Assignment functionality
+import { FileExporter, FileImporter } from "@/components/common/FileHandler";
 import { useCurrentUser } from "@/hooks/auth";
 import { useCollegeStore } from "@/store/college";
-import React, { useEffect, useState } from "react";
-import { z } from "zod";
-import { useForm } from "react-hook-form";
+import { useTeacherStore } from "@/store/teacherProfile";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2, Search } from "lucide-react";
-import { useTeacherStore } from "@/store/teacherProfile";
-import { FileImporter, FileExporter } from "@/components/common/FileHandler";
+import { useEffect, useState } from "react";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
 import SubjectAssignment from "./subjectAsignment";
 
 // Form schema remains the same

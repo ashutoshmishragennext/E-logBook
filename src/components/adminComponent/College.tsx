@@ -96,11 +96,6 @@ const College: React.FC = () => {
   const adminFormRef = useRef<HTMLDivElement>(null);
   console.log(profilePhotoFileName)
 
-  // Close form when clicking outside
-
-  // Function to fetch admin data from user API
-
-  // Fetch colleges on initial load
   useEffect(() => {
     fetchColleges();
   }, []);

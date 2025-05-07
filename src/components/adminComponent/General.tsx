@@ -1,14 +1,9 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
   Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
+  CardContent
 } from "@/components/ui/card";
 import {
   Form,
@@ -20,17 +15,19 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { useCurrentUser } from "@/hooks/auth";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { Save } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
-import { Save } from "lucide-react";
 import { FieldBuilder } from "./FieldBuilder";
 import {
-  LogBookTemplateSchema,
   GeneralTemplate,
+  LogBookTemplateSchema,
   TemplateFormValues,
 } from "./types";
-import { useCurrentUser } from "@/hooks/auth";
 
 // Form validation schema for general template details
 const generalTemplateSchema = z.object({

@@ -1,14 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
   Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
+  CardContent
 } from "@/components/ui/card";
 import {
   Form,
@@ -18,6 +13,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -25,20 +21,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { useCurrentUser } from "@/hooks/auth";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { Save } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
-import { Save } from "lucide-react";
 import { FieldBuilder } from "./FieldBuilder";
 import {
   LogBookTemplateSchema,
+  Subject,
   SubjectTemplate,
   TemplateFormValues,
-  Subject,
 } from "./types";
-import { useCurrentUser } from "@/hooks/auth";
 
 // Simplified form validation schema
 const subjectTemplateSchema = z.object({
