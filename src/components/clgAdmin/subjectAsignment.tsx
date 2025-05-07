@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable react-hooks/exhaustive-deps*/
 "use client";
 
 import { useAcademicYearStore } from "@/store/academicYear";
@@ -38,7 +40,7 @@ const SubjectAssignment: React.FC<SubjectAssignmentProps> = ({
   // States for data fetching
   const { years, fetchYears } = useAcademicYearStore();
   const [academicYears, setAcademicYears] = useState<any[]>([]);
-  const { batches, fetchBatches } = useBatchStore();
+  const { fetchBatches } = useBatchStore();
   
   const [phases, setPhases] = useState<any[]>([]);
   const [branches, setBranches] = useState<any[]>([]);
@@ -52,6 +54,7 @@ const SubjectAssignment: React.FC<SubjectAssignmentProps> = ({
   const [alreadyAssignedSubjects, setAlreadyAssignedSubjects] = useState<string[]>([]);
   const [formToSubmit, setFormToSubmit] = useState<AssignmentFormValues | null>(null);
   const [subjectSearchQuery, setSubjectSearchQuery] = useState("");
+  console.log("years",years)
 
   // Form handling
   const form = useForm<AssignmentFormValues>({
@@ -332,8 +335,8 @@ const SubjectAssignment: React.FC<SubjectAssignmentProps> = ({
         },
         body: JSON.stringify({ name: subjectName }),
       });
+      console.log("Response from subject request:", res);
 
-      const result = await res.json();
       setStatus(`✅ Subject request for "${subjectName}" sent to admin`);
       setSubjectSearchQuery(""); // Clear search query after request
     } catch (err) {

@@ -1,11 +1,12 @@
 "use client";
 
+import Batch from "@/components/clgAdmin/Batch";
+import Faculty from "@/components/clgAdmin/Faculty";
+import Profile from "@/components/clgAdmin/Profile";
 import {
-  Book,
   Building2,
   ChevronLeft,
   ChevronRight,
-  GraduationCap,
   LogOut,
   Menu,
   School,
@@ -14,9 +15,6 @@ import {
 import { signOut, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { SetStateAction, useEffect, useState } from "react";
-import Batch from "@/components/clgAdmin/Batch";
-import Faculty from "@/components/clgAdmin/Faculty";
-import Profile from "@/components/clgAdmin/Profile";
 
 const sidebarItems = [
   { id: "Profile", label: "Profile", icon: <School size={20} />, component: <Profile /> },

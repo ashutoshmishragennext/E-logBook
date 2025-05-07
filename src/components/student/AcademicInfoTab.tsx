@@ -1,33 +1,33 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
-import { useState, useEffect, JSXElementConstructor, Key, ReactElement, ReactNode, ReactPortal } from 'react';
-import { useForm, useFieldArray } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
-import { 
-  Form, 
-  FormControl, 
-  FormField, 
-  FormItem, 
-  FormLabel, 
-  FormMessage 
+import { Button } from '@/components/ui/button';
+import { Calendar } from '@/components/ui/calendar';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { format } from 'date-fns';
-import { 
-  CalendarIcon, 
-  Check, 
-  Loader2, 
-  Pencil, 
-  PlusCircle, 
-  Search, 
-  Trash, 
-  X 
+import {
+  CalendarIcon,
+  Check,
+  Loader2,
+  Pencil,
+  Search,
+  Trash,
+  X
 } from 'lucide-react';
+import { JSXElementConstructor, Key, ReactElement, ReactNode, ReactPortal, useEffect, useState } from 'react';
+import { useFieldArray, useForm } from 'react-hook-form';
+import * as z from 'zod';
 // import { toast } from '@/components/ui/use-toast';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -39,6 +39,7 @@ import {
   CommandList,
 } from '@/components/ui/command';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import Image from 'next/image';
 
 
 // Define the form schema
@@ -621,7 +622,9 @@ export default function AcademicInfoComponent({ userId, existingProfile, onProfi
                 <h4 className="text-sm font-medium text-muted-foreground">College ID Proof</h4>
                 {collegeIdProofPreview ? (
                   <div className="mt-1">
-                    <img 
+                    <Image
+                      width={100}
+                      height={100} 
                       src={collegeIdProofPreview} 
                       alt="College ID" 
                       className="h-24 object-cover rounded-md" 

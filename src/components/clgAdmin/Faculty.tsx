@@ -1,4 +1,5 @@
 // Faculty.tsx - Updated with Subject Assignment functionality
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { FileExporter, FileImporter } from "@/components/common/FileHandler";
 import { useCurrentUser } from "@/hooks/auth";
 import { useCollegeStore } from "@/store/college";

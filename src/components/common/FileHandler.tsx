@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState } from "react";
 import { Loader2, Download, Upload } from "lucide-react";
 import * as XLSX from "xlsx";

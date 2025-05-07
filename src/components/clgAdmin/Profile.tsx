@@ -1,23 +1,11 @@
+/* eslint-disable react-hooks/exhaustive-deps*/
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useCurrentUser } from "@/hooks/auth";
 import { useCollegeStore } from "@/store/college";
+import Image from "next/image";
 import { useEffect } from "react";
 
-interface College {
-  id: string;
-  userId: string;
-  name: string;
-  code: string;
-  address: string;
-  country: string;
-  city: string;
-  state: string;
-  phone: string;
-  email: string;
-  website: string;
-  description: string;
-  logo: string;
-}
+
 
 const Profile = () => {
   const user = useCurrentUser();
@@ -50,7 +38,9 @@ const Profile = () => {
         <Card className="w-full shadow-md">
           <CardHeader>
             <CardTitle className="text-xl flex items-center gap-4">
-              <img
+              <Image
+                width={48}
+                height={48}
                 src={college.logo}
                 alt={college.name}
                 className="w-12 h-12 rounded-full object-cover"

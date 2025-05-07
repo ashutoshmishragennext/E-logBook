@@ -30,6 +30,7 @@ export const useCourseStore = create<CourseStore>((set) => ({
       const data = await res.json();
       set({ courses: data, loading: false });
     } catch (err) {
+      console.error(err);
       set({ error: 'Failed to fetch courses', loading: false });
     }
   },

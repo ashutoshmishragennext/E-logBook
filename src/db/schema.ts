@@ -8,7 +8,6 @@ import {
   timestamp,
   uniqueIndex,
   uuid,
-  integer
 } from "drizzle-orm/pg-core";
 
 // ===== ENUMS =====

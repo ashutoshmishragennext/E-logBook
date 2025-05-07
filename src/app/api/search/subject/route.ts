@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { db } from "@/db";
 import { SubjectTable } from "@/db/schema";
 import { ilike } from "drizzle-orm";

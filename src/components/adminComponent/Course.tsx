@@ -1,3 +1,5 @@
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -110,7 +112,6 @@ const Course = () => {
     try {
       // Set loading state only for the form submission
       const isEditing = !!currentCourse;
-      const submitButtonLoading = true;
 
       let response;
 
@@ -144,7 +145,6 @@ const Course = () => {
       // Reset loading state after submission
       setIsLoading(false);
       // Reset submit button loading state
-      const submitButtonLoading = false;
     }
   };
 

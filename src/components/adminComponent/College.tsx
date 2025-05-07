@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable react-hooks/exhaustive-deps*/
 "use client";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -27,6 +28,7 @@ import {
   UserPlus,
   X,
 } from "lucide-react";
+import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 
 const College: React.FC = () => {
@@ -639,7 +641,9 @@ useEffect(() => {
         <div className="flex flex-col space-y-2">
           {formData.logo && (
             <div className="flex items-center">
-              <img
+              <Image
+                width={48}
+                height={48}
                 src={formData.logo}
                 alt="College Logo"
                 className="h-12 w-12 object-cover rounded-md"
@@ -981,9 +985,6 @@ useEffect(() => {
     });
   };
   console.log("Colleges:", colleges);
-  function handleAddAdmin(id: string): void {
-    throw new Error("Function not implemented.");
-  }
 
   return (
     <div className="relative min-h-screen ">
@@ -1108,7 +1109,7 @@ useEffect(() => {
                     {searchQuery ? (
                       <>
                         <Search className="h-8 w-8 mx-auto text-gray-400 mb-2" />
-                        <p>No colleges found matching "{searchQuery}"</p>
+                        <p>No colleges found matching {searchQuery}</p>
                         <Button
                           variant="link"
                           onClick={() => setSearchQuery("")}
@@ -1145,7 +1146,9 @@ useEffect(() => {
                   >
                     <td className="px-4 py-3 whitespace-nowrap">
                       {college.logo ? (
-                        <img
+                        <Image
+                          width={40}
+                          height={40}
                           src={college.logo}
                           alt={`${college.name} logo`}
                           className="h-10 w-10 rounded-full object-cover border border-gray-200"
@@ -1360,7 +1363,10 @@ useEffect(() => {
                   <div className="md:w-1/3">
                     <div className="flex flex-col items-center mb-6">
                       {formData.logo ? (
-                        <img
+                        <Image
+
+                          width={128}
+                          height={128}
                           src={formData.logo}
                           alt={`${formData.name} logo`}
                           className="h-32 w-32 object-cover rounded-lg border border-gray-200 shadow-sm"

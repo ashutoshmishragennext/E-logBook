@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useState, useEffect } from "react";
@@ -94,7 +95,6 @@ const Department = () => {
     try {
       // Set loading state only for the form submission
       const isEditing = !!currentBranch;
-      const submitButtonLoading = true;
       
       let response;
 
