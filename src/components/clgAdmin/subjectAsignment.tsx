@@ -1,11 +1,13 @@
-// SubjectAssignment.tsx
-import React, { useEffect, useState } from "react";
+"use client";
+
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { AlertCircle, Check, CheckCircle, Loader2, X } from "lucide-react";
 import { useAcademicYearStore } from "@/store/academicYear";
 import { useBatchStore } from "@/store/batch";
+import SubjectSelector from "./Settings";
 
 // Form schema for subject assignment
 const assignmentSchema = z.object({
@@ -49,6 +51,7 @@ const SubjectAssignment: React.FC<SubjectAssignmentProps> = ({
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [alreadyAssignedSubjects, setAlreadyAssignedSubjects] = useState<string[]>([]);
   const [formToSubmit, setFormToSubmit] = useState<AssignmentFormValues | null>(null);
+  const [subjectSearchQuery, setSubjectSearchQuery] = useState("");
 
   // Form handling
   const form = useForm<AssignmentFormValues>({
@@ -62,7 +65,7 @@ const SubjectAssignment: React.FC<SubjectAssignmentProps> = ({
     },
   });
 
-  const { watch } = form;
+  const { watch, setValue, reset } = form;
   const academicYearId = watch("academicYearId");
   const phaseId = watch("phaseId");
   const branchId = watch("branchId");
@@ -84,8 +87,8 @@ const SubjectAssignment: React.FC<SubjectAssignmentProps> = ({
   useEffect(() => {
     const fetchPhases = async () => {
       if (!academicYearId) return;
-      await fetchBatches("", academicYearId); // fetch using only academicYearId
-      setPhases(useBatchStore.getState().batches); // get updated batches
+      await fetchBatches("", academicYearId);
+      setPhases(useBatchStore.getState().batches);
     };
 
     fetchPhases();
@@ -129,7 +132,7 @@ const SubjectAssignment: React.FC<SubjectAssignmentProps> = ({
 
     const fetchSubjects = async () => {
       try {
-        const res = await fetch(`/api/subject`);
+        const res = await fetch(`/api/subject?courseId=${courseId}&phaseId=${phaseId}&academicYearId=${academicYearId}`);
         const data = await res.json();
         setSubjects(data);
       } catch (err) {
@@ -147,7 +150,6 @@ const SubjectAssignment: React.FC<SubjectAssignmentProps> = ({
       return;
     }
     
-    // Find subjects that are already assigned based on current criteria
     const getAlreadyAssignedSubjects = () => {
       const assigned = assignedSubjects.filter(assignment => 
         assignment.academicYearId === academicYearId &&
@@ -168,26 +170,22 @@ const SubjectAssignment: React.FC<SubjectAssignmentProps> = ({
       const res = await fetch(`/api/teacher-subjects?teacherId=${teacherId}`);
       const data = await res.json();
       
-      // Fetch related data for each assignment
-      const enrichedData = await Promise.all(data.map(async (assignment: { subjectId: any; academicYearId: any; phaseId: any; branchId: any; courseId: any; }) => {
-        // Initialize containers for related data
+      const enrichedData = await Promise.all(data.map(async (assignment: any) => {
         let subject = null;
         let academicYear = null;
         let phase = null;
         let branch = null;
         let course = null;
         
-        // Fetch subject data if subjectId exists
         if (assignment.subjectId) {
           try {
-            const subjectRes = await fetch(`/api/subject?SubjectId=${assignment.subjectId}`);
+            const subjectRes = await fetch(`/api/subject?subjectId=${assignment.subjectId}`);
             subject = await subjectRes.json();
           } catch (err) {
             console.error(`Error fetching subject ${assignment.subjectId}:`, err);
           }
         }
         
-        // Fetch academic year data if academicYearId exists
         if (assignment.academicYearId) {
           try {
             const yearRes = await fetch(`/api/academicYears?id=${assignment.academicYearId}`);
@@ -197,7 +195,6 @@ const SubjectAssignment: React.FC<SubjectAssignmentProps> = ({
           }
         }
         
-        // Fetch phase data if phaseId exists
         if (assignment.phaseId) {
           try {
             const phaseRes = await fetch(`/api/phase?id=${assignment.phaseId}`);
@@ -207,7 +204,6 @@ const SubjectAssignment: React.FC<SubjectAssignmentProps> = ({
           }
         }
         
-        // Fetch branch data if branchId exists
         if (assignment.branchId) {
           try {
             const branchRes = await fetch(`/api/branches?id=${assignment.branchId}`);
@@ -217,7 +213,6 @@ const SubjectAssignment: React.FC<SubjectAssignmentProps> = ({
           }
         }
         
-        // Fetch course data if courseId exists
         if (assignment.courseId) {
           try {
             const courseRes = await fetch(`/api/course?id=${assignment.courseId}`);
@@ -227,7 +222,6 @@ const SubjectAssignment: React.FC<SubjectAssignmentProps> = ({
           }
         }
         
-        // Return the assignment with related data attached
         return {
           ...assignment,
           subject,
@@ -245,7 +239,6 @@ const SubjectAssignment: React.FC<SubjectAssignmentProps> = ({
   };
 
   const handleFormSubmit = (data: AssignmentFormValues) => {
-    // Check if any subjects are already assigned
     const duplicateSubjects = data.subjectIds.filter(id => 
       assignedSubjects.some(assignment => 
         assignment.subjectId === id && 
@@ -256,12 +249,9 @@ const SubjectAssignment: React.FC<SubjectAssignmentProps> = ({
     );
     
     if (duplicateSubjects.length > 0) {
-      // Store the form data for later submission
       setFormToSubmit(data);
-      // Show confirmation dialog
       setShowConfirmation(true);
     } else {
-      // No duplicates, proceed with submission
       submitAssignments(data);
     }
   };
@@ -273,7 +263,6 @@ const SubjectAssignment: React.FC<SubjectAssignmentProps> = ({
     setShowConfirmation(false);
   
     try {
-      // Create individual assignment objects for each selected subject
       const assignments = data.subjectIds.map(subjectId => ({
         teacherId,
         subjectId,
@@ -295,10 +284,9 @@ const SubjectAssignment: React.FC<SubjectAssignmentProps> = ({
   
       if (res.ok) {
         setStatus("✅ Subjects assigned successfully!");
-        // Refresh the assigned subjects list
         fetchAssignedSubjects();
-        // Reset form
-        form.reset();
+        reset();
+        setSubjectSearchQuery(""); // Clear search query after successful assignment
       } else {
         setError(result.error || "Failed to assign subjects");
         setStatus("❌ Error occurred");
@@ -312,13 +300,11 @@ const SubjectAssignment: React.FC<SubjectAssignmentProps> = ({
     }
   };
 
-  // Function to get subject name by ID
   const getSubjectName = (subjectId: string) => {
     const subject = subjects.find(s => s.id === subjectId);
     return subject ? `${subject.name} (${subject.code})` : `Subject ID: ${subjectId}`;
   };
 
-  // Function to check if a subject is already assigned
   const isSubjectAssigned = (subjectId: string) => {
     return assignedSubjects.some(assignment => 
       assignment.subjectId === subjectId && 
@@ -326,6 +312,34 @@ const SubjectAssignment: React.FC<SubjectAssignmentProps> = ({
       assignment.phaseId === phaseId &&
       assignment.courseId === courseId
     );
+  };
+
+  const handleSubjectSelect = (subjectId: string) => {
+    const currentSelected = form.getValues("subjectIds");
+    if (currentSelected.includes(subjectId)) {
+      setValue("subjectIds", currentSelected.filter(id => id !== subjectId));
+    } else {
+      setValue("subjectIds", [...currentSelected, subjectId]);
+    }
+  };
+
+  const handleSubjectRequest = async (subjectName: string) => {
+    try {
+      const res = await fetch("/api/search/subject", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ name: subjectName }),
+      });
+
+      const result = await res.json();
+      setStatus(`✅ Subject request for "${subjectName}" sent to admin`);
+      setSubjectSearchQuery(""); // Clear search query after request
+    } catch (err) {
+      console.error(err);
+      setError("Failed to send subject request.");
+    }
   };
 
   return (
@@ -434,9 +448,15 @@ const SubjectAssignment: React.FC<SubjectAssignmentProps> = ({
                 <span>{error}</span>
               </div>
             )}
-            {status.includes("✅") && (
-              <div className="bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded mb-4 flex items-start">
-                <CheckCircle className="h-5 w-5 mr-2 flex-shrink-0 mt-0.5" />
+            {status && (
+              <div className={`${
+                status.includes("✅") ? "bg-green-50 border-green-200 text-green-800" : "bg-blue-50 border-blue-200 text-blue-800"
+              } border px-4 py-3 rounded mb-4 flex items-start`}>
+                {status.includes("✅") ? (
+                  <CheckCircle className="h-5 w-5 mr-2 flex-shrink-0 mt-0.5" />
+                ) : (
+                  <Loader2 className="h-5 w-5 mr-2 flex-shrink-0 mt-0.5 animate-spin" />
+                )}
                 <span>{status}</span>
               </div>
             )}
@@ -520,46 +540,59 @@ const SubjectAssignment: React.FC<SubjectAssignmentProps> = ({
                 )}
               </div>
 
-              {/* Subjects */}
+              {/* Subject Selector */}
               <div>
                 <label className="block text-sm font-medium mb-1 text-gray-700">Subjects *</label>
-                <div className="max-h-48 overflow-y-auto border rounded-lg bg-white p-2">
-                  {subjects.length === 0 ? (
-                    <p className="text-gray-500 text-sm p-2">
-                      {!courseId || !phaseId || !academicYearId
-                        ? "Please select all fields above to view available subjects"
-                        : "No subjects available for the selected criteria"}
-                    </p>
-                  ) : (
-                    subjects.map(subject => {
-                      const isAssigned = isSubjectAssigned(subject.id);
-                      return (
-                        <div key={subject.id} 
-                          className={`flex items-center py-1.5 px-2 rounded ${
-                            isAssigned ? 'bg-blue-50' : ''
-                          } hover:bg-gray-50`}
-                        >
-                          <input
-                            type="checkbox"
-                            id={`subject-${subject.id}`}
-                            value={subject.id}
-                            {...form.register("subjectIds")}
-                            className="mr-2"
-                          />
-                          <label htmlFor={`subject-${subject.id}`} className="text-sm flex-1">
-                            {subject.name} ({subject.code})
-                          </label>
-                          {isAssigned && (
-                            <span className="inline-flex items-center text-xs font-medium text-blue-700 bg-blue-100 px-2 py-0.5 rounded">
-                              <Check size={12} className="mr-1" />
-                              Assigned
-                            </span>
-                          )}
-                        </div>
-                      );
-                    })
-                  )}
+                <div className="mb-2">
+                  <SubjectSelector 
+                    onSubjectSelect={handleSubjectSelect}
+                    onSubjectRequest={handleSubjectRequest}
+                    selectedSubjectIds={selectedSubjectIds}
+                    disabled={!courseId || !phaseId || !academicYearId}
+                    searchQuery={subjectSearchQuery}
+                    onSearchChange={setSubjectSearchQuery}
+                  />
                 </div>
+                
+                {/* Selected subjects list */}
+                {selectedSubjectIds.length > 0 && (
+                  <div className="mt-2">
+                    <h4 className="text-sm font-medium text-gray-700 mb-1">Selected Subjects:</h4>
+                    <div className="max-h-32 overflow-y-auto border rounded-lg bg-white p-2">
+                      {selectedSubjectIds.map(subjectId => {
+                        const subject = subjects.find(s => s.id === subjectId);
+                        const isAssigned = isSubjectAssigned(subjectId);
+                        
+                        return (
+                          <div 
+                            key={subjectId} 
+                            className={`flex items-center justify-between py-1 px-2 rounded ${
+                              isAssigned ? 'bg-blue-50' : 'hover:bg-gray-50'
+                            }`}
+                          >
+                            <span className="text-sm">
+                              {subject ? `${subject.name} (${subject.code})` : `Subject ID: ${subjectId}`}
+                            </span>
+                            {isAssigned && (
+                              <span className="inline-flex items-center text-xs font-medium text-blue-700 bg-blue-100 px-2 py-0.5 rounded">
+                                <Check size={12} className="mr-1" />
+                                Assigned
+                              </span>
+                            )}
+                            <button 
+                              type="button"
+                              onClick={() => handleSubjectSelect(subjectId)}
+                              className="text-gray-500 hover:text-red-500 ml-2"
+                            >
+                              <X size={14} />
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+                
                 {alreadyAssignedSubjects.length > 0 && (
                   <p className="text-blue-600 text-xs mt-1 flex items-center">
                     <AlertCircle size={12} className="mr-1" />
@@ -576,7 +609,7 @@ const SubjectAssignment: React.FC<SubjectAssignmentProps> = ({
               {/* Submit button */}
               <button
                 type="submit"
-                disabled={isLoading}
+                disabled={isLoading || selectedSubjectIds.length === 0}
                 className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition disabled:bg-blue-400 flex items-center justify-center"
               >
                 {isLoading ? (

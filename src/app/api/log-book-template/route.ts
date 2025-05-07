@@ -1,131 +1,228 @@
+// app/api/templates/route.ts
+import { NextRequest, NextResponse } from "next/server";
+import { db } from "@/db";
+import { LogBookTemplateTable } from "@/db/schema";
+import { and, eq } from "drizzle-orm";
 
-import { db } from '@/db';
-import {
-  LogBookTemplateTable
-} from '@/db/schema';
-import { and, eq } from 'drizzle-orm';
-import { NextRequest, NextResponse } from 'next/server';
+import { z } from "zod";
 
-export async function POST(request: NextRequest) {
+// Define validation schemas for templates
+const fieldSchema = z.object({
+  fieldName: z.string(),
+  fieldLabel: z.string(),
+  fieldType: z.string(),
+  isRequired: z.boolean(),
+  options: z.array(z.string()).optional(),
+  validationRegex: z.string().optional(),
+  defaultValue: z.string().optional(),
+});
+
+const groupSchema = z.object({
+  groupName: z.string(),
+  fields: z.array(fieldSchema),
+});
+
+const dynamicSchemaValidation = z.object({
+  groups: z.array(groupSchema),
+});
+
+// Base template validation schema
+const baseTemplateSchema = z.object({
+  name: z.string().min(3, "Template name must be at least 3 characters"),
+  description: z.string().optional(),
+  dynamicSchema: dynamicSchemaValidation,
+  createdBy: z.string().uuid(),
+
+});
+
+// General template schema
+const generalTemplateSchema = baseTemplateSchema.extend({
+  templateType: z.literal("general"),
+});
+
+// Subject-specific template schema
+const subjectTemplateSchema = baseTemplateSchema.extend({
+  templateType: z.literal("subject"),
+  academicYearId: z.string().uuid().optional(),
+  phaseId: z.string().uuid().optional(),
+  subjectId: z.string().uuid(),
+  teacherSubjectId: z.string().uuid().optional(),
+
+});
+
+// Combined template schema
+const templateFormSchema = z.discriminatedUnion("templateType", [
+  generalTemplateSchema,
+  subjectTemplateSchema,
+]);
+
+// GET handler for templates
+export async function GET(request: NextRequest) {
   try {
-    const body = await request.json();
+    const { searchParams } = new URL(request.url);
+    const templateType = searchParams.get("templateType");
+    const academicYearId = searchParams.get("academicYearId");
+    const phaseId = searchParams.get("phaseId");
+    const subjectId = searchParams.get("subjectId");
 
-    // Validate input
-    const {
-      academicYearId,
-      batchId,
-      subjectId,
-      moduleId,
-      createdBy,
-      name,
-      description,
-      dynamicSchema,
+    // Build up WHERE conditions
+    const conditions = [];
 
-    } = body;
-
-
-    //   const batchId="86f6cdd7-281c-4eba-b423-e835360b012e";
-    //  const subjectId ="21f6eaf4-878d-4c8b-aa14-e9ae7c854d32"
-    //  const moduleId ="05ac612a-b8c5-482d-bd3b-9d1233e1f0a4"
-    //   const createdBy="913d6747-dab3-4432-8e7e-4706377a920c";
-
-    console.log("bodyyyyyyyyyyyyyyyyyyy", body);
-
-    // Ensure the UUIDs are valid and not empty
-    if (!academicYearId || !batchId || !subjectId || !moduleId) {
-      return NextResponse.json(
-        { error: 'Missing required fields (UUIDs)' },
-        { status: 400 }
-      );
+    if (templateType) {
+      conditions.push(eq(LogBookTemplateTable.templateType, templateType));
     }
 
-    // Optionally, generate a new UUID for the createdBy field if it's missing or empty
-    // This may not be necessary if createdBy is always sent from the client.
-    // if (!createdBy) {
-    //   createdBy = "913d6747-dab3-4432-8e7e-4706377a920c"; // Generate a new UUID if missing
-    // }
+    if (academicYearId) {
+      conditions.push(eq(LogBookTemplateTable.academicYearId, academicYearId));
+    }
 
-    // Insert log book template
-    const newTemplate = await db.insert(LogBookTemplateTable).values({
-      academicYearId,
-      batchId,
-      subjectId,
-      moduleId,
-      name,
-      description,
-      dynamicSchema: dynamicSchema || { groups: [] },
-      createdBy
-    }).returning();
+    if (phaseId) {
+      conditions.push(eq(LogBookTemplateTable.batchId, phaseId));
+    }
 
-    return NextResponse.json(newTemplate[0], { status: 201 });
+    if (subjectId) {
+      conditions.push(eq(LogBookTemplateTable.subjectId, subjectId));
+    }
+
+    const templates = await db
+      .select()
+      .from(LogBookTemplateTable)
+      .where(conditions.length > 0 ? and(...conditions) : undefined);
+
+    return NextResponse.json(templates);
   } catch (error) {
-    console.error('Error creating log book template:', error);
+    console.error("Error fetching templates:", error);
     return NextResponse.json(
-      { error: 'Failed to create log book template' },
+      { error: "Failed to fetch templates" },
       { status: 500 }
     );
   }
 }
 
-export async function GET(request: NextRequest) {
+
+// POST handler for templates
+export async function POST(request: NextRequest) {
   try {
-    // Get query parameters
-    const searchParams = request.nextUrl.searchParams;
-    const academicYearId = searchParams.get('academicYearId');
-    const batchId = searchParams.get('batchId');
-    const subjectId = searchParams.get('subjectId');
-    const moduleId = searchParams.get('moduleId');
-    const templateId = searchParams.get('templateId');
-
-    // Build query conditions using drizzle-orm's filtering
-    const conditions = [];
+    const body = await request.json();
     
-    if (academicYearId) {
-      conditions.push(eq(LogBookTemplateTable.academicYearId, academicYearId));
-    }
+    // Validate request body
+    const validatedData = templateFormSchema.parse(body);
     
-    if (batchId) {
-      conditions.push(eq(LogBookTemplateTable.batchId, batchId));
-    }
+    // Prepare data for insertion
+    const templateData = {
+      ...validatedData,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
     
-    if (subjectId) {
-      conditions.push(eq(LogBookTemplateTable.subjectId, subjectId));
-    }
+    // Insert template
+    const result = await db.insert(LogBookTemplateTable).values(templateData).returning();
     
-    if (moduleId) {
-      conditions.push(eq(LogBookTemplateTable.moduleId, moduleId));
-    }
-    
-    if (templateId) {
-      conditions.push(eq(LogBookTemplateTable.id, templateId));
-    }
-    
-    // Fetch log book templates
-    const templates = await db.query.LogBookTemplateTable.findMany({
-      where: conditions.length > 0 ? and(...conditions) : undefined,
-      with: {
-        academicYear: true,
-        batch: true,
-        subject: true,
-        module: true
-      }
-    });
-
-    return NextResponse.json(templates);
+    return NextResponse.json(result[0], { status: 201 });
   } catch (error) {
-    console.error('Error fetching log book templates:', error);
+    console.error("Error creating template:", error);
     
-    // Log the full error for more detailed debugging
-    if (error instanceof Error) {
-      console.error('Detailed error:', error.message);
-      console.error('Stack trace:', error.stack);
+    if (error instanceof z.ZodError) {
+      return NextResponse.json(
+        { error: "Validation error", details: error.errors },
+        { status: 400 }
+      );
     }
-
+    
     return NextResponse.json(
-      { 
-        error: 'Failed to fetch log book templates', 
-        details: error instanceof Error ? error.message : 'Unknown error' 
-      },
+      { error: "Failed to create template" },
+      { status: 500 }
+    );
+  }
+}
+
+// PATCH handler for templates
+export async function PATCH(request: NextRequest) {
+  try {
+    
+    const body = await request.json();
+    
+    // Validate template ID
+    if (!body.id) {
+      return NextResponse.json(
+        { error: "Template ID is required" },
+        { status: 400 }
+      );
+    }
+    
+    // Validate request body
+    const { id, ...updateData } = body;
+    const validatedData = templateFormSchema.parse(updateData);
+    
+    // Prepare data for update
+    const templateData = {
+      ...validatedData,
+      updatedAt: new Date(),
+    };
+    
+    // Update template
+    const result = await db
+      .update(LogBookTemplateTable)
+      .set(templateData)
+      .where(eq(LogBookTemplateTable.id, id))
+      .returning();
+    
+    if (result.length === 0) {
+      return NextResponse.json(
+        { error: "Template not found" },
+        { status: 404 }
+      );
+    }
+    
+    return NextResponse.json(result[0]);
+  } catch (error) {
+    console.error("Error updating template:", error);
+    
+    if (error instanceof z.ZodError) {
+      return NextResponse.json(
+        { error: "Validation error", details: error.errors },
+        { status: 400 }
+      );
+    }
+    
+    return NextResponse.json(
+      { error: "Failed to update template" },
+      { status: 500 }
+    );
+  }
+}
+
+// DELETE handler for templates
+export async function DELETE(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get("id");
+    
+    if (!id) {
+      return NextResponse.json(
+        { error: "Template ID is required" },
+        { status: 400 }
+      );
+    }
+    
+    // Delete template
+    const result = await db
+      .delete(LogBookTemplateTable)
+      .where(eq(LogBookTemplateTable.id, id))
+      .returning();
+    
+    if (result.length === 0) {
+      return NextResponse.json(
+        { error: "Template not found" },
+        { status: 404 }
+      );
+    }
+    
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("Error deleting template:", error);
+    return NextResponse.json(
+      { error: "Failed to delete template" },
       { status: 500 }
     );
   }

@@ -15,7 +15,6 @@ import {
   AcademicYear,
   Batch,
   LogBookDynamicSchema,
-  Module,
   Subject
 } from '@/db/schema';
 import { useState } from 'react';
@@ -24,7 +23,6 @@ interface LogBookTemplateFormProps {
   academicYears: AcademicYear[];
   batches: Batch[];
   subjects: Subject[];
-  modules: Module[];
   onSubmit: (template: any) => void;
 }
 
@@ -37,7 +35,6 @@ export function LogBookTemplateForm({
     academicYearId: '',
     batchId: '',
     subjectId: '',
-    moduleId: '',
     name: '',
     description: '',
   });

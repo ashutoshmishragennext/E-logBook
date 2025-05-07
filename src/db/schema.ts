@@ -346,16 +346,18 @@ export const StudentSubjectTable = pgTable(
   ]
 );
 
-// Log Book Template Table
 export const LogBookTemplateTable = pgTable(
   "log_book_templates",
   {
     id: uuid("id").defaultRandom().primaryKey().notNull(),
     
-    // Academic Specifics
-    academicYearId: uuid("academic_year_id").references(() => AcademicYearTable.id).notNull(),
-    batchId: uuid("phase_id").references(() => PhaseTable.id).notNull(),
-    subjectId: uuid("subject_id").references(() => SubjectTable.id).notNull(),
+    // Template Type
+    templateType: text("template_type"), // Either 'GENERAL' or 'SUBJECT_SPECIFIC'
+    
+    // Academic Specifics - now nullable for general templates
+    academicYearId: uuid("academic_year_id").references(() => AcademicYearTable.id),
+    batchId: uuid("phase_id").references(() => PhaseTable.id),
+    subjectId: uuid("subject_id").references(() => SubjectTable.id),
     teacherSubjectId: uuid("teacher_subject_id").references(() => TeacherSubjectTable.id), // Link to specific teacher-subject assignment
     
     // Template Configuration
@@ -373,6 +375,7 @@ export const LogBookTemplateTable = pgTable(
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   }
 );
+
 
 // Log Book Entries Table
 export const LogBookEntryTable = pgTable(

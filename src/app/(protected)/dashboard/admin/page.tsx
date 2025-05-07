@@ -3,8 +3,10 @@
 import {
   Book,
   Building2,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
+  ChevronUp,
   GraduationCap,
   LogOut,
   Menu,
@@ -16,18 +18,30 @@ import { useRouter } from "next/navigation";
 import { SetStateAction, useEffect, useState } from "react";
 
 // Import your components for each sidebar item
+import Academicyear from "@/components/adminComponent/Academicyear";
 import College from "@/components/adminComponent/College";
 import Course from "@/components/adminComponent/Course";
 import Department from "@/components/adminComponent/Department";
+import { GeneralTemplateForm } from "@/components/adminComponent/General";
 import Subject from "@/components/adminComponent/Subject";
-import Academicyear from "@/components/adminComponent/Academicyear";
+import { SubjectTemplateForm } from "@/components/adminComponent/SubjectTemplate";
 
 const sidebarItems = [
   { id: "college", label: "College", icon: <School size={20} />, component: <College /> },
   { id: "department", label: "Department", icon: <Building2 size={20} />, component: <Department /> },
   { id: "courses", label: "Courses", icon: <GraduationCap size={20} />, component: <Course /> },
   { id: "subject", label: "Subject", icon: <Book size={20} />, component: <Subject /> },
-  {id : "AcademicYear" , label: "Academic Year", icon: <Book size={20} />, component: <Academicyear /> },
+  { id: "AcademicYear", label: "Academic Year", icon: <Book size={20} />, component: <Academicyear /> },
+  { 
+    id: "Templates", 
+    label: "Templates", 
+    icon: <Book size={20} />, 
+    component: <div>Templates</div>,
+    subItems: [
+      { id: "general-templates", label: "General", component: <GeneralTemplateForm/> },
+      { id: "specified-templates", label: "Specified", component: <SubjectTemplateForm/> }
+    ]
+  },
 ];
 
 const Sidebar = () => {
@@ -37,9 +51,33 @@ const Sidebar = () => {
   const [activeComponent, setActiveComponent] = useState("college");
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [templatesOpen, setTemplatesOpen] = useState(false);
+
+  // Set "general-templates" as default when Templates is selected
+  useEffect(() => {
+    if (activeComponent === "Templates") {
+      setActiveComponent("general-templates");
+    }
+  }, [activeComponent]);
 
   // Find the active component to render
-  const activeItem = sidebarItems.find(item => item.id === activeComponent);
+  const findActiveComponent = () => {
+    // First check main items
+    const mainItem = sidebarItems.find(item => item.id === activeComponent);
+    if (mainItem) return mainItem.component;
+    
+    // Then check sub-items
+    for (const item of sidebarItems) {
+      if (item.subItems) {
+        const subItem = item.subItems.find(sub => sub.id === activeComponent);
+        if (subItem) return subItem.component;
+      }
+    }
+    
+    return <College />;
+  };
+
+  const activeComponentToRender = findActiveComponent();
 
   const handleLogout = async () => {
     await signOut({ redirectTo: "/auth/login" });
@@ -91,6 +129,8 @@ const Sidebar = () => {
           setActiveComponent={setActiveComponent}
           session={session}
           handleLogout={handleLogout}
+          templatesOpen={templatesOpen}
+          setTemplatesOpen={setTemplatesOpen}
         />
       </div>
 
@@ -117,6 +157,8 @@ const Sidebar = () => {
             }}
             session={session}
             handleLogout={handleLogout}
+            templatesOpen={templatesOpen}
+            setTemplatesOpen={setTemplatesOpen}
           />
         </div>
       </div>
@@ -126,9 +168,7 @@ const Sidebar = () => {
         {/* Top navigation bar */}
         <header className="bg-white shadow-sm border-b border-gray-200 h-16 flex items-center justify-between px-4 lg">
           <div className="flex items-center">
-            {/* <h1 className="text-xl font-semibold text-gray-800">
-              {activeItem?.label || "college"}
-            </h1> */}
+            {/* Optional header content */}
           </div>
 
           {/* Profile dropdown */}
@@ -173,8 +213,8 @@ const Sidebar = () => {
         {/* Content area */}
         <main className="flex-1 overflow-auto bg-gray-50">
           {/* Render the active component */}
-          <div className="bg-white rounded-lg shadow p-3  min-h-[calc(100vh-10rem)]">
-            {activeItem?.component}
+          <div className="bg-white rounded-lg shadow p-3 min-h-[calc(100vh-10rem)]">
+            {activeComponentToRender}
           </div>
         </main>
       </div>
@@ -190,6 +230,8 @@ interface SidebarContentProps {
   setActiveComponent: (id: string) => void;
   session: { user?: { name?: string | null; email?: string | null } } | null;
   handleLogout: () => void;
+  templatesOpen?: boolean;
+  setTemplatesOpen?: (open: boolean) => void;
 }
 
 const SidebarContent = ({ 
@@ -198,14 +240,15 @@ const SidebarContent = ({
   activeComponent, 
   setActiveComponent,
   session,
-  handleLogout
+  handleLogout,
+  templatesOpen = false,
+  setTemplatesOpen = () => {}
 }: SidebarContentProps) => {
   return (
     <>
       {/* Logo and toggle button */}
       <div className="flex items-center justify-between p-4 border-b border-gray-200">
         <div className="flex items-center">
-          {/* You can add your logo here */}
           {sidebarOpen && (
             <span className="text-lg font-bold text-blue-600">Admin Portal</span>
           )}
@@ -240,20 +283,59 @@ const SidebarContent = ({
       <div className="flex-1 overflow-y-auto py-4">
         <nav className="px-3 space-y-1">
           {sidebarItems.map((item) => (
-            <button
-              key={item.id}
-              onClick={() => setActiveComponent(item.id)}
-              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
-                activeComponent === item.id
-                  ? "bg-blue-50 text-blue-600 font-medium"
-                  : "text-gray-700 hover:bg-gray-100"
-              }`}
-            >
-              <div className="flex items-center justify-center w-8 h-8">
-                {item.icon}
-              </div>
-              {sidebarOpen && <span>{item.label}</span>}
-            </button>
+            <div key={item.id}>
+              <button
+                onClick={() => {
+                  if (item.subItems) {
+                    setTemplatesOpen(!templatesOpen);
+                    if (!templatesOpen && item.subItems.length > 0) {
+                      setActiveComponent(item.subItems[0].id);
+                    }
+                  } else {
+                    setActiveComponent(item.id);
+                  }
+                }}
+                className={`w-full flex items-center justify-between gap-3 px-3 py-2 rounded-lg transition-colors ${
+                  (activeComponent === item.id || 
+                   (item.subItems && item.subItems.some(sub => sub.id === activeComponent))
+                    ? "bg-blue-50 text-blue-600 font-medium"
+                    : "text-gray-700 hover:bg-gray-100"
+          )}`}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center justify-center w-8 h-8">
+                    {item.icon}
+                  </div>
+                  {sidebarOpen && <span>{item.label}</span>}
+                </div>
+                {sidebarOpen && item.subItems && (
+                  item.subItems.some(sub => sub.id === activeComponent) || templatesOpen ? (
+                    <ChevronUp size={16} />
+                  ) : (
+                    <ChevronDown size={16} />
+                  )
+                )}
+              </button>
+
+              {/* Sub-items for Templates */}
+              {sidebarOpen && templatesOpen && item.subItems && (
+                <div className="ml-8 mt-1 space-y-1">
+                  {item.subItems.map((subItem) => (
+                    <button
+                      key={subItem.id}
+                      onClick={() => setActiveComponent(subItem.id)}
+                      className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors text-sm ${
+                        activeComponent === subItem.id
+                          ? "bg-blue-100 text-blue-600 font-medium"
+                          : "text-gray-600 hover:bg-gray-100"
+                      }`}
+                    >
+                      <span>{subItem.label}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           ))}
         </nav>
       </div>
