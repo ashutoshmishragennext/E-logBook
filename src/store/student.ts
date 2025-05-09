@@ -1,3 +1,4 @@
+
 // store/useStudentProfileStore.ts
 import { create } from 'zustand';
 
@@ -42,7 +43,7 @@ interface StudentProfileStore {
   loading: boolean;
   error: string | null;
 
-  fetchProfile: (query: { id?: string; byUserId?: string; teacherId?: string ,collegeId?:String }) => Promise<void>;
+  fetchProfile: (query: { id?: string; byUserId?: string; teacherId?: string ,collegeId?:String ,verificationStatus?:string}) => Promise<void>;
   createProfile: (data: Partial<StudentProfile>) => Promise<void>;
   updateProfile: (query: { id?: string; userId?: string }, data: Partial<StudentProfile>) => Promise<void>;
   deleteProfile: (query: { id?: string; userId?: string }) => Promise<void>;

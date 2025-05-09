@@ -1,11 +1,20 @@
+
 // pages/api/student-profile.ts
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { StudentProfileTable, UsersTable } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
+
+// Assuming VerificationStatus is an enum, define it here if not imported
+export enum VerificationStatus {
+  PENDING = "PENDING",
+  APPROVED = "APPROVED",
+  REJECTED = "REJECTED",
+}
 
 
 
+// Fixing the GET function to correctly handle verificationStatus
 export async function GET(req: NextRequest) {
   try {
     const searchParams = req.nextUrl.searchParams;
@@ -13,47 +22,55 @@ export async function GET(req: NextRequest) {
     const byUserId = searchParams.get("byUserId");
     const teacherId = searchParams.get("teacherId");
     const collegeId = searchParams.get("collegeId");
+    const verificationStatusParam = searchParams.get("verificationStatus");
 
-
-    console.log("Query Parameters:", { id, byUserId, teacherId, collegeId });
-
-
-    // If neither parameter is provided
-    if (!id && !byUserId && !teacherId && !collegeId) {
+    if (!id && !byUserId && !teacherId && !collegeId && !verificationStatusParam) {
       return NextResponse.json(
-        { message: "Either id, byUserId, or teacherId ,or is required" },
+        { message: "Either id, byUserId, teacherId, collegeId, or verificationStatus is required" },
         { status: 400 }
       );
     }
 
     let students;
- 
 
     if (byUserId) {
-      // Search by userId
       students = await db
         .select()
         .from(StudentProfileTable)
         .where(eq(StudentProfileTable.userId, byUserId));
     }
     else if (teacherId) {
-      // Search by teacherId - return ALL matching students
       students = await db
         .select()
         .from(StudentProfileTable)
         .where(eq(StudentProfileTable.teacherId, teacherId));
-
-      console.log(`Found ${students.length} students with teacherId ${teacherId}`);
     }
-
-    else if(collegeId) {
+    else if (verificationStatusParam && collegeId) {
+      // Convert the verificationStatus parameter to the proper format
+      const verificationStatus = verificationStatusParam.toUpperCase();
+      
+      console.log(`Searching for students with collegeId ${collegeId} and verificationStatus ${verificationStatus}`);
+      
+      students = await db
+        .select()
+        .from(StudentProfileTable)
+        .where(
+          and(
+            eq(StudentProfileTable.collegeId, collegeId),
+            eq(StudentProfileTable.verificationStatus, verificationStatus as VerificationStatus)
+          )
+        );
+        
+      console.log(`Found ${students?.length || 0} students matching criteria`);
+    }
+    else if (collegeId) {
       // Search by collegeId - return ALL matching students
       students = await db
         .select()
         .from(StudentProfileTable)
         .where(eq(StudentProfileTable.collegeId, collegeId));
 
-      console.log(`Found ${students.length} students with collegeId ${collegeId}`);
+      console.log(`Found ${students?.length || 0} students with collegeId ${collegeId}`);
     }
     else {
       // Search by studentId (id parameter)

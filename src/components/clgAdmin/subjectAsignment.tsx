@@ -9,7 +9,7 @@ import { AlertCircle, Check, CheckCircle, Loader2, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import SubjectSelector from "./Settings";
+import SubjectSelector from "./SubjectComponent"
 
 // Form schema for subject assignment
 const assignmentSchema = z.object({
