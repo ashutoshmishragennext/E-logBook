@@ -8,18 +8,30 @@ export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const teacherId = searchParams.get("teacherId");
-    
-    if (!teacherId) {
+    const subjectId = searchParams.get("subjectId");
+
+    if (!teacherId && !subjectId) {
       return NextResponse.json(
-        { error: "Teacher ID is required" },
+        { error: "Missing teacherId or subjectId" },
         { status: 400 }
       );
+    }
+
+    // If subjectId is provided, filter by it
+    if (subjectId) {
+      const teacherSubjects = await db
+        .select()
+        .from(TeacherSubjectTable)
+        .where(
+            eq(TeacherSubjectTable.subjectId, subjectId)
+        );
+      return NextResponse.json(teacherSubjects);
     }
     
     const teacherSubjects = await db
       .select()
       .from(TeacherSubjectTable)
-      .where(eq(TeacherSubjectTable.teacherId, teacherId));
+      .where(eq(TeacherSubjectTable.teacherId, teacherId!));
     
     return NextResponse.json(teacherSubjects);
   } catch (error) {
@@ -49,14 +61,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
-    // Delete existing assignments for this teacher in this academic year and phase
-    await db.delete(TeacherSubjectTable).where(
-      and(
-        eq(TeacherSubjectTable.teacherId, teacherId),
-        eq(TeacherSubjectTable.academicYearId, academicYearId),
-        eq(TeacherSubjectTable.phaseId, phaseId)
-      )
-    );
+
 
     // Insert all new assignments with all fields including courseId and branchId
     const result = await db.insert(TeacherSubjectTable)

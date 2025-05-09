@@ -262,7 +262,7 @@ export const StudentProfileTable = pgTable(
     
     // Verification Information
     verificationStatus: VerificationStatus("verification_status").default("PENDING"),
-    teacherId: uuid("teacher_id").references(() => TeacherProfileTable.id),
+    teacherId: uuid("clg_admin").references(()=>UsersTable.id),
     rejectionReason: text("rejection_reason"),
     
     // Metadata

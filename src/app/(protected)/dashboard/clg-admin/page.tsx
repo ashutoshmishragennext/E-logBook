@@ -22,6 +22,7 @@ const sidebarItems = [
   { id: "Batch", label: "Batch", icon: <Building2 size={20} />, component: <Batch/> },
   { id: "Faculty", label: "Faculty", icon: <Building2 size={20} />, component: <Faculty /> },
   { id: "Students", label: "Students", icon: <User size={20} />, component: <Students/> },
+  { id: "StudentApproval", label: "Student Approval", icon: <User size={20} />, component: <Profile /> },
 
 ];
 

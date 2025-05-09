@@ -1,332 +1,641 @@
-/* eslint-disable  react-hooks/exhaustive-deps*/
-'use client';
 
-import { StudentLogBookEntries } from '@/components/student/DisplayLogBookEntries';
-import LogBookManagement from '@/components/student/LogBookManagement';
-import StudentProfile from '@/components/student/profileForm';
+// "use client";
 
+// import {
+//   Book,
+//   Building2,
+//   ChevronDown,
+//   ChevronLeft,
+//   ChevronRight,
+//   ChevronUp,
+//   GraduationCap,
+//   LogOut,
+//   Menu,
+//   School,
+//   User
+// } from "lucide-react";
+// import { signOut, useSession } from "next-auth/react";
+// import { useRouter } from "next/navigation";
+// import { SetStateAction, useEffect, useState } from "react";
+
+// // Import your components for each sidebar item
+// import Academicyear from "@/components/adminComponent/Academicyear";
+// import College from "@/components/adminComponent/College";
+// import Course from "@/components/adminComponent/Course";
+// import Department from "@/components/adminComponent/Department";
+// import Subject from "@/components/adminComponent/Subject";
+// import StudentProfile from "@/components/studentComponent/StudentProfile";
+// import AcademicTeacherAllocationForm from "@/components/studentComponent/TeacherAllocation";
+// import H from "@/components/studentComponent/H";
+
+// const sidebarItems = [
+//   { 
+//     id: "Profile", 
+//     label: "Profile", 
+//     icon: <Book size={20} />, 
+//     component: <div>Templates</div>,
+//     subItems: [
+//       { id: "Personal", label: "Personal Info", component: <StudentProfile/> },
+//       { id: "Academic", label: "Academic Info", component: <AcademicTeacherAllocationForm/> },
+//          { id: "h", label: "H", component: <H/> }
+//     ]
+//   },
+//   { id: "college", label: "College", icon: <School size={20} />, component: <College /> },
+//   { id: "department", label: "Department", icon: <Building2 size={20} />, component: <Department /> },
+//   { id: "courses", label: "Courses", icon: <GraduationCap size={20} />, component: <Course /> },
+//   { id: "subject", label: "Subject", icon: <Book size={20} />, component: <Subject /> },
+//   { id: "AcademicYear", label: "Academic Year", icon: <Book size={20} />, component: <Academicyear /> },
+// ];
+
+// const Sidebar = () => {
+//   const { data: session, status } = useSession();
+//   const router = useRouter();
+//   const [sidebarOpen, setSidebarOpen] = useState(true);
+//   const [activeComponent, setActiveComponent] = useState("college");
+//   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
+//   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+//   const [templatesOpen, setTemplatesOpen] = useState(false);
+
+//   // Set "general-templates" as default when Templates is selected
+//   useEffect(() => {
+//     if (activeComponent === "Templates") {
+//       setActiveComponent("general-templates");
+//     }
+//   }, [activeComponent]);
+
+//   // Find the active component to render
+//   const findActiveComponent = () => {
+//     // First check main items
+//     const mainItem = sidebarItems.find(item => item.id === activeComponent);
+//     if (mainItem) return mainItem.component;
+    
+//     // Then check sub-items
+//     for (const item of sidebarItems) {
+//       if (item.subItems) {
+//         const subItem = item.subItems.find(sub => sub.id === activeComponent);
+//         if (subItem) return subItem.component;
+//       }
+//     }
+    
+//     return <College />;
+//   };
+
+//   const activeComponentToRender = findActiveComponent();
+
+//   const handleLogout = async () => {
+//     await signOut({ redirectTo: "/auth/login" });
+//   };
+
+//   useEffect(() => {
+//     if (status === "unauthenticated") {
+//       router.push("/auth/login");
+//     }
+//   }, [status, router]);
+
+//   // Close profile dropdown when clicking outside
+//   useEffect(() => {
+//     const handleClickOutside = (event: MouseEvent) => {
+//       const target = event.target as HTMLElement;
+//       if (profileDropdownOpen && !target.closest('.profile-dropdown')) {
+//         setProfileDropdownOpen(false);
+//       }
+//     };
+
+//     document.addEventListener('mousedown', handleClickOutside);
+//     return () => {
+//       document.removeEventListener('mousedown', handleClickOutside);
+//     };
+//   }, [profileDropdownOpen]);
+
+//   return (
+//     <div className="flex h-screen bg-gray-50">
+//       {/* Mobile menu button */}
+//       <div className="lg:hidden fixed top-4 left-4 z-30">
+//         <button
+//           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+//           className="p-2 rounded-md bg-white shadow-md text-gray-600"
+//         >
+//           <Menu size={24} />
+//         </button>
+//       </div>
+
+//       {/* Sidebar - Desktop */}
+//       <div
+//         className={`hidden lg:flex flex-col ${
+//           sidebarOpen ? "w-64" : "w-20"
+//         } transition-all duration-300 bg-white border-r border-gray-200 shadow-sm`}
+//       >
+//         <SidebarContent 
+//           sidebarOpen={sidebarOpen}
+//           setSidebarOpen={setSidebarOpen}
+//           activeComponent={activeComponent}
+//           setActiveComponent={setActiveComponent}
+//           session={session}
+//           handleLogout={handleLogout}
+//           templatesOpen={templatesOpen}
+//           setTemplatesOpen={setTemplatesOpen}
+//         />
+//       </div>
+
+//       {/* Sidebar - Mobile */}
+//       <div
+//         className={`lg:hidden fixed inset-0 z-20 transform ${
+//           mobileMenuOpen ? "translate-x-0" : "-translate-x-full"
+//         } transition-transform duration-300 ease-in-out`}
+//       >
+//         <div className="relative flex flex-col w-64 h-full bg-white border-r border-gray-200 shadow-xl">
+//           <button
+//             onClick={() => setMobileMenuOpen(false)}
+//             className="absolute top-4 right-4 text-gray-500"
+//           >
+//             <ChevronLeft size={24} />
+//           </button>
+//           <SidebarContent 
+//             sidebarOpen={true}
+//             setSidebarOpen={() => {}}
+//             activeComponent={activeComponent}
+//             setActiveComponent={(id: SetStateAction<string>) => {
+//               setActiveComponent(id);
+//               setMobileMenuOpen(false);
+//             }}
+//             session={session}
+//             handleLogout={handleLogout}
+//             templatesOpen={templatesOpen}
+//             setTemplatesOpen={setTemplatesOpen}
+//           />
+//         </div>
+//       </div>
+
+//       {/* Main content */}
+//       <div className="flex-1 flex flex-col overflow-hidden">
+//         {/* Top navigation bar */}
+//         <header className="bg-white shadow-sm border-b border-gray-200 h-16 flex items-center justify-between px-4 lg">
+//           <div className="flex items-center">
+//             {/* Optional header content */}
+//           </div>
+
+//           {/* Profile dropdown */}
+//           <div className="relative profile-dropdown">
+//             <button
+//               onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
+//               className="flex items-center space-x-2 text-gray-700 hover:text-gray-900 focus:outline-none"
+//             >
+//               <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
+//                 <User size={20} className="text-blue-600" />
+//               </div>
+//               <span className="hidden md:inline-block font-medium">
+//                 {session?.user?.name || "Student"}
+//               </span>
+//               <ChevronRight size={16} className={`transition-transform duration-200 ${profileDropdownOpen ? 'rotate-90' : ''}`} />
+//             </button>
+
+//             {/* Dropdown menu */}
+//             {profileDropdownOpen && (
+//               <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 border border-gray-200 z-10">
+//                 <a href="#" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+//                   <div className="flex items-center space-x-2">
+//                     <User size={16} />
+//                     <span>My Profile</span>
+//                   </div>
+//                 </a>
+//                 <hr className="my-1 border-gray-200" />
+//                 <button
+//                   onClick={handleLogout}
+//                   className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100"
+//                 >
+//                   <div className="flex items-center space-x-2">
+//                     <LogOut size={16} />
+//                     <span>Logout</span>
+//                   </div>
+//                 </button>
+//               </div>
+//             )}
+//           </div>
+//         </header>
+
+//         {/* Content area */}
+//         <main className="flex-1 overflow-auto bg-gray-50">
+//           {/* Render the active component */}
+//           <div className="bg-white rounded-lg shadow p-3 min-h-[calc(100vh-10rem)]">
+//             {activeComponentToRender}
+//           </div>
+//         </main>
+//       </div>
+//     </div>
+//   );
+// };
+
+// // Extracted sidebar content component for reuse
+// interface SidebarContentProps {
+//   sidebarOpen: boolean;
+//   setSidebarOpen: (open: boolean) => void;
+//   activeComponent: string;
+//   setActiveComponent: (id: string) => void;
+//   session: { user?: { name?: string | null; email?: string | null } } | null;
+//   handleLogout: () => void;
+//   templatesOpen?: boolean;
+//   setTemplatesOpen?: (open: boolean) => void;
+// }
+
+// const SidebarContent = ({ 
+//   sidebarOpen, 
+//   setSidebarOpen, 
+//   activeComponent, 
+//   setActiveComponent,
+//   session,
+//   handleLogout,
+//   templatesOpen = false,
+//   setTemplatesOpen = () => {}
+// }: SidebarContentProps) => {
+//   return (
+//     <>
+//       {/* Logo and toggle button */}
+//       <div className="flex items-center justify-between p-4 border-b border-gray-200">
+//         <div className="flex items-center">
+//           {sidebarOpen && (
+//             <span className="text-lg font-bold text-blue-600">Student Portal</span>
+//           )}
+//           {!sidebarOpen && (
+//             <span className="text-lg font-bold text-blue-600">AP</span>
+//           )}
+//         </div>
+//         <button
+//           onClick={() => setSidebarOpen(!sidebarOpen)}
+//           className="text-gray-500 hover:bg-gray-100 p-1 rounded-full focus:outline-none"
+//         >
+//           {sidebarOpen ? <ChevronLeft size={20} /> : <ChevronRight size={20} />}
+//         </button>
+//       </div>
+
+//       {/* User profile in sidebar */}
+//       <div className="p-4 border-b border-gray-200">
+//         <div className="flex items-center space-x-3">
+//           <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
+//             <User size={20} className="text-blue-600" />
+//           </div>
+//           {sidebarOpen && (
+//             <div>
+//               <p className="font-medium text-gray-800">{session?.user?.name || "Student"}</p>
+//               <p className="text-xs text-gray-500">{session?.user?.email || "student@example.com"}</p>
+//             </div>
+//           )}
+//         </div>
+//       </div>
+
+//       {/* Menu */}
+//       <div className="flex-1 overflow-y-auto py-4">
+//         <nav className="px-3 space-y-1">
+//           {sidebarItems.map((item) => (
+//             <div key={item.id}>
+//               <button
+//                 onClick={() => {
+//                   if (item.subItems) {
+//                     setTemplatesOpen(!templatesOpen);
+//                     if (!templatesOpen && item.subItems.length > 0) {
+//                       setActiveComponent(item.subItems[0].id);
+//                     }
+//                   } else {
+//                     setActiveComponent(item.id);
+//                   }
+//                 }}
+//                 className={`w-full flex items-center justify-between gap-3 px-3 py-2 rounded-lg transition-colors ${
+//                   (activeComponent === item.id || 
+//                    (item.subItems && item.subItems.some(sub => sub.id === activeComponent))
+//                     ? "bg-blue-50 text-blue-600 font-medium"
+//                     : "text-gray-700 hover:bg-gray-100"
+//           )}`}
+//               >
+//                 <div className="flex items-center gap-3">
+//                   <div className="flex items-center justify-center w-8 h-8">
+//                     {item.icon}
+//                   </div>
+//                   {sidebarOpen && <span>{item.label}</span>}
+//                 </div>
+//                 {sidebarOpen && item.subItems && (
+//                   item.subItems.some(sub => sub.id === activeComponent) || templatesOpen ? (
+//                     <ChevronUp size={16} />
+//                   ) : (
+//                     <ChevronDown size={16} />
+//                   )
+//                 )}
+//               </button>
+
+//               {/* Sub-items for Templates */}
+//               {sidebarOpen && templatesOpen && item.subItems && (
+//                 <div className="ml-8 mt-1 space-y-1">
+//                   {item.subItems.map((subItem) => (
+//                     <button
+//                       key={subItem.id}
+//                       onClick={() => setActiveComponent(subItem.id)}
+//                       className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors text-sm ${
+//                         activeComponent === subItem.id
+//                           ? "bg-blue-100 text-blue-600 font-medium"
+//                           : "text-gray-600 hover:bg-gray-100"
+//                       }`}
+//                     >
+//                       <span>{subItem.label}</span>
+//                     </button>
+//                   ))}
+//                 </div>
+//               )}
+//             </div>
+//           ))}
+//         </nav>
+//       </div>
+
+//       {/* Logout button */}
+//       <div className="p-4 border-t border-gray-200">
+//         <button
+//           onClick={handleLogout}
+//           className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-red-600 hover:bg-red-50 transition-colors ${
+//             !sidebarOpen && "justify-center"
+//           }`}
+//         >
+//           <LogOut size={20} />
+//           {sidebarOpen && <span>Logout</span>}
+//         </button>
+//       </div>
+//     </>
+//   );
+// };
+
+// export default Sidebar;
+
+
+
+
+"use client";
+
+import Batch from "@/components/clgAdmin/Batch";
+import Faculty from "@/components/clgAdmin/Faculty";
+import Profile from "@/components/clgAdmin/Profile";
+import Students from "@/components/clgAdmin/Student";
+import Student from "@/components/studentComponent/Student";
+import StudentProfileCompact from "@/components/studentComponent/StudentProfile";
+import StudentProfileForm from "@/components/studentComponent/StudentProfile";
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { useCurrentUser } from '@/hooks/auth';
-import {
-  AlertCircle,
-  Book,
-  ChevronDown,
+  Building2,
   ChevronLeft,
   ChevronRight,
-  ChevronUp,
-  File,
-  GraduationCap,
   LogOut,
   Menu,
-  Briefcase,
-  Settings,
+  School,
   User
-} from 'lucide-react';
-import { Profile } from 'next-auth';
-import { signOut, useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
-import { toast } from "sonner";
+} from "lucide-react";
+import { signOut, useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import { SetStateAction, useEffect, useState } from "react";
 
-type ProfileStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
-type ActiveComponent = 'personal' | 'academic' | 'professional' | 'verification' | 'LogBookEntries' | 'EnteredlogBook';
+const sidebarItems = [
+  { id: "Profile", label: "Profile", icon: <School size={20} />, component: <StudentProfileCompact/> },
+  { id: "Batch", label: "Batch", icon: <Building2 size={20} />, component: <Batch/> },
+  { id: "Faculty", label: "Faculty", icon: <Building2 size={20} />, component: <Faculty /> },
+  { id: "Students", label: "Students", icon: <User size={20} />, component: <Students/> },
 
-export default function Dashboard() {
-  const { status } = useSession();
+];
+
+const Sidebar = () => {
+  const { data: session, status } = useSession();
   const router = useRouter();
-  const user = useCurrentUser();
-  
-  const [sidebarOpen, setSidebarOpen] = useState<boolean>(true);
-  const [activeComponent, setActiveComponent] = useState<ActiveComponent>('personal');
-  const [profileStatus, setProfileStatus] = useState<ProfileStatus>('PENDING');
-  const [profileExists, setProfileExists] = useState<boolean>(false);
-  const [isProfileExpanded, setIsProfileExpanded] = useState<boolean>(true);
-  
-  // We're still keeping this state for other functionality,
-  // but we won't pass it to the StudentProfile component
-  const [existingProfile, setExistingProfile] = useState<Profile | null>(null);
-  console.log(existingProfile);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [activeComponent, setActiveComponent] = useState("Profile");
+  const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // Find the active component to render
+  const activeItem = sidebarItems.find(item => item.id === activeComponent);
 
   const handleLogout = async () => {
     await signOut({ redirectTo: "/auth/login" });
   };
 
-  // Fetch profile data and status
   useEffect(() => {
-    if (user?.id) {
-      fetchProfileData();
-    }
-  }, [user?.id]);
-
-  const fetchProfileData = async () => {
-    try {
-      const response = await fetch(`/api/student-profile?byUserId=${user?.id}`);
-      const data = await response.json() as Profile & { status?: ProfileStatus, message?: string };
-      console.log("Profile data:", data);
-      
-      if (response.ok && data) {
-        if ('message' in data && data.message === "Student not found") {
-          setProfileExists(false);
-          setProfileStatus('PENDING');
-        } else {
-          setProfileExists(true);
-          setProfileStatus(data.status || 'PENDING');
-          setExistingProfile(data);
-        }
-      }
-    } catch (error) {
-      console.error("Error fetching profile data:", error);
-      toast.error("Failed to load profile data");
-    }
-  };
-
-  // Redirect if not authenticated
-  useEffect(() => {
-    if (status === 'unauthenticated') {
-      router.push('/auth/login');
+    if (status === "unauthenticated") {
+      router.push("/auth/login");
     }
   }, [status, router]);
 
-  if (status === 'loading') {
-    return <div className="flex items-center justify-center h-screen">Loading...</div>;
-  }
+  // Close profile dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (profileDropdownOpen && !target.closest('.profile-dropdown')) {
+        setProfileDropdownOpen(false);
+      }
+    };
 
-  const toggleSidebar = () => {
-    setSidebarOpen(!sidebarOpen);
-  };
-
-  const toggleProfileExpansion = () => {
-    setIsProfileExpanded(!isProfileExpanded);
-  };
-
-  // Determine if logbook entry should be accessible
-  const canAccessLogBook = profileStatus === 'APPROVED';
-
-  // Render the appropriate component based on sidebar selection
-  const renderMainContent = () => {
-    // Profile tabs - now with only userId and activeTab props
-    if (['personal', 'academic', 'professional'].includes(activeComponent)) {
-      return (
-        <StudentProfile 
-          activeTab={activeComponent as "personal" | "academic" | "professional"}
-          userId={user?.id || ''}
-        />
-      );
-    }
-    
-    switch (activeComponent) {
-      case 'verification':
-        return (
-          <div className="flex items-center justify-center p-8">
-            <p className="text-gray-500">Verification status: {profileStatus}</p>
-          </div>
-        );
-        
-      case 'LogBookEntries':
-        if (!canAccessLogBook) {
-          return (
-            <div className="text-center p-8 text-red-500">
-              Your profile is pending verification. You cannot access the logbook entries until your profile is approved.
-            </div>
-          );
-        }
-        return <LogBookManagement />;
-        
-      case 'EnteredlogBook':
-        if (!canAccessLogBook) {
-          return (
-            <div className="text-center p-8 text-red-500">
-              Your profile is pending verification. You cannot access the logbook entries until your profile is approved.
-            </div>
-          );
-        }
-        return <StudentLogBookEntries />;
-        
-      default:
-        return (
-          <div className="text-center p-8 text-gray-500">
-            Select an option from the sidebar
-          </div>
-        );
-    }
-  };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [profileDropdownOpen]);
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <nav className="bg-white shadow-sm border-b px-6 py-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <button
-              onClick={toggleSidebar}
-              className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
-            >
-              <Menu className="h-5 w-5" />
-            </button>
-            <h1 className="text-2xl font-semibold text-gray-800">Student Portal</h1>
-          </div>
-          
-          <div className="flex items-center gap-4">
-            <Popover>
-              <PopoverTrigger asChild>
-                <button className="flex items-center gap-2 hover:bg-gray-50 rounded-lg p-2 transition-colors">
-                  <span className="text-sm font-medium text-gray-700">{user?.name}</span>
-                </button>
-              </PopoverTrigger>
-              <PopoverContent className="w-56" align="end">
-                <div className="space-y-1">
-                  <button className="w-full flex items-center gap-2 rounded-lg p-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors">
-                    <Settings className="h-4 w-4" />
-                    Profile Settings
-                  </button>
-                  <button 
-                    onClick={handleLogout}
-                    className="w-full flex items-center gap-2 rounded-lg p-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
-                  >
-                    <LogOut className="h-4 w-4" />
-                    Logout
-                  </button>
-                </div>
-              </PopoverContent>
-            </Popover>
-          </div>
-        </div>
-      </nav>
-
-      <div className="flex">
-        {/* Sidebar */}
-        <div 
-          className={`${
-            sidebarOpen ? 'w-64' : 'w-20'
-          } bg-white border-r transition-all duration-300 ease-in-out h-[calc(100vh-64px)] flex flex-col justify-between`}
+    <div className="flex h-screen bg-gray-50">
+      {/* Mobile menu button */}
+      <div className="lg:hidden fixed top-4 left-4 z-30">
+        <button
+          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          className="p-2 rounded-md bg-white shadow-md text-gray-600"
         >
-          <div>
-            <div className="flex justify-end p-2">
-              <button 
-                onClick={toggleSidebar} 
-                className="p-1 text-gray-500 hover:bg-gray-100 rounded-full"
-              >
-                {sidebarOpen ? <ChevronLeft size={18} /> : <ChevronRight size={18} />}
-              </button>
-            </div>
-            <ul className="space-y-2 px-3 py-4">
-              {/* Profile section with collapsible options */}
-              <li>
-                <button
-                  onClick={toggleProfileExpansion}
-                  className={`w-full flex items-center justify-between px-4 py-3 rounded-lg transition-colors ${
-                    ['personal', 'academic', 'professional'].includes(activeComponent)
-                      ? 'bg-gray-100 text-blue-600 font-medium'
-                      : 'text-gray-700 hover:bg-gray-50'
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <User className="h-5 w-5" />
-                    {sidebarOpen && <span>Profile</span>}
-                  </div>
-                  {sidebarOpen && (isProfileExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />)}
-                </button>
+          <Menu size={24} />
+        </button>
+      </div>
 
-                {/* Profile sub-options */}
-                {isProfileExpanded && sidebarOpen && (
-                  <div className="ml-6 mt-1 space-y-1">
-                    <button
-                      onClick={() => setActiveComponent('personal')}
-                      className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg transition-colors ${
-                        activeComponent === 'personal'
-                          ? 'bg-gray-100 text-blue-600 font-medium'
-                          : 'text-gray-700 hover:bg-gray-50'
-                      }`}
-                    >
-                      <User className="h-4 w-4" />
-                      <span>Personal</span>
-                    </button>
-                    <button
-                      onClick={() => setActiveComponent('academic')}
-                      className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg transition-colors ${
-                        activeComponent === 'academic'
-                          ? 'bg-gray-100 text-blue-600 font-medium'
-                          : 'text-gray-700 hover:bg-gray-50'
-                      }`}
-                    >
-                      <GraduationCap className="h-4 w-4" />
-                      <span>Academic</span>
-                    </button>
-                    <button
-                      onClick={() => setActiveComponent('professional')}
-                      className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg transition-colors ${
-                        activeComponent === 'professional'
-                          ? 'bg-gray-100 text-blue-600 font-medium'
-                          : 'text-gray-700 hover:bg-gray-50'
-                      }`}
-                    >
-                      <Briefcase className="h-4 w-4" />
-                      <span>Professional</span>
-                    </button>
-                  </div>
-                )}
-              </li>
+      {/* Sidebar - Desktop */}
+      <div
+        className={`hidden lg:flex flex-col ${
+          sidebarOpen ? "w-64" : "w-20"
+        } transition-all duration-300 bg-white border-r border-gray-200 shadow-sm`}
+      >
+        <SidebarContent 
+          sidebarOpen={sidebarOpen}
+          setSidebarOpen={setSidebarOpen}
+          activeComponent={activeComponent}
+          setActiveComponent={setActiveComponent}
+          session={session}
+          handleLogout={handleLogout}
+        />
+      </div>
 
-              {/* Verification status item */}
-              {profileExists && profileStatus !== 'APPROVED' && (
-                <li>
-                  <button
-                    onClick={() => setActiveComponent('verification')}
-                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                      activeComponent === 'verification'
-                        ? 'bg-gray-100 text-blue-600 font-medium'
-                        : 'text-gray-700 hover:bg-gray-50'
-                    }`}
-                  >
-                    <AlertCircle className="h-5 w-5" />
-                    {sidebarOpen && <span>Verification Status</span>}
-                  </button>
-                </li>
-              )}
+      {/* Sidebar - Mobile */}
+      <div
+        className={`lg:hidden fixed inset-0 z-20 transform ${
+          mobileMenuOpen ? "translate-x-0" : "-translate-x-full"
+        } transition-transform duration-300 ease-in-out`}
+      >
+        <div className="relative flex flex-col w-64 h-full bg-white border-r border-gray-200 shadow-xl">
+          <button
+            onClick={() => setMobileMenuOpen(false)}
+            className="absolute top-4 right-4 text-gray-500"
+          >
+            <ChevronLeft size={24} />
+          </button>
+          <SidebarContent 
+            sidebarOpen={true}
+            setSidebarOpen={() => {}}
+            activeComponent={activeComponent}
+            setActiveComponent={(id: SetStateAction<string>) => {
+              setActiveComponent(id);
+              setMobileMenuOpen(false);
+            }}
+            session={session}
+            handleLogout={handleLogout}
+          />
+        </div>
+      </div>
 
-              {/* LogBook entries options - only if profile is approved */}
-              {canAccessLogBook && (
-                <>
-                  <li>
-                    <button
-                      onClick={() => setActiveComponent('LogBookEntries')}
-                      className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                        activeComponent === 'LogBookEntries'
-                          ? 'bg-gray-100 text-blue-600 font-medium'
-                          : 'text-gray-700 hover:bg-gray-50'
-                      }`}
-                    >
-                      <Book className="h-5 w-5" />
-                      {sidebarOpen && <span>Log Book Entries</span>}
-                    </button>
-                  </li>
-                  <li>
-                    <button
-                      onClick={() => setActiveComponent('EnteredlogBook')}
-                      className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                        activeComponent === 'EnteredlogBook'
-                          ? 'bg-gray-100 text-blue-600 font-medium'
-                          : 'text-gray-700 hover:bg-gray-50'
-                      }`}
-                    >
-                      <File className="h-5 w-5" />
-                      {sidebarOpen && <span>All Entries</span>}
-                    </button>
-                  </li>
-                </>
-              )}
-            </ul>
+      {/* Main content */}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {/* Top navigation bar */}
+        <header className="bg-white shadow-sm border-b border-gray-200 h-16 flex items-center justify-between px-4 lg">
+          <div className="flex items-center">
+            {/* <h1 className="text-xl font-semibold text-gray-800">
+              {activeItem?.label || "college"}
+            </h1> */}
           </div>
-        </div>
 
-        {/* Main content */}
-        <div className="flex-1 p-6 overflow-auto">
-          {renderMainContent()}
-        </div>
+          {/* Profile dropdown */}
+          <div className="relative profile-dropdown">
+            <button
+              onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
+              className="flex items-center space-x-2 text-gray-700 hover:text-gray-900 focus:outline-none"
+            >
+              <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
+                <User size={20} className="text-blue-600" />
+              </div>
+              <span className="hidden md:inline-block font-medium">
+                {session?.user?.name || "Admin"}
+              </span>
+              <ChevronRight size={16} className={`transition-transform duration-200 ${profileDropdownOpen ? 'rotate-90' : ''}`} />
+            </button>
+
+            {/* Dropdown menu */}
+            {profileDropdownOpen && (
+              <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 border border-gray-200 z-10">
+                <a href="#" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                  <div className="flex items-center space-x-2">
+                    <User size={16} />
+                    <span>My Profile</span>
+                  </div>
+                </a>
+                <hr className="my-1 border-gray-200" />
+                <button
+                  onClick={handleLogout}
+                  className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100"
+                >
+                  <div className="flex items-center space-x-2">
+                    <LogOut size={16} />
+                    <span>Logout</span>
+                  </div>
+                </button>
+              </div>
+            )}
+          </div>
+        </header>
+
+        {/* Content area */}
+        <main className="flex-1 overflow-auto bg-gray-50">
+          {/* Render the active component */}
+          <div className="bg-white rounded-lg shadow p-3  min-h-[calc(100vh-10rem)]">
+            {activeItem?.component}
+          </div>
+        </main>
       </div>
     </div>
   );
+};
+
+// Extracted sidebar content component for reuse
+interface SidebarContentProps {
+  sidebarOpen: boolean;
+  setSidebarOpen: (open: boolean) => void;
+  activeComponent: string;
+  setActiveComponent: (id: string) => void;
+  session: { user?: { name?: string | null; email?: string | null } } | null;
+  handleLogout: () => void;
 }
+
+const SidebarContent = ({ 
+  sidebarOpen, 
+  setSidebarOpen, 
+  activeComponent, 
+  setActiveComponent,
+  session,
+  handleLogout
+}: SidebarContentProps) => {
+  return (
+    <>
+      {/* Logo and toggle button */}
+      <div className="flex items-center justify-between p-4 border-b border-gray-200">
+        <div className="flex items-center">
+          {/* You can add your logo here */}
+          {sidebarOpen && (
+            <span className="text-lg font-bold text-blue-600">Student Portal</span>
+          )}
+          {!sidebarOpen && (
+            <span className="text-lg font-bold text-blue-600">AP</span>
+          )}
+        </div>
+        <button
+          onClick={() => setSidebarOpen(!sidebarOpen)}
+          className="text-gray-500 hover:bg-gray-100 p-1 rounded-full focus:outline-none"
+        >
+          {sidebarOpen ? <ChevronLeft size={20} /> : <ChevronRight size={20} />}
+        </button>
+      </div>
+
+      {/* User profile in sidebar */}
+      <div className="p-4 border-b border-gray-200">
+        <div className="flex items-center space-x-3">
+          <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
+            <User size={20} className="text-blue-600" />
+          </div>
+          {sidebarOpen && (
+            <div>
+              <p className="font-medium text-gray-800">{session?.user?.name || "Admin"}</p>
+              <p className="text-xs text-gray-500">{session?.user?.email || "admin@example.com"}</p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Menu */}
+      <div className="flex-1 overflow-y-auto py-4">
+        <nav className="px-3 space-y-1">
+          {sidebarItems.map((item) => (
+            <button
+              key={item.id}
+              onClick={() => setActiveComponent(item.id)}
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
+                activeComponent === item.id
+                  ? "bg-blue-50 text-blue-600 font-medium"
+                  : "text-gray-700 hover:bg-gray-100"
+              }`}
+            >
+              <div className="flex items-center justify-center w-8 h-8">
+                {item.icon}
+              </div>
+              {sidebarOpen && <span>{item.label}</span>}
+            </button>
+          ))}
+        </nav>
+      </div>
+
+      {/* Logout button */}
+      <div className="p-4 border-t border-gray-200">
+        <button
+          onClick={handleLogout}
+          className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-red-600 hover:bg-red-50 transition-colors ${
+            !sidebarOpen && "justify-center"
+          }`}
+        >
+          <LogOut size={20} />
+          {sidebarOpen && <span>Logout</span>}
+        </button>
+      </div>
+    </>
+  );
+};
+
+export default Sidebar;

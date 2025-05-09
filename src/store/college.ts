@@ -14,6 +14,7 @@ export interface College {
   website: string;
   description: string;
   logo: string;
+  collegeAdminId: string;
 
 }
 

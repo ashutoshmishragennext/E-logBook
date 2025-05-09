@@ -27,7 +27,7 @@ interface StudentProfile {
   branchId: string;
   courseId: string;
   academicYearId: string;
-  CollegeIdProof: string;
+  collegeIdProof: string;
   yearOfPassing: string;
   createdAt: string;
   updatedAt: string;
