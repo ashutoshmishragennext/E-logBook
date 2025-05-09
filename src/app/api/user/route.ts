@@ -2,7 +2,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
-import { TeacherProfileTable, UsersTable } from "@/db/schema";
+import { TeacherProfileTable, UsersTable, StudentProfileTable } from "@/db/schema";
 import { hash } from "bcryptjs";
 
 export async function GET(request: NextRequest) {
@@ -107,6 +107,7 @@ async function handleSingleUserCreation(userData: any) {
   console.log("User created:", user);
 
   let teacherId = null;
+  let studentId = null;
 
   // Handle teacher profile creation
   if (role === "TEACHER" && userData.teacherData) {
@@ -132,9 +133,39 @@ async function handleSingleUserCreation(userData: any) {
     teacherId = teacher.id;
     console.log("Teacher profile created with ID:", teacherId);
   }
+  
+  // Handle student profile creation
+  if (role === "STUDENT" && userData.studentData) {
+    if (!userData.studentData.collegeId) {
+      return NextResponse.json(
+        { error: "College ID is required for students" },
+        { status: 400 }
+      );
+    }
+
+    const [student] = await db.insert(StudentProfileTable)
+      .values({
+        userId: user.id,
+        name: userData.name,
+        email: userData.email,
+
+        collegeId: userData.studentData.collegeId,
+        rollNo: userData.studentData.rollNo || null,
+        branchId: userData.studentData.branchId || null,
+        courseId: userData.studentData.courseId || null,
+        academicYearId: userData.studentData.academicYearId || null,
+        mobileNo: userData.studentData.mobileNo || userData.phone || ""
+      })
+      .returning({ id: StudentProfileTable.id });
+
+      console.log("Student profile created:", student);
+    studentId = student.id;
+    console.log("Student profile created with ID:", studentId);
+  }
 
   return NextResponse.json({
     teacherId: teacherId,
+    studentId: studentId,
     userId: user.id,
     name: userData.name,
     email: userData.email,
@@ -143,6 +174,14 @@ async function handleSingleUserCreation(userData: any) {
       collegeId: userData.teacherData.collegeId,
       designation: userData.teacherData.designation || "Lecturer",
       employeeId: userData.teacherData.employeeId
+    }),
+    ...(userData.studentData && {
+      rollNo: userData.studentData.rollNo,
+      mobileNo: userData.studentData.mobileNo,
+      collegeId: userData.studentData.collegeId,
+      branchId: userData.studentData.branchId,
+      courseId: userData.studentData.courseId,
+      academicYearId: userData.studentData.academicYearId
     }),
     ...(!userData.password && { tempPassword: password })
   });
@@ -195,6 +234,7 @@ async function handleBulkUserCreation(usersData: any[]) {
         });
 
       let teacherId = null;
+      let studentId = null;
 
       // Handle teacher profile creation if applicable
       if (role === "TEACHER" && userData.teacherData) {
@@ -222,6 +262,35 @@ async function handleBulkUserCreation(usersData: any[]) {
 
         teacherId = teacher.id;
       }
+      
+      // Handle student profile creation if applicable
+      if (role === "STUDENT" && userData.studentData) {
+        // Validate student-specific required fields
+        if (!userData.studentData.collegeId) {
+          results.failed++;
+          results.errors.push(`Student data missing collegeId for: ${userData.email}`);
+          
+          // Delete the created user since we couldn't complete the student profile
+          await db.delete(UsersTable).where(eq(UsersTable.id, user.id));
+          continue;
+        }
+
+        const [student] = await db.insert(StudentProfileTable)
+          .values({
+            userId: user.id,
+            name: userData.name,
+            email: userData.email,
+            rollNo: userData.studentData.rollNo || null,
+            collegeId: userData.studentData.collegeId,
+            branchId: userData.studentData.branchId || null,
+            courseId: userData.studentData.courseId || null,
+            academicYearId: userData.studentData.academicYearId || null,
+            mobileNo: userData.studentData.mobileNo || userData.phone || ""
+          })
+          .returning({ id: StudentProfileTable.id });
+
+        studentId = student.id;
+      }
 
       // Add successful user to results
       results.successful++;
@@ -230,6 +299,7 @@ async function handleBulkUserCreation(usersData: any[]) {
         email: userData.email,
         role: role,
         ...(teacherId && { teacherId }),
+        ...(studentId && { studentId }),
         tempPassword: !userData.password ? password : undefined
       });
 

@@ -3,6 +3,7 @@
 import Batch from "@/components/clgAdmin/Batch";
 import Faculty from "@/components/clgAdmin/Faculty";
 import Profile from "@/components/clgAdmin/Profile";
+import Students from "@/components/clgAdmin/Student";
 import {
   Building2,
   ChevronLeft,
@@ -20,6 +21,8 @@ const sidebarItems = [
   { id: "Profile", label: "Profile", icon: <School size={20} />, component: <Profile /> },
   { id: "Batch", label: "Batch", icon: <Building2 size={20} />, component: <Batch/> },
   { id: "Faculty", label: "Faculty", icon: <Building2 size={20} />, component: <Faculty /> },
+  { id: "Students", label: "Students", icon: <User size={20} />, component: <Students/> },
+
 ];
 
 const Sidebar = () => {

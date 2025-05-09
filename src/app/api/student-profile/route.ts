@@ -12,16 +12,22 @@ export async function GET(req: NextRequest) {
     const id = searchParams.get("id");
     const byUserId = searchParams.get("byUserId");
     const teacherId = searchParams.get("teacherId");
+    const collegeId = searchParams.get("collegeId");
+
+
+    console.log("Query Parameters:", { id, byUserId, teacherId, collegeId });
+
 
     // If neither parameter is provided
-    if (!id && !byUserId && !teacherId) {
+    if (!id && !byUserId && !teacherId && !collegeId) {
       return NextResponse.json(
-        { message: "Either id, byUserId, or teacherId is required" },
+        { message: "Either id, byUserId, or teacherId ,or is required" },
         { status: 400 }
       );
     }
 
     let students;
+ 
 
     if (byUserId) {
       // Search by userId
@@ -38,6 +44,16 @@ export async function GET(req: NextRequest) {
         .where(eq(StudentProfileTable.teacherId, teacherId));
 
       console.log(`Found ${students.length} students with teacherId ${teacherId}`);
+    }
+
+    else if(collegeId) {
+      // Search by collegeId - return ALL matching students
+      students = await db
+        .select()
+        .from(StudentProfileTable)
+        .where(eq(StudentProfileTable.collegeId, collegeId));
+
+      console.log(`Found ${students.length} students with collegeId ${collegeId}`);
     }
     else {
       // Search by studentId (id parameter)
@@ -208,6 +224,63 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json(
       {
         message: "Error updating student profile",
+        error: error instanceof Error ? error.message : "Unknown error"
+      },
+      { status: 500 }
+    );
+  }
+}
+
+
+export async function DELETE(req: NextRequest) {
+  try {
+    const searchParams = req.nextUrl.searchParams;
+    const id = searchParams.get("id");
+    const userId = searchParams.get("userId");
+
+    if (!id && !userId) {
+      return NextResponse.json(
+        { message: "Either ID or User ID is required" },
+        { status: 400 }
+      );
+    }
+
+    // Check if profile exists based on which parameter was provided
+    let existingProfile;
+    if (id) {
+      existingProfile = await db
+        .select()
+        .from(StudentProfileTable)
+        .where(eq(StudentProfileTable.id, id))
+        .limit(1);
+    } else {
+      existingProfile = await db
+        .select()
+        .from(StudentProfileTable)
+        .where(eq(StudentProfileTable.userId, userId!))
+        .limit(1);
+    }
+
+    if (existingProfile.length === 0) {
+      return NextResponse.json(
+        { message: "Student profile not found" },
+        { status: 404 }
+      );
+    }
+
+    // Delete student profile
+    if (id) {
+      await db.delete(StudentProfileTable).where(eq(StudentProfileTable.id, id));
+    } else {
+      await db.delete(StudentProfileTable).where(eq(StudentProfileTable.userId, userId!));
+    }
+
+    return NextResponse.json({ message: "Student profile deleted successfully" }, { status: 200 });
+  } catch (error) {
+    console.error("Student Profile Deletion Error:", error);
+    return NextResponse.json(
+      {
+        message: "Error deleting student profile",
         error: error instanceof Error ? error.message : "Unknown error"
       },
       { status: 500 }
