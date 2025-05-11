@@ -1,15 +1,16 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import { db } from "@/db";
 import { SubjectTable } from "@/db/schema";
 import { ilike } from "drizzle-orm";
 import { NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 
-export async function GET(req: { url: string | URL; }) {
+export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const query = searchParams.get("q") || "";
-  
+
   if (!query) {
-    return Response.json([]);
+    return NextResponse.json([]);
   }
 
   const results = await db
@@ -18,10 +19,10 @@ export async function GET(req: { url: string | URL; }) {
     .where(ilike(SubjectTable.name, `%${query}%`))
     .limit(10);
 
-  return Response.json(results);
+  return NextResponse.json(results);
 }
 
-export async function POST(req: { json: () => any; }) {
+export async function POST(req: NextRequest) {
   const body = await req.json();
   const { name } = body;
 
@@ -33,10 +34,8 @@ export async function POST(req: { json: () => any; }) {
   }
 
   try {
-    // Generate a default code from the name (first 3 letters uppercase)
     const defaultCode = name.substring(0, 3).toUpperCase();
-    
-    // Insert the new subject with approved=false
+
     await db.insert(SubjectTable).values({
       name: name.trim(),
       code: defaultCode,

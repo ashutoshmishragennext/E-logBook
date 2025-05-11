@@ -5,13 +5,6 @@ import { db } from "@/db";
 import { StudentProfileTable, UsersTable } from "@/db/schema";
 import { and, eq } from "drizzle-orm";
 
-// Assuming VerificationStatus is an enum, define it here if not imported
-export enum VerificationStatus {
-  PENDING = "PENDING",
-  APPROVED = "APPROVED",
-  REJECTED = "REJECTED",
-}
-
 
 
 // Fixing the GET function to correctly handle verificationStatus
@@ -46,23 +39,27 @@ export async function GET(req: NextRequest) {
         .where(eq(StudentProfileTable.teacherId, teacherId));
     }
     else if (verificationStatusParam && collegeId) {
-      // Convert the verificationStatus parameter to the proper format
       const verificationStatus = verificationStatusParam.toUpperCase();
-      
-      console.log(`Searching for students with collegeId ${collegeId} and verificationStatus ${verificationStatus}`);
-      
+
+      // Ensure the value is a valid enum value
+      if (!["PENDING", "APPROVED", "REJECTED"].includes(verificationStatus)) {
+        return NextResponse.json(
+          { message: "Invalid verification status" },
+          { status: 400 }
+        );
+      }
+
       students = await db
         .select()
         .from(StudentProfileTable)
         .where(
           and(
             eq(StudentProfileTable.collegeId, collegeId),
-            eq(StudentProfileTable.verificationStatus, verificationStatus as VerificationStatus)
+            eq(StudentProfileTable.verificationStatus, verificationStatus as "PENDING" | "APPROVED" | "REJECTED")
           )
         );
-        
-      console.log(`Found ${students?.length || 0} students matching criteria`);
     }
+
     else if (collegeId) {
       // Search by collegeId - return ALL matching students
       students = await db

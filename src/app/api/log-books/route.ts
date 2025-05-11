@@ -8,6 +8,7 @@ import { z } from 'zod';
 const logBookEntryCreateSchema = z.object({
   logBookTemplateId: z.string().uuid(),
   studentId: z.string().uuid(),
+  studentSubjectId: z.string().uuid(), // ✅ required field
   teacherId: z.string().uuid().optional(),
   dynamicFields: z.record(z.any()).optional(),
   studentRemarks: z.string().optional(),
@@ -15,28 +16,27 @@ const logBookEntryCreateSchema = z.object({
   teacherRemarks: z.string().optional(),
 }).strict();
 
+
 // Zod schema for updating log book entries (with ID)
 const logBookEntryUpdateSchema = logBookEntryCreateSchema.extend({
   id: z.string().uuid()
 });
-
 export async function POST(req: NextRequest) {
   try {
-    // Parse and validate the request body
     const body = await req.json();
     const validatedData = logBookEntryCreateSchema.parse(body);
 
-    // Create the log book entry with server-generated ID
     const [newLogBookEntry] = await db
       .insert(LogBookEntryTable)
       .values({
-        id: crypto.randomUUID(),
         logBookTemplateId: validatedData.logBookTemplateId,
         studentId: validatedData.studentId,
         teacherId: validatedData.teacherId || null,
         dynamicFields: validatedData.dynamicFields,
         studentRemarks: validatedData.studentRemarks || null,
         status: validatedData.status,
+        // ✅ add required field missing from payload
+        studentSubjectId: validatedData.studentSubjectId, // <-- make sure this is in your Zod schema!
         createdAt: new Date(),
         updatedAt: new Date()
       })
@@ -45,26 +45,24 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(newLogBookEntry, { status: 201 });
   } catch (error) {
     console.error('Log Book Entry Creation Error:', error);
-    
+
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { 
-          error: 'Validation Failed', 
+        {
+          error: 'Validation Failed',
           details: error.errors.map(err => ({
             path: err.path.join('.'),
             message: err.message
           }))
-        }, 
+        },
         { status: 400 }
       );
     }
-    
-    return NextResponse.json(
-      { error: 'Internal Server Error' }, 
-      { status: 500 }
-    );
+
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
+
 
 export async function GET(req: NextRequest) {
   try {

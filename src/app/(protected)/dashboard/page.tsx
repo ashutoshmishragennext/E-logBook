@@ -32,9 +32,7 @@ export default function Dashboard() {
       case "COLLEGE_ADMIN":
         router.push("/dashboard/clg-admin/");
         break;
-      case "USER":
-          router.push("/dashboard/user");
-          break;
+
       case "STUDENT":
           router.push("/dashboard/student");
           break;

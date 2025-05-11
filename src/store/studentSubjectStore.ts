@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { create } from 'zustand';
 import { College } from './college';
 
@@ -33,6 +34,7 @@ export interface Phase {
 }
 
 export interface StudentSubjectAllocation {
+  hasLogbookAccess: any;
   id: string;
   studentId: string;
   subjectId: string;
@@ -43,6 +45,11 @@ export interface StudentSubjectAllocation {
   rejectionReason?: string;
   subject: Subject;
   teacherSubject: TeacherSubject;
+}
+
+interface teacher{
+  id: string;
+  name: string;
 }
 
 interface StudentSubjectStore {
@@ -56,6 +63,7 @@ interface StudentSubjectStore {
   branches: any[];
   course: any[];
   colleges: College[];
+  teacher: teacher|null;
 
   // UI states
   selectedSubjectId: string | null;
@@ -68,6 +76,7 @@ interface StudentSubjectStore {
   error: string | null;
 
   // Actions
+  fetchTeacherName: (teacherId: string) => Promise<void>;
   fetchBranches: () => Promise<void>;
   fetchCollege: (collegeId: string) => Promise<void>;
   fetchCourses: () => Promise<void>;
@@ -111,6 +120,7 @@ export const useStudentSubjectStore = create<StudentSubjectStore>((set, get) => 
   branches: [],
   colleges: [], // Fixed: Initialize colleges as empty array
   course: [],
+  teacher: null,
   
   selectedSubjectId: null,
   selectedTeacherSubjectId: null,
@@ -120,6 +130,18 @@ export const useStudentSubjectStore = create<StudentSubjectStore>((set, get) => 
   error: null,
 
   // Fetch courses
+  fetchTeacherName: async (teacherId: string) => {
+    set({ loading: true, error: null });
+    try {
+      const res = await fetch(`/api/teacher-profile?id=${teacherId}`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Failed to fetch teacher');
+      set({ teacher: data.data, loading: false });
+    } catch (err: any) {
+      console.error('Error fetching teacher:', err);
+      set({ error: err.message, loading: false });
+    }
+  },
   fetchCourses: async () => {
     set({ loading: true, error: null });
     try {

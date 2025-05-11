@@ -1,3 +1,4 @@
+// api/teacher-profile/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { TeacherProfileTable } from "@/db/schema";
@@ -18,16 +19,17 @@ export async function GET(req: NextRequest) {
 
     // Fetch by teacher ID
     if (id) {
+      // FIXED: Searching by the primary id field instead of userId
       const profile = await db
         .select()
         .from(TeacherProfileTable)
-        .where(eq(TeacherProfileTable.userId, id));
+        .where(eq(TeacherProfileTable.id, id));
 
       if (!profile || profile.length === 0) {
         return NextResponse.json({ error: "Teacher not found" }, { status: 404 });
       }
 
-      return NextResponse.json({ data: profile }, { status: 200 });
+      return NextResponse.json({ data: profile[0] }, { status: 200 });
     }
 
     // Fetch all teachers by college ID
@@ -52,11 +54,10 @@ export async function GET(req: NextRequest) {
   }
 }
 
-
 export async function POST(req: NextRequest) {
   try {
     const data = await req.json();
-    
+
     // Validate required fields
     if (!data.userId || !data.name || !data.email || !data.mobileNo ||
         !data.collegeId || !data.branchId || !data.courseId ||
@@ -67,40 +68,35 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       );
     }
-    
+
     // Check if profile already exists
     const existingProfile = await db
       .select()
       .from(TeacherProfileTable)
       .where(eq(TeacherProfileTable.userId, data.userId));
-    
+
     if (existingProfile.length > 0) {
       return NextResponse.json(
         { error: "Profile already exists for this user" },
         { status: 400 }
       );
     }
-    
+
     // Create new profile
     const result = await db.insert(TeacherProfileTable).values({
-      userId: data.userId,
+      userId: data.userId,  // Make sure this field is included
       name: data.name,
       email: data.email,
       mobileNo: data.mobileNo,
-      location: data.location,
       profilePhoto: data.profilePhoto,
       teacherIdProof: data.teacherIdProof,
+      Address: data.Address,
       collegeId: data.collegeId,
-      branchId: data.branchId,
-      courseId: data.courseId,
-      academicYearId: data.academicYearId,
-      phaseId: data.phaseId,
       designation: data.designation,
       employeeId: data.employeeId,
-      joiningDate: new Date(data.joiningDate),
-      isActive: data.isActive || "true",
+      createdAt: new Date()
     }).returning();
-    
+
     return NextResponse.json(result[0]);
   } catch (error) {
     console.error("Error creating teacher profile:", error);
@@ -116,44 +112,38 @@ export async function PUT(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const id = searchParams.get("id");
     const data = await req.json();
-    
+
     if (!id) {
       return NextResponse.json(
         { error: "Profile ID is required" },
         { status: 400 }
       );
     }
-    
+
     // Update profile
     const result = await db.update(TeacherProfileTable)
       .set({
-        name: data.name,
-        email: data.email,
-        mobileNo: data.mobileNo,
-        location: data.location,
-        profilePhoto: data.profilePhoto,
-        teacherIdProof: data.teacherIdProof,
-        collegeId: data.collegeId,
-        branchId: data.branchId,
-        courseId: data.courseId,
-        academicYearId: data.academicYearId,
-        phaseId: data.phaseId,
-        designation: data.designation, 
-        employeeId: data.employeeId,
-        joiningDate: new Date(data.joiningDate),
-        isActive: data.isActive,
+      name: data.name,
+      email: data.email,
+      mobileNo: data.mobileNo,
+      profilePhoto: data.profilePhoto,
+      teacherIdProof: data.teacherIdProof,
+      Address: data.Address,
+      collegeId: data.collegeId,
+      designation: data.designation,
+      employeeId: data.employeeId,
         updatedAt: new Date(),
       })
       .where(eq(TeacherProfileTable.id, id))
       .returning();
-    
+
     if (result.length === 0) {
       return NextResponse.json(
         { error: "Teacher profile not found" },
         { status: 404 }
       );
     }
-    
+
     return NextResponse.json(result[0]);
   } catch (error) {
     console.error("Error updating teacher profile:", error);

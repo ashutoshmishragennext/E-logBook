@@ -1,15 +1,16 @@
-import { useCurrentUser } from '@/hooks/auth'
-import { useCollegeStore } from '@/store/college'
-import { useStudentProfileStore, VerificationStatus } from '@/store/student'
-import React, { useEffect, useState } from 'react'
-import { Checkbox } from '@/components/ui/checkbox'
+/* eslint-disable react-hooks/exhaustive-deps*/
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Search } from 'lucide-react'
+import { useCurrentUser } from '@/hooks/auth'
+import { useCollegeStore } from '@/store/college'
+import { useStudentProfileStore, VerificationStatus } from '@/store/student'
 import { useStudentSubjectStore } from '@/store/studentSubjectStore'
+import { Search } from 'lucide-react'
+import { useEffect, useState } from 'react'
 
 const StudentApproval = () => {
   const user = useCurrentUser()

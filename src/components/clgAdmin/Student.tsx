@@ -31,7 +31,6 @@ const Students = () => {
     profiles: students,
     loading: isLoading,
     fetchProfile: fetchStudents,
-    createProfile: createStudent,
   } = useStudentProfileStore();
 
   const [collegeId, setCollegeId] = useState("");

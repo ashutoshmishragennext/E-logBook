@@ -1,10 +1,8 @@
 "use client";
 
-import Batch from "@/components/clgAdmin/Batch";
-import Faculty from "@/components/clgAdmin/Faculty";
-import Students from "@/components/clgAdmin/Student";
 import StudentProfileCompact from "@/components/studentComponent/StudentProfile";
-import TeacherAllocation from "@/components/studentComponent/TeacherAllocation";
+import StudentSubjectSelection from "@/components/studentComponent/TeacherAllocation";
+import { useStudentProfileStore } from "@/store/student";
 import {
   Building2,
   ChevronLeft,
@@ -18,14 +16,6 @@ import { signOut, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { SetStateAction, useEffect, useState } from "react";
 
-const sidebarItems = [
-  { id: "Profile", label: "Profile", icon: <School size={20} />, component: <StudentProfileCompact/> },
-  { id: "SubjectSelection", label: "Subject", icon: <Building2 size={20} />, component: <TeacherAllocation/> },
-  { id: "Faculty", label: "Faculty", icon: <Building2 size={20} />, component: <Faculty /> },
-  { id: "Students", label: "Students", icon: <User size={20} />, component: <Students/> },
-
-];
-
 const Sidebar = () => {
   const { data: session, status } = useSession();
   const router = useRouter();
@@ -33,6 +23,28 @@ const Sidebar = () => {
   const [activeComponent, setActiveComponent] = useState("Profile");
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  const { profile, fetchProfile } =
+    useStudentProfileStore();
+
+
+
+  useEffect(() => {
+    if (session?.user?.id) {
+      fetchProfile({byUserId: session.user.id});
+    }
+  }, [session?.user?.id, fetchProfile]);
+
+  // Dynamically create sidebarItems with session data
+  const sidebarItems = [
+    { id: "Profile", label: "Profile", icon: <School size={20} />, component: <StudentProfileCompact/> },
+    { 
+      id: "SubjectSelection", 
+      label: "Subject", 
+      icon: <Building2 size={20} />, 
+      component: <StudentSubjectSelection studentId={profile?.id || ""} /> 
+    },
+  ];
 
   // Find the active component to render
   const activeItem = sidebarItems.find(item => item.id === activeComponent);
@@ -87,6 +99,7 @@ const Sidebar = () => {
           setActiveComponent={setActiveComponent}
           session={session}
           handleLogout={handleLogout}
+          sidebarItems={sidebarItems}
         />
       </div>
 
@@ -113,6 +126,7 @@ const Sidebar = () => {
             }}
             session={session}
             handleLogout={handleLogout}
+            sidebarItems={sidebarItems}
           />
         </div>
       </div>
@@ -169,7 +183,7 @@ const Sidebar = () => {
         {/* Content area */}
         <main className="flex-1 overflow-auto bg-gray-50">
           {/* Render the active component */}
-          <div className="bg-white rounded-lg shadow p-3  min-h-[calc(100vh-10rem)]">
+          <div className="bg-white rounded-lg shadow p-3 h-full">
             {activeItem?.component}
           </div>
         </main>
@@ -184,8 +198,14 @@ interface SidebarContentProps {
   setSidebarOpen: (open: boolean) => void;
   activeComponent: string;
   setActiveComponent: (id: string) => void;
-  session: { user?: { name?: string | null; email?: string | null } } | null;
+  session: { user?: { name?: string | null; email?: string | null; id?: string | null } } | null;
   handleLogout: () => void;
+  sidebarItems: {
+    id: string;
+    label: string;
+    icon: React.ReactElement;
+    component: React.ReactElement;
+  }[];
 }
 
 const SidebarContent = ({ 
@@ -194,7 +214,8 @@ const SidebarContent = ({
   activeComponent, 
   setActiveComponent,
   session,
-  handleLogout
+  handleLogout,
+  sidebarItems
 }: SidebarContentProps) => {
   return (
     <>

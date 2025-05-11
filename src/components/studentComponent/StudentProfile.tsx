@@ -29,20 +29,26 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { 
-  AlertCircle, 
-  Eye, 
-  FileText, 
-  Link as LinkIcon, 
-  Pencil, 
-  Save, 
-  X, 
-  CheckCircle2 
+import {
+  AlertCircle,
+  Eye,
+  FileText,
+  Link as LinkIcon,
+  Pencil,
+  Save,
+  X,
+  CheckCircle2,
+  Info,
 } from "lucide-react";
-import { 
-  Alert,
-  AlertDescription 
-} from "@/components/ui/alert";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 // Form validation schema
 const formSchema = z.object({
@@ -99,14 +105,18 @@ const StudentProfileCompact = () => {
   const [profilePhotoUrl, setProfilePhotoUrl] = useState<string>("");
   const [collegeIdProofUrl, setCollegeIdProofUrl] = useState<string>("");
   const [isEditing, setIsEditing] = useState(false);
-  const [viewingIdProof, setViewingIdProof] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
+  const [dialogOpen, setDialogOpen] = useState(false);
+
   // Display name mappings
   const [collegeDisplayName, setCollegeDisplayName] = useState("");
   const [branchDisplayName, setBranchDisplayName] = useState("");
   const [courseDisplayName, setCourseDisplayName] = useState("");
   const [academicYearDisplayName, setAcademicYearDisplayName] = useState("");
+
+  // Check if profile is verified (used to lock certain fields)
+  const isProfileVerified =
+    profile?.verificationStatus === VerificationStatus.APPROVED;
 
   // Initialize form
   const form = useForm<z.infer<typeof formSchema>>({
@@ -157,7 +167,14 @@ const StudentProfileCompact = () => {
     };
 
     loadData();
-  }, [profile, fetchBranches, fetchAcademicYears, fetchCourses, fetchCollege, fetchcolleges]);
+  }, [
+    profile,
+    fetchBranches,
+    fetchAcademicYears,
+    fetchCourses,
+    fetchCollege,
+    fetchcolleges,
+  ]);
 
   // Update form when profile is loaded
   useEffect(() => {
@@ -166,7 +183,9 @@ const StudentProfileCompact = () => {
         name: profile.name || user?.name || "",
         email: profile.email || user?.email || "",
         mobileNo: profile.mobileNo || "",
-        dateOfBirth: profile.dateOfBirth ? new Date(profile.dateOfBirth) : undefined,
+        dateOfBirth: profile.dateOfBirth
+          ? new Date(profile.dateOfBirth)
+          : undefined,
         Address: profile.Address || "",
         country: profile.country || "",
         state: profile.state || "",
@@ -192,10 +211,12 @@ const StudentProfileCompact = () => {
     // Map IDs to display names when the data is loaded
     if (profile && colleges && branches && course && academicYears) {
       // Find the display names by ID
-      const selectedCollege = colleges.find(c => c.id === profile.collegeId);
-      const selectedBranch = branches.find(b => b.id === profile.branchId);
-      const selectedCourse = course.find(c => c.id === profile.courseId);
-      const selectedYear = academicYears.find(y => y.id === profile.academicYearId);
+      const selectedCollege = colleges.find((c) => c.id === profile.collegeId);
+      const selectedBranch = branches.find((b) => b.id === profile.branchId);
+      const selectedCourse = course.find((c) => c.id === profile.courseId);
+      const selectedYear = academicYears.find(
+        (y) => y.id === profile.academicYearId
+      );
 
       // Set display names
       setCollegeDisplayName(selectedCollege?.name || "");
@@ -230,28 +251,62 @@ const StudentProfileCompact = () => {
     }
   };
 
+  const handleSaveClick = () => {
+    // Check if verified and show dialog
+    if (isProfileVerified) {
+      setDialogOpen(true);
+    } else {
+      form.handleSubmit(onSubmit)();
+    }
+  };
+
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     try {
       setIsSubmitting(true);
-      
-      const profileData = {
-        ...values,
-        userId: userId as string,
-        profilePhoto: profilePhotoUrl,
-        collegeIdProof: collegeIdProofUrl, // Fix: renamed from CollegeIdProof to collegeIdProof
-        // Set verification status to PENDING when submitting changes
-        verificationStatus: 
-          profile?.verificationStatus === VerificationStatus.APPROVED 
-            ? VerificationStatus.APPROVED 
-            : VerificationStatus.PENDING,
-      };
+      setDialogOpen(false);
+
+      // If profile is verified, preserve the locked fields from the original profile
+      let profileData;
+
+      if (isProfileVerified && profile) {
+        profileData = {
+          ...values,
+          userId: userId as string,
+          profilePhoto: profilePhotoUrl,
+          collegeIdProof: collegeIdProofUrl,
+          // Preserve locked fields if verified
+          adharNo: profile.adharNo,
+          dateOfBirth: profile.dateOfBirth,
+          rollNo: profile.rollNo,
+          collegeId: profile.collegeId,
+          branchId: profile.branchId,
+          courseId: profile.courseId,
+          academicYearId: profile.academicYearId,
+          yearOfPassing: profile.yearOfPassing,
+          verificationStatus: VerificationStatus.APPROVED,
+        };
+      } else {
+        profileData = {
+          ...values,
+          userId: userId as string,
+          profilePhoto: profilePhotoUrl,
+          collegeIdProof: collegeIdProofUrl,
+          // Set verification status to PENDING when submitting changes
+          verificationStatus:
+            profile?.verificationStatus === VerificationStatus.APPROVED
+              ? VerificationStatus.APPROVED
+              : VerificationStatus.PENDING,
+        };
+      }
 
       if (profile) {
         await updateProfile(
           { id: profile.id },
           {
             ...profileData,
-            dateOfBirth: values.dateOfBirth
+            dateOfBirth: isProfileVerified
+              ? profile.dateOfBirth
+              : values.dateOfBirth
               ? values.dateOfBirth.toISOString()
               : undefined,
           }
@@ -300,7 +355,7 @@ const StudentProfileCompact = () => {
   }
 
   return (
-    <Card className="w-full shadow-md bg-white">
+    <Card className="w-full  shadow-md bg-white">
       <CardHeader className="bg-primary/90 text-white py-4 flex flex-row justify-between items-center">
         <CardTitle className="text-xl font-bold">Student Profile</CardTitle>
         {!isEditing ? (
@@ -325,7 +380,7 @@ const StudentProfileCompact = () => {
               Cancel
             </Button>
             <Button
-              onClick={form.handleSubmit(onSubmit)}
+              onClick={handleSaveClick}
               className="gap-1 bg-white text-primary hover:bg-gray-100"
               size="sm"
               disabled={isSubmitting}
@@ -348,7 +403,9 @@ const StudentProfileCompact = () => {
                   <Avatar className="h-20 w-20 border-2 border-muted">
                     <AvatarImage src={profilePhotoUrl} />
                     <AvatarFallback className="bg-primary text-white text-xl">
-                      {form.getValues("name")?.charAt(0) || user?.name?.charAt(0) || "U"}
+                      {form.getValues("name")?.charAt(0) ||
+                        user?.name?.charAt(0) ||
+                        "U"}
                     </AvatarFallback>
                   </Avatar>
                   {isEditing && (
@@ -387,7 +444,7 @@ const StudentProfileCompact = () => {
                       </FormItem>
                     )}
                   />
-                  
+
                   <FormField
                     control={form.control}
                     name="email"
@@ -395,11 +452,13 @@ const StudentProfileCompact = () => {
                       <FormItem>
                         {isEditing ? (
                           <>
-                            <FormLabel className="text-xs text-muted-foreground">Email</FormLabel>
+                            <FormLabel className="text-xs text-muted-foreground">
+                              Email
+                            </FormLabel>
                             <FormControl>
-                              <Input 
-                                {...field} 
-                                className="h-8 text-muted-foreground" 
+                              <Input
+                                {...field}
+                                className="h-8 text-muted-foreground"
                                 disabled
                               />
                             </FormControl>
@@ -412,23 +471,28 @@ const StudentProfileCompact = () => {
                       </FormItem>
                     )}
                   />
-                  
+
                   {profile?.verificationStatus && (
                     <div className="flex items-center gap-2 mt-1">
-                      <div className={`text-xs px-2 py-0.5 rounded-full inline-block ${
-                        profile.verificationStatus === VerificationStatus.APPROVED
-                          ? "bg-green-100 text-green-800"
-                          : profile.verificationStatus === VerificationStatus.REJECTED
-                          ? "bg-red-100 text-red-800"
-                          : "bg-yellow-100 text-yellow-800"
-                      }`}>
+                      <div
+                        className={`text-xs px-2 py-0.5 rounded-full inline-block ${
+                          profile.verificationStatus ===
+                          VerificationStatus.APPROVED
+                            ? "bg-green-100 text-green-800"
+                            : profile.verificationStatus ===
+                              VerificationStatus.REJECTED
+                            ? "bg-red-100 text-red-800"
+                            : "bg-yellow-100 text-yellow-800"
+                        }`}
+                      >
                         {profile.verificationStatus}
                       </div>
-                      
-                      {profile?.verificationStatus === VerificationStatus.REJECTED && (
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
+
+                      {profile?.verificationStatus ===
+                        VerificationStatus.REJECTED && (
+                        <Button
+                          variant="outline"
+                          size="sm"
                           className="text-xs h-6 px-2"
                           onClick={requestVerification}
                         >
@@ -438,10 +502,10 @@ const StudentProfileCompact = () => {
                     </div>
                   )}
 
-                  {!profile?.verificationStatus && (
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
+                  {!profile?.verificationStatus && !profile && (
+                    <Button
+                      variant="outline"
+                      size="sm"
                       className="text-xs h-6 px-2 mt-1"
                       onClick={requestVerification}
                     >
@@ -453,14 +517,16 @@ const StudentProfileCompact = () => {
 
               {/* Right side: College ID Proof */}
               <div className="w-full md:w-1/2">
-                <FormLabel className="text-xs block mb-1">College ID Proof</FormLabel>
-                <div className="border rounded-md p-3 bg-muted/10 h-20 flex items-center">
+                <FormLabel className="text-xs block mb-1">
+                  College ID Proof
+                </FormLabel>
+                <div className="border rounded-md p-3 bg-muted/10  flex items-center">
                   {collegeIdProofUrl ? (
                     <div className="flex flex-wrap items-center justify-between gap-3 w-full">
                       <div className="flex items-center gap-2">
                         <FileText className="h-4 w-4 text-muted-foreground" />
                         <span className="text-sm text-muted-foreground overflow-hidden text-ellipsis max-w-[150px]">
-                          {collegeIdProofUrl.split('/').pop()}
+                          {collegeIdProofUrl.split("/").pop()}
                         </span>
                       </div>
                       <div className="flex gap-2">
@@ -469,12 +535,14 @@ const StudentProfileCompact = () => {
                           variant="outline"
                           size="sm"
                           className="text-xs h-7"
-                          onClick={() => window.open(collegeIdProofUrl, '_blank')}
+                          onClick={() =>
+                            window.open(collegeIdProofUrl, "_blank")
+                          }
                         >
                           <Eye className="h-3 w-3 mr-1" />
                           View
                         </Button>
-                        {isEditing && (
+                        {isEditing && !isProfileVerified && (
                           <UploadButton
                             endpoint="imageUploader"
                             onClientUploadComplete={(res) => {
@@ -497,7 +565,7 @@ const StudentProfileCompact = () => {
                         )}
                       </div>
                     </div>
-                  ) : isEditing ? (
+                  ) : isEditing && !isProfileVerified ? (
                     <UploadButton
                       endpoint="imageUploader"
                       onClientUploadComplete={(res) => {
@@ -525,445 +593,557 @@ const StudentProfileCompact = () => {
                 </div>
               </div>
             </div>
-            
-            {/* Verification alert if pending */}
+
+            {/* Verification alerts */}
             {profile?.verificationStatus === VerificationStatus.PENDING && (
               <Alert className="mb-4 bg-yellow-50 border-yellow-200">
                 <AlertCircle className="h-4 w-4 text-yellow-800" />
                 <AlertDescription className="text-sm text-yellow-800">
-                  Your profile is awaiting verification from the college administrator. You can continue to use the platform in the meantime.
+                  Your profile is awaiting verification from the college
+                  administrator. You can continue to use the platform in the
+                  meantime.
                 </AlertDescription>
               </Alert>
             )}
 
-            {/* Approved alert for verification */}
             {profile?.verificationStatus === VerificationStatus.APPROVED && (
               <Alert className="mb-4 bg-green-50 border-green-200">
                 <CheckCircle2 className="h-4 w-4 text-green-800" />
                 <AlertDescription className="text-sm text-green-800">
-                  Your profile has been verified by the college administrator. You now have full access to all platform features.
+                  Your profile has been verified by the college administrator.
+                  You now have full access to all platform features.
                 </AlertDescription>
               </Alert>
             )}
 
-            {/* Combined profile form - all fields in one section */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-4">
-              {/* Left column - Personal details */}
-              <div className="space-y-4 bg-blue-50/30 p-4 rounded-lg">
-                <h3 className="font-medium text-primary">Personal Details</h3>
-                
-                <FormField
-                  control={form.control}
-                  name="mobileNo"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-xs">Mobile Number</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="9876543210"
-                          {...field}
-                          disabled={!isEditing}
-                          className={!isEditing ? "bg-muted/30" : ""}
-                        />
-                      </FormControl>
-                      <FormMessage className="text-xs" />
-                    </FormItem>
-                  )}
-                />
+            {profile?.verificationStatus === VerificationStatus.REJECTED && (
+              <Alert className="mb-4 bg-red-50 border-red-200">
+                <AlertCircle className="h-4 w-4 text-red-800" />
+                <AlertDescription className="text-sm text-red-800">
+                  Your profile verification was rejected. Reason -
+                  {profile?.rejectionReason}
+                </AlertDescription>
+              </Alert>
+            )}
 
-                <FormField
-                  control={form.control}
-                  name="dateOfBirth"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-xs">Date of Birth</FormLabel>
-                      <DatePicker
-                        selected={field.value}
-                        onChange={field.onChange}
-                        dateFormat="dd/MM/yyyy"
-                        placeholderText="Select date"
-                        className={`flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm ${
-                          !isEditing ? "bg-muted/30" : ""
-                        }`}
+            {/* MODIFIED LAYOUT: Using a 4-column grid on desktop */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+
+              {/* Personal details inputs - 4 per row on desktop */}
+              <FormField
+                control={form.control}
+                name="mobileNo"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-xs">Mobile Number</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="9876543210"
+                        {...field}
                         disabled={!isEditing}
+                        className={!isEditing ? "bg-muted/30" : ""}
                       />
-                      <FormMessage className="text-xs" />
-                    </FormItem>
-                  )}
-                />
+                    </FormControl>
+                    <FormMessage className="text-xs" />
+                  </FormItem>
+                )}
+              />
 
-                <FormField
-                  control={form.control}
-                  name="maritalStatus"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-xs">Marital Status</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        defaultValue={field.value}
+              <FormField
+                control={form.control}
+                name="dateOfBirth"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-xs flex items-center gap-1">
+                      Date of Birth
+                      {isProfileVerified && isEditing && (
+                        <span className="text-xs text-amber-600">
+                          <span title="Cannot be changed after verification">
+                            <Info className="h-3 w-3" />
+                          </span>
+                        </span>
+                      )}
+                    </FormLabel>
+                    <DatePicker
+                      selected={field.value}
+                      onChange={field.onChange}
+                      dateFormat="dd/MM/yyyy"
+                      placeholderText="Select date"
+                      className={`flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm ${
+                        !isEditing || (isProfileVerified && isEditing)
+                          ? "bg-muted/30"
+                          : ""
+                      }`}
+                      disabled={!isEditing || (isProfileVerified && isEditing)}
+                    />
+                    <FormMessage className="text-xs" />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="maritalStatus"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-xs">Marital Status</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      value={field.value || ""}
+                      disabled={!isEditing}
+                    >
+                      <FormControl>
+                        <SelectTrigger
+                          className={!isEditing ? "bg-muted/30" : ""}
+                        >
+                          <SelectValue placeholder="Select" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="single">Single</SelectItem>
+                        <SelectItem value="married">Married</SelectItem>
+                        <SelectItem value="divorced">Divorced</SelectItem>
+                        <SelectItem value="widowed">Widowed</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage className="text-xs" />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="adharNo"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-xs flex items-center gap-1">
+                      Aadhar Number
+                      {isProfileVerified && isEditing && (
+                        <span className="text-xs text-amber-600">
+                          <span title="Cannot be changed after verification">
+                            <Info className="h-3 w-3" />
+                          </span>
+                        </span>
+                      )}
+                    </FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="1234 5678 9012"
+                        {...field}
+                        disabled={
+                          !isEditing || (isProfileVerified && isEditing)
+                        }
+                        className={
+                          !isEditing || (isProfileVerified && isEditing)
+                            ? "bg-muted/30"
+                            : ""
+                        }
+                      />
+                    </FormControl>
+                    <FormMessage className="text-xs" />
+                  </FormItem>
+                )}
+              />
+        
+
+              {/* Location details inputs - 4 per row on desktop */}
+              <FormField
+                control={form.control}
+                name="Address"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-xs">Address</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="Your address"
+                        {...field}
                         disabled={!isEditing}
+                        className={!isEditing ? "bg-muted/30" : ""}
+                      />
+                    </FormControl>
+                    <FormMessage className="text-xs" />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="city"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-xs">City</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="City"
+                        {...field}
+                        disabled={!isEditing}
+                        className={!isEditing ? "bg-muted/30" : ""}
+                      />
+                    </FormControl>
+                    <FormMessage className="text-xs" />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="state"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-xs">State</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="State"
+                        {...field}
+                        disabled={!isEditing}
+                        className={!isEditing ? "bg-muted/30" : ""}
+                      />
+                    </FormControl>
+                    <FormMessage className="text-xs" />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="country"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-xs">Country</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="Country"
+                        {...field}
+                        disabled={!isEditing}
+                        className={!isEditing ? "bg-muted/30" : ""}
+                      />
+                    </FormControl>
+                    <FormMessage className="text-xs" />
+                  </FormItem>
+                )}
+              />
+
+
+              {/* Academic details inputs - 4 per row on desktop */}
+              <FormField
+                control={form.control}
+                name="rollNo"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-xs flex items-center gap-1">
+                      Roll Number
+                      {isProfileVerified && isEditing && (
+                        <span className="text-xs text-amber-600">
+                          <span title="Cannot be changed after verification">
+                            <Info className="h-3 w-3" />
+                          </span>
+                        </span>
+                      )}
+                    </FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="Roll No"
+                        {...field}
+                        disabled={
+                          !isEditing || (isProfileVerified && isEditing)
+                        }
+                        className={
+                          !isEditing || (isProfileVerified && isEditing)
+                            ? "bg-muted/30"
+                            : ""
+                        }
+                      />
+                    </FormControl>
+                    <FormMessage className="text-xs" />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="collegeId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-xs flex items-center gap-1">
+                      College
+                      {isProfileVerified && isEditing && (
+                        <span className="text-xs text-amber-600">
+                          <span title="Cannot be changed after verification">
+                            <Info className="h-3 w-3" />
+                          </span>
+                        </span>
+                      )}
+                    </FormLabel>
+                    {isEditing && !isProfileVerified ? (
+                      <Select
+                        onValueChange={(value) => {
+                          field.onChange(value);
+                          handleCollegeChange(value);
+                        }}
+                        value={field.value || ""}
+                        disabled={
+                          !isEditing || (isProfileVerified && isEditing)
+                        }
                       >
                         <FormControl>
                           <SelectTrigger
-                            className={!isEditing ? "bg-muted/30" : ""}
+                            className={
+                              !isEditing || (isProfileVerified && isEditing)
+                                ? "bg-muted/30"
+                                : ""
+                            }
                           >
-                            <SelectValue placeholder="Select" />
+                            <SelectValue placeholder="Select college" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="single">Single</SelectItem>
-                          <SelectItem value="married">Married</SelectItem>
-                          <SelectItem value="divorced">Divorced</SelectItem>
-                          <SelectItem value="widowed">Widowed</SelectItem>
+                          {colleges?.map((college) => (
+                            <SelectItem key={college.id} value={college.id}>
+                              {college.name}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
-                      <FormMessage className="text-xs" />
-                    </FormItem>
-                  )}
-                />
+                    ) : (
+                      <Input
+                        value={collegeDisplayName || "Not selected"}
+                        disabled={true}
+                        className="bg-muted/30"
+                      />
+                    )}
+                    <FormMessage className="text-xs" />
+                  </FormItem>
+                )}
+              />
 
-                <FormField
-                  control={form.control}
-                  name="adharNo"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-xs">Aadhar Number</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="1234 5678 9012"
-                          {...field}
-                          disabled={!isEditing}
-                          className={!isEditing ? "bg-muted/30" : ""}
-                        />
-                      </FormControl>
-                      <FormMessage className="text-xs" />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              {/* Middle column - Location details */}
-              <div className="space-y-4 bg-green-50/30 p-4 rounded-lg">
-                <h3 className="font-medium text-primary">Location</h3>
-                
-                <FormField
-                  control={form.control}
-                  name="Address"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-xs">Address</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="Your address"
-                          {...field}
-                          disabled={!isEditing}
-                          className={!isEditing ? "bg-muted/30" : ""}
-                        />
-                      </FormControl>
-                      <FormMessage className="text-xs" />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="city"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-xs">City</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="City"
-                          {...field}
-                          disabled={!isEditing}
-                          className={!isEditing ? "bg-muted/30" : ""}
-                        />
-                      </FormControl>
-                      <FormMessage className="text-xs" />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="state"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-xs">State</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="State"
-                          {...field}
-                          disabled={!isEditing}
-                          className={!isEditing ? "bg-muted/30" : ""}
-                        />
-                      </FormControl>
-                      <FormMessage className="text-xs" />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="country"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-xs">Country</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="Country"
-                          {...field}
-                          disabled={!isEditing}
-                          className={!isEditing ? "bg-muted/30" : ""}
-                        />
-                      </FormControl>
-                      <FormMessage className="text-xs" />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              {/* Right column - Academic details */}
-              <div className="space-y-4 bg-purple-50/30 p-4 rounded-lg">
-                <h3 className="font-medium text-primary">Academic Details</h3>
-                
-                <FormField
-                  control={form.control}
-                  name="rollNo"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-xs">Roll Number</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="Roll No"
-                          {...field}
-                          disabled={!isEditing}
-                          className={!isEditing ? "bg-muted/30" : ""}
-                        />
-                      </FormControl>
-                      <FormMessage className="text-xs" />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="collegeId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-xs">College</FormLabel>
-                      {isEditing ? (
-                        <Select
-                          onValueChange={(value) => {
-                            field.onChange(value);
-                            handleCollegeChange(value);
-                          }}
-                          value={field.value}
-                          disabled={!isEditing}
-                        >
-                          <FormControl>
-                            <SelectTrigger
-                              className={!isEditing ? "bg-muted/30" : ""}
-                            >
-                              <SelectValue placeholder="Select College" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {colleges && colleges.map((college) => (
-                              <SelectItem key={college.id} value={college.id}>
-                                {college.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      ) : (
-                        <div className="p-2 bg-muted/30 border rounded-md text-sm">
-                          {collegeDisplayName || "Not selected"}
-                        </div>
+              <FormField
+                control={form.control}
+                name="branchId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-xs flex items-center gap-1">
+                      Branch
+                      {isProfileVerified && isEditing && (
+                        <span className="text-xs text-amber-600">
+                          <span title="Cannot be changed after verification">
+                            <Info className="h-3 w-3" />
+                          </span>
+                        </span>
                       )}
-                      <FormMessage className="text-xs" />
-                    </FormItem>
-                  )}
-                />
-
-                <div className="grid grid-cols-2 gap-3">
-                  <FormField
-                    control={form.control}
-                    name="branchId"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-xs">Branch</FormLabel>
-                        {isEditing ? (
-                          <Select
-                            onValueChange={(value) => {
-                              field.onChange(value);
-                              // Update branch display name
-                              const selectedBranch = branches.find(b => b.id === value);
-                              setBranchDisplayName(selectedBranch?.name || "");
-                            }}
-                            value={field.value}
-                            disabled={!isEditing}
-                          >
-                            <FormControl>
-                              <SelectTrigger
-                                className={!isEditing ? "bg-muted/30" : ""}
-                              >
-                                <SelectValue placeholder="Select Branch" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {branches.map((branch) => (
-                                <SelectItem key={branch.id} value={branch.id}>
-                                  {branch.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        ) : (
-                          <div className="p-2 bg-muted/30 border rounded-md text-sm">
-                            {branchDisplayName || "Not selected"}
-                          </div>
-                        )}
-                        <FormMessage className="text-xs" />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="courseId"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-xs">Course</FormLabel>
-                        {isEditing ? (
-                          <Select
-                            onValueChange={(value) => {
-                              field.onChange(value);
-                              // Update course display name
-                              const selectedCourse = course?.find(c => c.id === value);
-                              setCourseDisplayName(selectedCourse?.name || "");
-                            }}
-                            value={field.value}
-                            disabled={!isEditing}
-                            >
-                            <FormControl>
-                              <SelectTrigger
-                                className={!isEditing ? "bg-muted/30" : ""}
-                              >
-                                <SelectValue placeholder="Select Course" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {course && course.map((c) => (
-                                <SelectItem key={c.id} value={c.id}>
-                                  {c.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        ) : (
-                          <div className="p-2 bg-muted/30 border rounded-md text-sm">
-                            {courseDisplayName || "Not selected"}
-                          </div>
-                        )}
-                        <FormMessage className="text-xs" />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <FormField
-                    control={form.control}
-                    name="academicYearId"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-xs">Academic Year</FormLabel>
-                        {isEditing ? (
-                          <Select
-                            onValueChange={(value) => {
-                              field.onChange(value);
-                              // Update academic year display name
-                              const selectedYear = academicYears.find(y => y.id === value);
-                              setAcademicYearDisplayName(selectedYear?.name || "");
-                            }}
-                            value={field.value}
-                            disabled={!isEditing}
-                          >
-                            <FormControl>
-                              <SelectTrigger
-                                className={!isEditing ? "bg-muted/30" : ""}
-                              >
-                                <SelectValue placeholder="Select Year" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {academicYears && academicYears.map((year) => (
-                                <SelectItem key={year.id} value={year.id}>
-                                  {year.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        ) : (
-                          <div className="p-2 bg-muted/30 border rounded-md text-sm">
-                            {academicYearDisplayName || "Not selected"}
-                          </div>
-                        )}
-                        <FormMessage className="text-xs" />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="yearOfPassing"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-xs">Year of Passing</FormLabel>
+                    </FormLabel>
+                    {isEditing && !isProfileVerified ? (
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value || ""}
+                        disabled={
+                          !isEditing || (isProfileVerified && isEditing)
+                        }
+                      >
                         <FormControl>
-                          <Input
-                            placeholder="Year"
-                            {...field}
-                            disabled={!isEditing}
-                            className={!isEditing ? "bg-muted/30" : ""}
-                          />
+                          <SelectTrigger
+                            className={
+                              !isEditing || (isProfileVerified && isEditing)
+                                ? "bg-muted/30"
+                                : ""
+                            }
+                          >
+                            <SelectValue placeholder="Select branch" />
+                          </SelectTrigger>
                         </FormControl>
-                        <FormMessage className="text-xs" />
-                      </FormItem>
+                        <SelectContent>
+                          {branches?.map((branch) => (
+                            <SelectItem key={branch.id} value={branch.id}>
+                              {branch.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <Input
+                        value={branchDisplayName || "Not selected"}
+                        disabled={true}
+                        className="bg-muted/30"
+                      />
                     )}
-                  />
-                </div>
-                
-                <FormField
-                  control={form.control}
-                  name="teacherId"
-                  render={({ field }) => (
-                    <FormItem className="hidden">
-                      <FormControl>
-                        <Input {...field} type="hidden" />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-              </div>
-            </div>
+                    <FormMessage className="text-xs" />
+                  </FormItem>
+                )}
+              />
 
-            {/* Submit button - only visible when editing and on small screens */}
-            {isEditing && (
-              <div className="mt-6 flex justify-end md:hidden">
-                <Button
-                  type="submit"
-                  className="w-full md:w-auto"
-                  disabled={isSubmitting}
-                >
-                  {isSubmitting ? "Saving..." : "Save Profile"}
-                </Button>
-              </div>
-            )}
+              <FormField
+                control={form.control}
+                name="courseId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-xs flex items-center gap-1">
+                      Course
+                      {isProfileVerified && isEditing && (
+                        <span className="text-xs text-amber-600">
+                          <span title="Cannot be changed after verification">
+                            <Info className="h-3 w-3" />
+                          </span>
+                        </span>
+                      )}
+                    </FormLabel>
+                    {isEditing && !isProfileVerified ? (
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value || ""}
+                        disabled={
+                          !isEditing || (isProfileVerified && isEditing)
+                        }
+                      >
+                        <FormControl>
+                          <SelectTrigger
+                            className={
+                              !isEditing || (isProfileVerified && isEditing)
+                                ? "bg-muted/30"
+                                : ""
+                            }
+                          >
+                            <SelectValue placeholder="Select course" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {course?.map((c) => (
+                            <SelectItem key={c.id} value={c.id}>
+                              {c.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <Input
+                        value={courseDisplayName || "Not selected"}
+                        disabled={true}
+                        className="bg-muted/30"
+                      />
+                    )}
+                    <FormMessage className="text-xs" />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="academicYearId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-xs flex items-center gap-1">
+                      Academic Year
+                      {isProfileVerified && isEditing && (
+                        <span className="text-xs text-amber-600">
+                          <span title="Cannot be changed after verification">
+                            <Info className="h-3 w-3" />
+                          </span>
+                        </span>
+                      )}
+                    </FormLabel>
+                    {isEditing && !isProfileVerified ? (
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value || ""}
+                        disabled={
+                          !isEditing || (isProfileVerified && isEditing)
+                        }
+                      >
+                        <FormControl>
+                          <SelectTrigger
+                            className={
+                              !isEditing || (isProfileVerified && isEditing)
+                                ? "bg-muted/30"
+                                : ""
+                            }
+                          >
+                            <SelectValue placeholder="Select academic year" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {academicYears?.map((year) => (
+                            <SelectItem key={year.id} value={year.id}>
+                              {year.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <Input
+                        value={academicYearDisplayName || "Not selected"}
+                        disabled={true}
+                        className="bg-muted/30"
+                      />
+                    )}
+                    <FormMessage className="text-xs" />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="yearOfPassing"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-xs flex items-center gap-1">
+                      Year of Passing
+                      {isProfileVerified && isEditing && (
+                        <span className="text-xs text-amber-600">
+                          <span title="Cannot be changed after verification">
+                            <Info className="h-3 w-3" />
+                          </span>
+                        </span>
+                      )}
+                    </FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="e.g. 2025"
+                        {...field}
+                        disabled={
+                          !isEditing || (isProfileVerified && isEditing)
+                        }
+                        className={
+                          !isEditing || (isProfileVerified && isEditing)
+                            ? "bg-muted/30"
+                            : ""
+                        }
+                      />
+                    </FormControl>
+                    <FormMessage className="text-xs" />
+                  </FormItem>
+                )}
+              />
+            </div>
           </form>
         </Form>
       </CardContent>
+
+      {/* Confirmation Dialog for Verified Profiles */}
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Update Profile</DialogTitle>
+            <DialogDescription>
+              Some fields cannot be changed after verification. The following
+              fields will remain unchanged:
+              <ul className="list-disc list-inside mt-2 space-y-1">
+                <li>Aadhar Number</li>
+                <li>Date of Birth</li>
+                <li>Roll Number</li>
+                <li>College</li>
+                <li>Branch</li>
+                <li>Course</li>
+                <li>Academic Year</li>
+                <li>Year of Passing</li>
+              </ul>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={form.handleSubmit(onSubmit)}>Continue</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 };
