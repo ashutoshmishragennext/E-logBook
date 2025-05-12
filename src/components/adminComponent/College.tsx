@@ -459,7 +459,7 @@ useEffect(() => {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-              collegeAdminId: userData.createdBy,
+              collegeAdminId: userData.userId,
             }),
           }
         );
@@ -473,7 +473,7 @@ useEffect(() => {
                 ? {
                     ...updatedCollege,
                     collegeAdmin: {
-                      id: userData.createdBy,
+                      id: userData.userId,
                       name: userData.name,
                       email: userData.email,
                     },
