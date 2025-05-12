@@ -9,14 +9,27 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const id = searchParams.get("id");
     const collegeId = searchParams.get("collegeId");
+    const userId = searchParams.get("userId");
 
-    if (!id && !collegeId) {
+    if (!id && !collegeId && !userId) {
       return NextResponse.json(
         { error: "Either 'id' or 'collegeId' query parameter is required." },
         { status: 400 }
       );
     }
 
+    if (userId) {
+      const profile = await db
+        .select()
+        .from(TeacherProfileTable)
+        .where(eq(TeacherProfileTable.userId, userId));
+
+      if (!profile || profile.length === 0) {
+        return NextResponse.json({ error: "Teacher not found" }, { status: 404 });
+      }
+
+      return NextResponse.json({ data: profile[0] }, { status: 200 });
+    }
     // Fetch by teacher ID
     if (id) {
       // FIXED: Searching by the primary id field instead of userId
@@ -60,9 +73,9 @@ export async function POST(req: NextRequest) {
 
     // Validate required fields
     if (!data.userId || !data.name || !data.email || !data.mobileNo ||
-        !data.collegeId || !data.branchId || !data.courseId ||
-        !data.academicYearId || !data.phaseId || !data.designation ||
-        !data.employeeId || !data.joiningDate) {
+      !data.collegeId || !data.branchId || !data.courseId ||
+      !data.academicYearId || !data.phaseId || !data.designation ||
+      !data.employeeId || !data.joiningDate) {
       return NextResponse.json(
         { error: "Missing required fields" },
         { status: 400 }
@@ -123,15 +136,15 @@ export async function PUT(req: NextRequest) {
     // Update profile
     const result = await db.update(TeacherProfileTable)
       .set({
-      name: data.name,
-      email: data.email,
-      mobileNo: data.mobileNo,
-      profilePhoto: data.profilePhoto,
-      teacherIdProof: data.teacherIdProof,
-      Address: data.Address,
-      collegeId: data.collegeId,
-      designation: data.designation,
-      employeeId: data.employeeId,
+        name: data.name,
+        email: data.email,
+        mobileNo: data.mobileNo,
+        profilePhoto: data.profilePhoto,
+        teacherIdProof: data.teacherIdProof,
+        Address: data.Address,
+        collegeId: data.collegeId,
+        designation: data.designation,
+        employeeId: data.employeeId,
         updatedAt: new Date(),
       })
       .where(eq(TeacherProfileTable.id, id))

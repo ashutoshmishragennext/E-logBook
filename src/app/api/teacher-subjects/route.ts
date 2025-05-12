@@ -9,8 +9,9 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const teacherId = searchParams.get("teacherId");
     const subjectId = searchParams.get("subjectId");
+    const id = searchParams.get("id");
 
-    if (!teacherId && !subjectId) {
+    if (!teacherId && !subjectId && !id) {
       return NextResponse.json(
         { error: "Missing teacherId or subjectId" },
         { status: 400 }
@@ -18,6 +19,14 @@ export async function GET(req: NextRequest) {
     }
 
     // If subjectId is provided, filter by it
+
+    if (id) {
+      const teacherSubject = await db
+        .select()
+        .from(TeacherSubjectTable)
+        .where(eq(TeacherSubjectTable.id, id));
+      return NextResponse.json(teacherSubject);
+    }
     if (subjectId) {
       const teacherSubjects = await db
         .select()

@@ -48,6 +48,13 @@ interface SelectedSubjectTeacher {
   teacherName: string;
 }
 
+// Interface for teacher subject data
+interface TeacherSubjectData {
+  id: string;
+  teacherId: string;
+  subjectId: string;
+}
+
 export default function StudentSubjectSelection({
   studentId,
 }: StudentSubjectSelectionProps) {
@@ -59,7 +66,7 @@ export default function StudentSubjectSelection({
     studentAllocations,
     loading,
     error,
-
+    teacher,
     fetchTeacherName,
     fetchAcademicYears,
     fetchPhases,
@@ -86,54 +93,200 @@ export default function StudentSubjectSelection({
   const { profile, fetchProfile } = useStudentProfileStore();
   const [profileLoading, setProfileLoading] = useState(true);
   const [teacherNames, setTeacherNames] = useState<Record<string, string>>({});
-  // Fetch teacher names when teacherSubjects changes
-  useEffect(() => {
-    const fetchTeacherNames = async () => {
-      // Create a set of unique teacher IDs that need to be fetched
-      const teacherIdsToFetch = new Set<string>();
-      teacherSubjects.forEach((ts) => {
-        if (ts.teacherId && !teacherNames[ts.teacherId]) {
-          teacherIdsToFetch.add(ts.teacherId as string);
-        }
-      });
+  const [subjectNames, setSubjectNames] = useState<Record<string, string>>({});
+  const [fetchingTeacherNames, setFetchingTeacherNames] = useState(false);
+  const [cachedTeacherSubjects, setCachedTeacherSubjects] = useState<
+    Record<string, TeacherSubjectData>
+  >({});
 
-      // Fetch teacher names in parallel
-      const fetchPromises = Array.from(teacherIdsToFetch).map(
-        async (teacherId) => {
-          try {
-            await fetchTeacherName(teacherId);
-            const state = useStudentSubjectStore.getState();
-            console.log(
-              `Fetched teacher (ID: ${teacherId}): ${state.teacher?.name}`
-            );
-            if (state.teacher?.name) {
-              return { [teacherId]: state.teacher.name };
-            }
-          } catch (error) {
-            console.error(
-              `Error fetching teacher name for ID ${teacherId}:`,
-              error
-            );
-          }
-          return null;
-        }
+  // Improved function to fetch teacher name directly
+  const getTeacherName = async (teacherId: string) => {
+    if (!teacherId) return "Unknown Teacher";
+
+    console.log("Fetching teacher name for ID:", teacherId);
+
+    // Return cached name if available
+    if (teacherNames[teacherId]) {
+      return teacherNames[teacherId];
+    }
+
+    console.log("Fetching teacher name for ID:", teacherId);
+
+    try {
+      // Direct API call to fetch teacher name
+      const response = await fetch(`/api/teacher-profile?id=${teacherId}`);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch teacher: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log("Fetched teacher data:", data);
+      const name = data?.name || "Unknown Teacher";
+
+      // Update the cache
+      setTeacherNames((prev) => ({
+        ...prev,
+        [teacherId]: name,
+      }));
+
+      return name;
+    } catch (error) {
+      console.error(`Error fetching teacher name for ID ${teacherId}:`, error);
+      return "Unknown Teacher";
+    }
+  };
+
+  const fetchTeacherSubjectDetails = async (teacherSubjectId: string) => {
+    if (!teacherSubjectId) return null;
+
+    // Return from cache if available
+    if (cachedTeacherSubjects[teacherSubjectId]) {
+      return cachedTeacherSubjects[teacherSubjectId];
+    }
+
+    try {
+      const response = await fetch(
+        `/api/teacher-subjects?id=${teacherSubjectId}`
+      );
+      if (!response.ok) {
+        throw new Error(`Failed to fetch teacher subject: ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      // Update the cache
+      setCachedTeacherSubjects((prev) => ({
+        ...prev,
+        [teacherSubjectId]: data,
+      }));
+
+      // If we have a teacherId, immediately initiate fetching the teacher's name
+      if (data && data.teacherId) {
+        getTeacherName(data.teacherId);
+      }
+
+      return data;
+    } catch (error) {
+      console.error(
+        `Error fetching teacher subject details for ID ${teacherSubjectId}:`,
+        error
+      );
+      return null;
+    }
+  };
+  useEffect(() => {
+    const fetchSubjectsForAllocations = async () => {
+      const uniqueSubjectIds = new Set(
+        studentAllocations.map((a) => a.subjectId)
       );
 
-      const results = await Promise.all(fetchPromises);
-      const newTeacherNames = results.reduce((acc, result) => {
-        return result ? { ...acc, ...result } : acc;
-      }, {});
+      const newSubjectNames: Record<string, string> = {};
 
-      setTeacherNames((prev) => ({ ...prev, ...newTeacherNames }));
-      console.log("Updated teacher names:", {
-        ...teacherNames,
-        ...newTeacherNames,
-      });
+      for (const subjectId of uniqueSubjectIds) {
+        if (!subjectNames[subjectId]) {
+          const subject = await fetchSubjectById(subjectId);
+          if (subject?.name) {
+            newSubjectNames[subjectId] = subject.name;
+          }
+        }
+      }
+
+      setSubjectNames((prev) => ({ ...prev, ...newSubjectNames }));
     };
 
-    if (teacherSubjects.length > 0) {
-      fetchTeacherNames();
+    if (studentAllocations.length > 0) {
+      fetchSubjectsForAllocations();
     }
+  }, [studentAllocations]);
+  4;
+
+  // Improved teacher names fetching for allocations
+  // Improved useEffect for fetching teacher names
+  useEffect(() => {
+    const fetchAllocationTeacherInfo = async () => {
+      if (studentAllocations.length === 0) return;
+
+      setFetchingTeacherNames(true);
+
+      try {
+        for (const allocation of studentAllocations) {
+          const teacherSubjectId = allocation.teacherSubjectId;
+
+          // Skip if we don't have a valid teacherSubjectId
+          if (!teacherSubjectId) continue;
+
+          let teacherId = null;
+
+          // First check if we already know about this teacher subject
+          const existingTeacherSubject = teacherSubjects.find(
+            (ts) => ts.id === teacherSubjectId
+          );
+          
+
+          if (existingTeacherSubject && existingTeacherSubject.teacherId) {
+            teacherId = existingTeacherSubject.teacherId;
+          } else {
+            // If not in our current list, check cache or fetch it
+            let teacherSubjectData = cachedTeacherSubjects[teacherSubjectId];
+
+            if (!teacherSubjectData) {
+              teacherSubjectData = await fetchTeacherSubjectDetails(
+                teacherSubjectId
+              );
+            }
+
+            if (teacherSubjectData && teacherSubjectData.teacherId) {
+              teacherId = teacherSubjectData.teacherId;
+            }
+          }
+
+          console.log("Teacher ID for allocation:", teacherId);
+
+          // If we found a teacherId, make sure we have the name
+          if (teacherId && !teacherNames[teacherId]) {
+            await getTeacherName(teacherId);
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching allocation teacher info:", error);
+      } finally {
+        setFetchingTeacherNames(false);
+      }
+    };
+
+    fetchAllocationTeacherInfo();
+  }, [
+    studentAllocations,
+    teacherSubjects,
+    cachedTeacherSubjects,
+    teacherNames,
+  ]);
+
+  // Fetch teacher names for available teachers when teacherSubjects changes
+  useEffect(() => {
+    const fetchAvailableTeacherNames = async () => {
+      if (teacherSubjects.length === 0) return;
+
+      const teacherIdsToFetch = teacherSubjects
+        .map((ts) => ts.teacherId)
+        .filter((id) => id && !teacherNames[id]);
+
+      if (teacherIdsToFetch.length === 0) return;
+
+      const newTeacherNames: Record<string, string> = {};
+
+      for (const teacherId of teacherIdsToFetch) {
+        const name = await getTeacherName(teacherId);
+        newTeacherNames[teacherId] = name;
+      }
+
+      setTeacherNames((prev) => ({
+        ...prev,
+        ...newTeacherNames,
+      }));
+    };
+
+    fetchAvailableTeacherNames();
   }, [teacherSubjects]);
 
   useEffect(() => {
@@ -272,29 +425,17 @@ export default function StudentSubjectSelection({
   };
 
   const handleAddSubjectTeacher = async () => {
-    console.log("Adding subject-teacher:", {
-      currentSubjectId,
-      currentTeacherSubjectId,
-      selectedSubjects,
-    });
-
     if (!currentSubjectId || !currentTeacherSubjectId) {
-      console.log("Cannot add: Missing subject ID or teacher subject ID");
       return;
     }
-
-    // Set loading state if needed
-    // setAddingSubject(true);
 
     try {
       // Find teacher subject
       const teacherSubject = teacherSubjects.find(
         (ts) => ts.id === currentTeacherSubjectId
       );
-      console.log("Found teacher subject:", teacherSubject);
 
       if (!teacherSubject) {
-        console.log("Cannot add: teacherSubject not found");
         return;
       }
 
@@ -306,13 +447,9 @@ export default function StudentSubjectSelection({
         subjectName = subjectDetails.name;
       }
 
-      // Get teacher name
+      // Get teacher name - use our improved method
       const teacherId = teacherSubject.teacherId;
-      const teacherName =
-        teacherId && teacherNames[teacherId]
-          ? teacherNames[teacherId]
-          : "Unknown Teacher";
-      console.log("Teacher name to display:", teacherName);
+      const teacherName = await getTeacherName(teacherId);
 
       // Check if already selected
       const alreadySelected = selectedSubjects.some(
@@ -320,15 +457,12 @@ export default function StudentSubjectSelection({
       );
 
       if (alreadySelected) {
-        console.log("Cannot add: Subject already selected");
         return;
       }
 
       // Check if subject is already allocated
       const isAllocated = isSubjectAllocated(currentSubjectId);
-      console.log("Is subject already allocated?", isAllocated);
       if (isAllocated) {
-        console.log("Cannot add: Subject already allocated to student");
         return;
       }
 
@@ -340,7 +474,6 @@ export default function StudentSubjectSelection({
         teacherName: teacherName,
       };
 
-      console.log("Adding new subject-teacher:", newSelection);
       setSelectedSubjects((prev) => [...prev, newSelection]);
 
       // Reset current selections
@@ -349,9 +482,6 @@ export default function StudentSubjectSelection({
       setSearchQuery("");
     } catch (error) {
       console.error("Error adding subject-teacher:", error);
-    } finally {
-      // Reset loading state if needed
-      // setAddingSubject(false);
     }
   };
 
@@ -395,6 +525,66 @@ export default function StudentSubjectSelection({
     }
   };
 
+  // Helper function to get teacher name from teacherSubject
+  const getTeacherNameFromSubject = (teacherSubjectId: string) => {
+    const teacherSubject = teacherSubjects.find(
+      (ts) => ts.id === teacherSubjectId
+    );
+    if (!teacherSubject || !teacherSubject.teacherId) return "Unknown Teacher";
+    return teacherNames[teacherSubject.teacherId] || "Loading...";
+  };
+
+  // Fixed getAllocationTeacherName function
+  const getAllocationTeacherName = (allocation: { teacherSubjectId?: string }) => {
+    if (!allocation || !allocation.teacherSubjectId) {
+      return "Unknown Teacher";
+    }
+
+    // First check if we have this teacher subject in our cache or main list
+    const teacherSubject = teacherSubjects.find(
+      (ts) => ts.id === allocation.teacherSubjectId
+    );
+
+    const cachedTeacherSubject =
+      cachedTeacherSubjects[allocation.teacherSubjectId];
+
+    let teacherId = null;
+
+    // Get the teacherId from wherever it's available
+    if (teacherSubject && teacherSubject.teacherId) {
+      teacherId = teacherSubject.teacherId;
+    } else if (cachedTeacherSubject && cachedTeacherSubject.teacherId) {
+      teacherId = cachedTeacherSubject.teacherId;
+    }
+
+    // If we have a teacher ID, return the name if available
+    if (teacherId && teacherNames[teacherId]) {
+      return teacherNames[teacherId];
+    }
+
+    // Handle loading state
+    if (fetchingTeacherNames) {
+      return "Loading...";
+    }
+
+    // If we have a teacher subject ID but name isn't loaded yet, trigger a fetch
+    if (allocation.teacherSubjectId && !fetchingTeacherNames) {
+      // This will start fetching in the background
+      setTimeout(async () => {
+        const teacherSubjectData = await fetchTeacherSubjectDetails(
+          allocation.teacherSubjectId ?? ""
+        );
+        if (teacherSubjectData && teacherSubjectData.teacherId) {
+
+          await getTeacherName(teacherSubjectData.teacherId);
+        }
+      }, 0);
+      return "Loading...";
+    }
+
+    return "Unknown Teacher";
+  };
+
   // Determine if form is ready for submission
   const isFormValid =
     selectedAcademicYearId &&
@@ -404,24 +594,13 @@ export default function StudentSubjectSelection({
 
   // Check if a subject is already allocated to student
   const isSubjectAllocated = (subjectId: string): boolean => {
-    const allocated = studentAllocations.some(
-      (allocation: {
-        subjectId: string;
-        academicYearId: string;
-        phaseId: string;
-      }) =>
+    return studentAllocations.some(
+      (allocation) =>
         allocation.subjectId === subjectId &&
         allocation.academicYearId === selectedAcademicYearId &&
-        allocation.phaseId === selectedPhaseId
+        allocation.phaseId === selectedPhaseId &&
+        allocation.verificationStatus !== "REJECTED" // Optionally exclude rejected allocations
     );
-
-    console.log(`Subject ${subjectId} allocation check:`, {
-      allocated,
-      academicYearId: selectedAcademicYearId,
-      phaseId: selectedPhaseId,
-    });
-
-    return allocated;
   };
 
   return (
@@ -490,10 +669,9 @@ export default function StudentSubjectSelection({
                     <div className="p-2">
                       {teacherSubjects.map((teacherSubject) => {
                         const teacherId = teacherSubject.teacherId;
-                        const displayName =
-                          teacherId && teacherNames[teacherId]
-                            ? teacherNames[teacherId]
-                            : "Loading teacher...";
+                        const displayName = teacherId
+                          ? teacherNames[teacherId] || "Loading teacher..."
+                          : "Unknown Teacher";
 
                         return (
                           <div
@@ -654,20 +832,26 @@ export default function StudentSubjectSelection({
                 </TableHeader>
                 <TableBody>
                   {studentAllocations.map((allocation) => {
+                    // Get subject name, either from cache or display placeholder
+                    const subjectName =
+                      subjectNames[allocation.subjectId] || "Loading...";
+
+                    // Get teacher name using our fixed function
+                    const teacherName = getAllocationTeacherName(allocation);
+
+                    // Find academic year name
                     const academicYear = academicYears.find(
-                      (y) => y.id === allocation.academicYearId
+                      (year) => year.id === allocation.academicYearId
                     );
+
                     return (
                       <TableRow key={allocation.id}>
                         <TableCell className="font-medium">
-                          {allocation.subject?.name || "Unknown Subject"}
+                          {subjectName}
                         </TableCell>
+                        <TableCell>{teacherName}</TableCell>
                         <TableCell>
-                          {allocation.teacherSubject?.teacher?.name ||
-                            "Not assigned"}
-                        </TableCell>
-                        <TableCell>
-                          {academicYear?.name || "Unknown Year"}
+                          {academicYear?.name || allocation.academicYearId}
                         </TableCell>
                         <TableCell>
                           <Badge
@@ -680,27 +864,32 @@ export default function StudentSubjectSelection({
                             }
                             className={
                               allocation.verificationStatus === "APPROVED"
-                                ? "bg-green-100 text-green-800 hover:bg-green-100"
+                                ? "bg-green-100 text-green-800"
                                 : allocation.verificationStatus === "REJECTED"
-                                ? "bg-red-100 text-red-800 hover:bg-red-100"
-                                : "bg-yellow-100 text-yellow-800 hover:bg-yellow-100"
+                                ? "bg-red-100 text-red-800"
+                                : "bg-yellow-100 text-yellow-800"
                             }
                           >
-                            {allocation.verificationStatus || "PENDING"}
+                            {allocation.verificationStatus}
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          <Badge
-                            variant={
-                              allocation.hasLogbookAccess
-                                ? "default"
-                                : "secondary"
-                            }
-                          >
-                            {allocation.hasLogbookAccess
-                              ? "Granted"
-                              : "Not Available"}
-                          </Badge>
+                          {allocation.verificationStatus === "APPROVED" ? (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              asChild
+                              className="text-blue-600 hover:text-blue-800"
+                            >
+                              <a href={`/student/logbook/${allocation.id}`}>
+                                Access Logbook
+                              </a>
+                            </Button>
+                          ) : (
+                            <Badge variant="outline" className="bg-gray-100">
+                              Pending Approval
+                            </Badge>
+                          )}
                         </TableCell>
                       </TableRow>
                     );
@@ -711,34 +900,15 @@ export default function StudentSubjectSelection({
           ) : (
             <div className="p-6 text-center border rounded-md bg-gray-50">
               <p className="text-gray-500">No subject allocations found</p>
+              {!selectedPhaseId && (
+                <p className="text-sm mt-2 text-gray-400">
+                  Select a phase to make new subject allocations
+                </p>
+              )}
             </div>
           )}
         </CardContent>
       </Card>
-
-      <div
-        className="mt-8 p-4 border border-gray-200 rounded-md bg-gray-50"
-        style={{ display: "none" }}
-      >
-        <h3 className="text-sm font-medium mb-2">Debug Information</h3>
-        <pre className="text-xs whitespace-pre-wrap">
-          {JSON.stringify(
-            {
-              currentSubjectId,
-              currentTeacherSubjectId,
-              selectedAcademicYearId,
-              selectedCollegeId,
-              selectedPhaseId,
-              teacherSubjectsCount: teacherSubjects.length,
-              selectedSubjectsCount: selectedSubjects.length,
-              teacherNamesCount: Object.keys(teacherNames).length,
-              allocationsCount: studentAllocations.length,
-            },
-            null,
-            2
-          )}
-        </pre>
-      </div>
     </div>
   );
 }

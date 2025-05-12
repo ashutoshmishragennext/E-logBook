@@ -1,3 +1,4 @@
+import { create } from 'zustand';
 // /api/colleges/route.ts
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { db } from "@/db";
@@ -35,7 +36,7 @@ export async function GET(req: NextRequest) {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    if (!body.userId) {
+    if (!body.createdBy) {
       return NextResponse.json({ message: "Missing userId" }, { status: 400 });
     }
 

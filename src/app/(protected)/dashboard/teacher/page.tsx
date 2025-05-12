@@ -1,193 +1,274 @@
 "use client";
 
-import DisplayLogBookEntries from "@/components/teacher/DisplayLogBookEntries";
-import Students from "@/components/teacher/Students";
 import { TeacherProfilePage } from "@/components/teacher/TeacherProfile";
-
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { useCurrentUser } from "@/hooks/auth";
 import {
   ChevronLeft,
   ChevronRight,
-  File,
   LogOut,
   Menu,
-  Settings,
-  Users,
+  School,
+  User
 } from "lucide-react";
 import { signOut, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
-export default function Dashboard() {
+import { SetStateAction, useEffect, useState } from "react";
+
+const Sidebar = () => {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const user = useCurrentUser();
-  // console.log("user",user?.name);
-
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [activeComponent, setActiveComponent] = useState("profile");
+  const [activeComponent, setActiveComponent] = useState("Profile");
+  const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // Dynamically create sidebarItems with session data
+  const sidebarItems = [
+    { id: "Profile", label: "Profile", icon: <School size={20} />, component: <TeacherProfilePage/> },
+  ];
+
+  // Find the active component to render
+  const activeItem = sidebarItems.find(item => item.id === activeComponent);
 
   const handleLogout = async () => {
     await signOut({ redirectTo: "/auth/login" });
   };
 
-  // Redirect if not authenticatedclear
   useEffect(() => {
     if (status === "unauthenticated") {
-      router.push("/login");
+      router.push("/auth/login");
     }
   }, [status, router]);
 
-  if (status === "loading") {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        Loading...
-      </div>
-    );
-  }
+  // Close profile dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (profileDropdownOpen && !target.closest('.profile-dropdown')) {
+        setProfileDropdownOpen(false);
+      }
+    };
 
-  if (!session) {
-    console.log("");
-
-    return null;
-  }
-
-  const toggleSidebar = () => {
-    setSidebarOpen(!sidebarOpen);
-  };
-
-  // Navigation items for sidebar
-  const navItems = [
-    { id: "profile", label: "Profile", icon: <File className="h-5 w-5" /> },
-    { id: "students", label: "Students", icon: <Users className="h-5 w-5" /> },
-    { id: "logBooks", label: "Log Books", icon: <Users className="h-5 w-5" /> },
-    // { id: 'folders', label: 'Folders', icon: <FolderOpen className="h-5 w-5" /> },
-    // { id: 'activity', label: 'Activity', icon: <Activity className="h-5 w-5" /> },
-  ];
-
-  // Render the appropriate component based on sidebar selection
-  const renderMainContent = () => {
-    switch (activeComponent) {
-      case "profile":
-        return <TeacherProfilePage/>;
-      case "logBooks":
-        return <DisplayLogBookEntries />;
-      case "students":
-        return <Students />;
-      case "activity":
-        return (
-          <div>
-            <h1 className="text-2xl font-bold mb-6">Recent Activity</h1>
-            <div className="border rounded-lg p-6">
-              <h2 className="text-lg font-semibold mb-4">Activity Log</h2>
-              {/* Activity logs and timeline */}
-            </div>
-          </div>
-        );
-      default:
-        return (
-          <div className="text-center p-8 text-gray-500">
-            Select an option from the sidebar
-          </div>
-        );
-    }
-  };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [profileDropdownOpen]);
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <nav className="bg-white shadow-sm border-b px-6 py-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <button
-              onClick={toggleSidebar}
-              className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
-            >
-              <Menu className="h-5 w-5" />
-            </button>
-            <h1 className="text-2xl font-semibold text-gray-800">
-              {" "}
-              Teacher Portal
-            </h1>
+    <div className="flex h-screen bg-gray-50">
+      {/* Mobile menu button */}
+      <div className="lg:hidden fixed top-4 left-4 z-30">
+        <button
+          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          className="p-2 rounded-md bg-white shadow-md text-gray-600"
+        >
+          <Menu size={24} />
+        </button>
+      </div>
+
+      {/* Sidebar - Desktop */}
+      <div
+        className={`hidden lg:flex flex-col ${
+          sidebarOpen ? "w-64" : "w-20"
+        } transition-all duration-300 bg-white border-r border-gray-200 shadow-sm`}
+      >
+        <SidebarContent 
+          sidebarOpen={sidebarOpen}
+          setSidebarOpen={setSidebarOpen}
+          activeComponent={activeComponent}
+          setActiveComponent={setActiveComponent}
+          session={session}
+          handleLogout={handleLogout}
+          sidebarItems={sidebarItems}
+        />
+      </div>
+
+      {/* Sidebar - Mobile */}
+      <div
+        className={`lg:hidden fixed inset-0 z-20 transform ${
+          mobileMenuOpen ? "translate-x-0" : "-translate-x-full"
+        } transition-transform duration-300 ease-in-out`}
+      >
+        <div className="relative flex flex-col w-64 h-full bg-white border-r border-gray-200 shadow-xl">
+          <button
+            onClick={() => setMobileMenuOpen(false)}
+            className="absolute top-4 right-4 text-gray-500"
+          >
+            <ChevronLeft size={24} />
+          </button>
+          <SidebarContent 
+            sidebarOpen={true}
+            setSidebarOpen={() => {}}
+            activeComponent={activeComponent}
+            setActiveComponent={(id: SetStateAction<string>) => {
+              setActiveComponent(id);
+              setMobileMenuOpen(false);
+            }}
+            session={session}
+            handleLogout={handleLogout}
+            sidebarItems={sidebarItems}
+          />
+        </div>
+      </div>
+
+      {/* Main content */}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {/* Top navigation bar */}
+        <header className="bg-white shadow-sm border-b border-gray-200 h-16 flex items-center justify-between px-4 lg">
+          <div className="flex items-center">
+            {/* <h1 className="text-xl font-semibold text-gray-800">
+              {activeItem?.label || "college"}
+            </h1> */}
           </div>
 
-          <Popover>
-            <PopoverTrigger asChild>
-              <button className="flex items-center gap-2 hover:bg-gray-50 rounded-lg p-2 transition-colors">
-                {/* <Avatar className="h-8 w-8">
-                  <AvatarImage src="/images/user_alt_icon.png" alt="User" />
-                  
-                </Avatar> */}
-                <span className="text-sm font-medium text-gray-700">
-                  {user?.name}
-                </span>
-              </button>
-            </PopoverTrigger>
-            <PopoverContent className="w-56" align="end">
-              <div className="space-y-1">
-                <button className="w-full flex items-center gap-2 rounded-lg p-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors">
-                  <Settings className="h-4 w-4" />
-                  Profile Settings
-                </button>
+          {/* Profile dropdown */}
+          <div className="relative profile-dropdown">
+            <button
+              onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
+              className="flex items-center space-x-2 text-gray-700 hover:text-gray-900 focus:outline-none"
+            >
+              <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
+                <User size={20} className="text-blue-600" />
+              </div>
+              <span className="hidden md:inline-block font-medium">
+                {session?.user?.name || "Admin"}
+              </span>
+              <ChevronRight size={16} className={`transition-transform duration-200 ${profileDropdownOpen ? 'rotate-90' : ''}`} />
+            </button>
+
+            {/* Dropdown menu */}
+            {profileDropdownOpen && (
+              <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 border border-gray-200 z-10">
+                <a href="#" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                  <div className="flex items-center space-x-2">
+                    <User size={16} />
+                    <span>My Profile</span>
+                  </div>
+                </a>
+                <hr className="my-1 border-gray-200" />
                 <button
                   onClick={handleLogout}
-                  className="w-full flex items-center gap-2 rounded-lg p-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                  className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100"
                 >
-                  <LogOut className="h-4 w-4" />
-                  Logout
+                  <div className="flex items-center space-x-2">
+                    <LogOut size={16} />
+                    <span>Logout</span>
+                  </div>
                 </button>
               </div>
-            </PopoverContent>
-          </Popover>
-        </div>
-      </nav>
-
-      <div className="flex">
-        {/* Sidebar */}
-        <div
-          className={`${
-            sidebarOpen ? "w-64" : "w-20"
-          } bg-white border-r transition-all duration-300 ease-in-out h-[calc(100vh-64px)] flex flex-col justify-between`}
-        >
-          <div>
-            <div className="flex justify-end p-2">
-              <button
-                onClick={toggleSidebar}
-                className="p-1 text-gray-500 hover:bg-gray-100 rounded-full"
-              >
-                {sidebarOpen ? (
-                  <ChevronLeft size={18} />
-                ) : (
-                  <ChevronRight size={18} />
-                )}
-              </button>
-            </div>
-            <ul className="space-y-2 px-3 py-4">
-              {navItems.map((item) => (
-                <li key={item.id}>
-                  <button
-                    onClick={() => setActiveComponent(item.id)}
-                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                      activeComponent === item.id
-                        ? "bg-gray-100 text-blue-600 font-medium"
-                        : "text-gray-700 hover:bg-gray-50"
-                    }`}
-                  >
-                    {item.icon}
-                    {sidebarOpen && <span>{item.label}</span>}
-                  </button>
-                </li>
-              ))}
-            </ul>
+            )}
           </div>
-        </div>
+        </header>
 
-        {/* Main content */}
-        <div className="flex-1 p-6 overflow-auto">{renderMainContent()}</div>
+        {/* Content area */}
+        <main className="flex-1 overflow-auto bg-gray-50">
+          {/* Render the active component */}
+          <div className="bg-white rounded-lg shadow p-3 h-full">
+            {activeItem?.component}
+          </div>
+        </main>
       </div>
     </div>
   );
+};
+
+// Extracted sidebar content component for reuse
+interface SidebarContentProps {
+  sidebarOpen: boolean;
+  setSidebarOpen: (open: boolean) => void;
+  activeComponent: string;
+  setActiveComponent: (id: string) => void;
+  session: { user?: { name?: string | null; email?: string | null; id?: string | null } } | null;
+  handleLogout: () => void;
+  sidebarItems: {
+    id: string;
+    label: string;
+    icon: React.ReactElement;
+    component: React.ReactElement;
+  }[];
 }
+
+const SidebarContent = ({ 
+  sidebarOpen, 
+  setSidebarOpen, 
+  activeComponent, 
+  setActiveComponent,
+  session,
+  handleLogout,
+  sidebarItems
+}: SidebarContentProps) => {
+  return (
+    <>
+      {/* Logo and toggle button */}
+      <div className="flex items-center justify-between p-4 border-b border-gray-200">
+        <div className="flex items-center">
+          {/* You can add your logo here */}
+          {sidebarOpen && (
+            <span className="text-lg font-bold text-blue-600">Student Portal</span>
+          )}
+          {!sidebarOpen && (
+            <span className="text-lg font-bold text-blue-600">AP</span>
+          )}
+        </div>
+        <button
+          onClick={() => setSidebarOpen(!sidebarOpen)}
+          className="text-gray-500 hover:bg-gray-100 p-1 rounded-full focus:outline-none"
+        >
+          {sidebarOpen ? <ChevronLeft size={20} /> : <ChevronRight size={20} />}
+        </button>
+      </div>
+
+      {/* User profile in sidebar */}
+      <div className="p-4 border-b border-gray-200">
+        <div className="flex items-center space-x-3">
+          <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
+            <User size={20} className="text-blue-600" />
+          </div>
+          {sidebarOpen && (
+            <div>
+              <p className="font-medium text-gray-800">{session?.user?.name || "Admin"}</p>
+              <p className="text-xs text-gray-500">{session?.user?.email || "admin@example.com"}</p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Menu */}
+      <div className="flex-1 overflow-y-auto py-4">
+        <nav className="px-3 space-y-1">
+          {sidebarItems.map((item) => (
+            <button
+              key={item.id}
+              onClick={() => setActiveComponent(item.id)}
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
+                activeComponent === item.id
+                  ? "bg-blue-50 text-blue-600 font-medium"
+                  : "text-gray-700 hover:bg-gray-100"
+              }`}
+            >
+              <div className="flex items-center justify-center w-8 h-8">
+                {item.icon}
+              </div>
+              {sidebarOpen && <span>{item.label}</span>}
+            </button>
+          ))}
+        </nav>
+      </div>
+
+      {/* Logout button */}
+      <div className="p-4 border-t border-gray-200">
+        <button
+          onClick={handleLogout}
+          className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-red-600 hover:bg-red-50 transition-colors ${
+            !sidebarOpen && "justify-center"
+          }`}
+        >
+          <LogOut size={20} />
+          {sidebarOpen && <span>Logout</span>}
+        </button>
+      </div>
+    </>
+  );
+};
+
+export default Sidebar;

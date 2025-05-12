@@ -2,7 +2,6 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable react-hooks/exhaustive-deps*/
 
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -20,24 +19,24 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { useCurrentUser } from "@/hooks/auth";
-import { cn } from "@/lib/utils";
 import { UploadButton } from "@/utils/uploadthing";
 import debounce from "lodash/debounce";
-import { Edit, Loader2, Save, Search, X } from "lucide-react";
+import { Edit, Loader2, Mail, Phone, Save, Search, X } from "lucide-react";
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
+import { useTeacherStore } from "@/store/teacherStore";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 // Types based on the schema
 type College = {
@@ -46,37 +45,22 @@ type College = {
   code: string;
 };
 
-type Branch = {
-  id: string;
-  name: string;
-  code: string;
-  collegeId: string;
-};
-
-type Course = {
-  id: string;
-  name: string;
-  code: string;
-  level: string;
-  branchId: string;
-};
-
-type AcademicYear = {
-  id: string;
-  name: string;
-};
-
-type Phase = {
-  id: string;
-  name: string;
-  academicYearId: string;
-};
-
 type Subject = {
   id: string;
   name: string;
   code: string;
   phaseId: string;
+  phaseName?: string;
+  branchName?: string;
+  courseName?: string;
+  academicYearName?: string;
+};
+
+type CollegeAdmin = {
+  id: string;
+  name: string;
+  email: string;
+  mobileNo: string;
 };
 
 // Teacher profile validation schema
@@ -86,19 +70,12 @@ const teacherProfileSchema = z.object({
   mobileNo: z
     .string()
     .regex(/^\d{10}$/, { message: "Mobile number must be 10 digits" }),
-  location: z.string().min(1, { message: "Location is required" }),
+  Address: z.string().min(1, { message: "Location is required" }),
   profilePhoto: z.string().optional(),
   teacherIdProof: z.string().optional(),
   collegeId: z.string().min(1, { message: "College is required" }),
-  branchId: z.string().min(1, { message: "Branch/Department is required" }),
-  courseId: z.string().min(1, { message: "Course is required" }),
-  academicYearId: z.string().min(1, { message: "Academic Year is required" }),
-  phaseId: z.string().min(1, { message: "Phase is required" }),
   designation: z.string().min(1, { message: "Designation is required" }),
   employeeId: z.string().min(1, { message: "Employee ID is required" }),
-  joiningDate: z.date({ required_error: "Joining date is required" }),
-  isActive: z.string().default("true"),
-  subjectIds: z.string().array().optional(),
 });
 
 type TeacherProfileFormData = z.infer<typeof teacherProfileSchema>;
@@ -115,46 +92,33 @@ export function TeacherProfilePage() {
   const [existingProfile, setExistingProfile] = useState<any>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isFetchingData, setIsFetchingData] = useState<boolean>(true);
+  const [collegeAdmin, setCollegeAdmin] = useState<CollegeAdmin | null>(null);
+  const [isLoadingAdmin, setIsLoadingAdmin] = useState<boolean>(false);
+
+  // Get data from Zustand store
+  const { subjects, fetchSubjects, isLoadingSubjects, hasSubjects } =
+    useTeacherStore();
 
   // State for dropdown data
   const [colleges, setColleges] = useState<College[]>([]);
-  const [branches, setBranches] = useState<Branch[]>([]);
-  const [filteredBranches, setFilteredBranches] = useState<Branch[]>([]);
   const [filteredColleges, setFilteredColleges] = useState<College[]>([]);
-  const [courses, setCourses] = useState<Course[]>([]);
-  const [academicYears, setAcademicYears] = useState<AcademicYear[]>([]);
-  const [phases, setPhases] = useState<Phase[]>([]);
-  const [subjects, setSubjects] = useState<Subject[]>([]);
-  const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
 
   // State for search
   const [collegeSearchTerm, setCollegeSearchTerm] = useState("");
-  const [branchSearchTerm, setBranchSearchTerm] = useState("");
   const [isSearchingCollege, setIsSearchingCollege] = useState(false);
-  const [isSearchingBranch, setIsSearchingBranch] = useState(false);
   const [showCollegeDropdown, setShowCollegeDropdown] = useState(false);
-  const [showBranchDropdown, setShowBranchDropdown] = useState(false);
-
-  const userId = user?.id || null;
 
   const form = useForm<TeacherProfileFormData>({
     defaultValues: {
       name: user?.name || "",
       email: user?.email || "",
       mobileNo: "",
-      location: "",
+      Address: "",
       profilePhoto: "",
       teacherIdProof: "",
       collegeId: "",
-      branchId: "",
-      courseId: "",
-      academicYearId: "",
-      phaseId: "",
       designation: "",
       employeeId: "",
-      joiningDate: new Date(),
-      isActive: "true",
-      subjectIds: [],
     },
   });
 
@@ -167,17 +131,32 @@ export function TeacherProfilePage() {
       : "No college selected";
   };
 
-  const getSelectedBranchName = () => {
-    const branchId = form.getValues("branchId");
-    const branch = branches.find((b) => b.id === branchId);
-    return branch ? `${branch.name} (${branch.code})` : "No branch selected";
-  };
-
   // Fetch initial data
   useEffect(() => {
-    fetchAcademicYears();
     fetchColleges("");
   }, []);
+
+  // Fetch college admin details
+  const fetchCollegeAdmin = async (collegeId: string) => {
+    if (!collegeId) return;
+
+    setIsLoadingAdmin(true);
+    try {
+      const response = await fetch(`/api/college?collegeId=${collegeId}`);
+      const data = await response.json();
+
+      if (data.success && data.data) {
+        setCollegeAdmin(data.data);
+      } else {
+        setCollegeAdmin(null);
+      }
+    } catch (error) {
+      console.error("Error fetching college admin:", error);
+      setCollegeAdmin(null);
+    } finally {
+      setIsLoadingAdmin(false);
+    }
+  };
 
   // Fetch existing profile if user is logged in
   useEffect(() => {
@@ -185,11 +164,14 @@ export function TeacherProfilePage() {
       if (user?.id) {
         try {
           setIsFetchingData(true);
-          const response = await fetch(`/api/teacher-profile?id=${user.id}`);
+          const response = await fetch(
+            `/api/teacher-profile?userId=${user.id}`
+          );
           const data = await response.json();
+          const dataResponse = data.data;
 
-          if (data && data.length > 0) {
-            const profile = data[0];
+          if (dataResponse) {
+            const profile = dataResponse;
             setExistingProfile(profile);
 
             // Populate form with existing data
@@ -197,19 +179,12 @@ export function TeacherProfilePage() {
               name: profile.name,
               email: profile.email,
               mobileNo: profile.mobileNo,
-              location: profile.location || "",
+              Address: profile.Address || "",
               profilePhoto: profile.profilePhoto || "",
               teacherIdProof: profile.teacherIdProof || "",
               collegeId: profile.collegeId,
-              branchId: profile.branchId,
-              courseId: profile.courseId,
-              academicYearId: profile.academicYearId,
-              phaseId: profile.phaseId,
               designation: profile.designation,
               employeeId: profile.employeeId,
-              joiningDate: new Date(profile.joiningDate),
-              isActive: profile.isActive,
-              subjectIds: [],
             });
 
             // Set file names if URLs exist
@@ -224,22 +199,13 @@ export function TeacherProfilePage() {
               );
             }
 
-            // Fetch dependencies
+            // Fetch allocated subjects
+            await fetchSubjects(profile.id);
+
+            // Fetch college admin details
+            fetchCollegeAdmin(profile.collegeId);
+
             fetchColleges("");
-            if (profile.collegeId) {
-              fetchBranches(profile.collegeId, "");
-            }
-            if (profile.branchId) {
-              fetchCourses(profile.branchId);
-            }
-            if (profile.academicYearId) {
-              fetchPhases(profile.academicYearId);
-            }
-            if (profile.phaseId) {
-              fetchSubjects(profile.phaseId);
-            }
-            // Fetch selected subjects
-            fetchTeacherSubjects(profile.id);
           }
         } catch (error) {
           console.error("Error fetching profile:", error);
@@ -252,25 +218,9 @@ export function TeacherProfilePage() {
     }
 
     fetchExistingProfile();
-  }, [user?.id, form]);
+  }, [user?.id, form, fetchSubjects]);
 
-  // Fetch teacher subjects
-  const fetchTeacherSubjects = async (teacherId: string) => {
-    try {
-      const response = await fetch(
-        `/api/teacher-subjects?teacherId=${teacherId}`
-      );
-      const data = await response.json();
-
-      if (data && data.length > 0) {
-        const subjectIds = data.map((item: any) => item.subjectId);
-        setSelectedSubjects(subjectIds);
-        form.setValue("subjectIds", subjectIds);
-      }
-    } catch (error) {
-      console.error("Error fetching teacher subjects:", error);
-    }
-  };
+  console.log("subjects: ", subjects);
 
   // Fetch methods for dropdown data
   const fetchColleges = async (searchTerm: string) => {
@@ -284,64 +234,6 @@ export function TeacherProfilePage() {
       console.error("Error fetching colleges:", error);
     } finally {
       setIsSearchingCollege(false);
-    }
-  };
-
-  const fetchBranches = async (collegeId: string, searchTerm: string) => {
-    setIsSearchingBranch(true);
-    try {
-      const response = await fetch(
-        `/api/search/branch?collegeId=${collegeId}&search=${searchTerm}`
-      );
-      const data = await response.json();
-      setBranches(data);
-      setFilteredBranches(data);
-    } catch (error) {
-      console.error("Error fetching branches:", error);
-    } finally {
-      setIsSearchingBranch(false);
-    }
-  };
-
-  const fetchCourses = async (branchId: string) => {
-    try {
-      const response = await fetch(`/api/search/course?branchId=${branchId}`);
-      const data = await response.json();
-      setCourses(data);
-    } catch (error) {
-      console.error("Error fetching courses:", error);
-    }
-  };
-
-  const fetchAcademicYears = async () => {
-    try {
-      const response = await fetch("/api/academicYears");
-      const data = await response.json();
-      setAcademicYears(data);
-    } catch (error) {
-      console.error("Error fetching academic years:", error);
-    }
-  };
-
-  const fetchPhases = async (academicYearId: string) => {
-    try {
-      const response = await fetch(
-        `/api/phase?academicYears=${academicYearId}`
-      );
-      const data = await response.json();
-      setPhases(data);
-    } catch (error) {
-      console.error("Error fetching phases:", error);
-    }
-  };
-
-  const fetchSubjects = async (phaseId: string) => {
-    try {
-      const response = await fetch(`/api/subject?PhaseId=${phaseId}`);
-      const data = await response.json();
-      setSubjects(data);
-    } catch (error) {
-      console.error("Error fetching subjects:", error);
     }
   };
 
@@ -359,64 +251,13 @@ export function TeacherProfilePage() {
     }
   }, 300);
 
-  const debouncedBranchSearch = debounce((collegeId: string, term: string) => {
-    if (branches.length > 0) {
-      const filtered = branches.filter(
-        (branch) =>
-          branch.name.toLowerCase().includes(term.toLowerCase()) ||
-          branch.code.toLowerCase().includes(term.toLowerCase())
-      );
-      setFilteredBranches(filtered);
-    } else {
-      fetchBranches(collegeId, term);
-    }
-  }, 300);
-
   // Handle form field changes
   const handleCollegeChange = (collegeId: string) => {
     form.setValue("collegeId", collegeId);
-    form.setValue("branchId", "");
-    form.setValue("courseId", "");
-    setBranches([]);
-    setCourses([]);
-    fetchBranches(collegeId, "");
     setShowCollegeDropdown(false);
-  };
 
-  const handleBranchChange = (branchId: string) => {
-    form.setValue("branchId", branchId);
-    form.setValue("courseId", "");
-    setCourses([]);
-    fetchCourses(branchId);
-    setShowBranchDropdown(false);
-  };
-
-  const handleAcademicYearChange = (academicYearId: string) => {
-    form.setValue("academicYearId", academicYearId);
-    form.setValue("phaseId", "");
-    setPhases([]);
-    fetchPhases(academicYearId);
-  };
-
-  const handlePhaseChange = (phaseId: string) => {
-    form.setValue("phaseId", phaseId);
-    fetchSubjects(phaseId);
-  };
-
-  const handleSubjectSelection = (subjectId: string) => {
-    if (!isEditMode) return;
-
-    const currentSubjects = selectedSubjects.slice();
-    const index = currentSubjects.indexOf(subjectId);
-
-    if (index === -1) {
-      currentSubjects.push(subjectId);
-    } else {
-      currentSubjects.splice(index, 1);
-    }
-
-    setSelectedSubjects(currentSubjects);
-    form.setValue("subjectIds", currentSubjects);
+    // Fetch college admin when college changes
+    fetchCollegeAdmin(collegeId);
   };
 
   // Toggle edit mode
@@ -429,19 +270,12 @@ export function TeacherProfilePage() {
           name: existingProfile.name,
           email: existingProfile.email,
           mobileNo: existingProfile.mobileNo,
-          location: existingProfile.location || "",
+          Address: existingProfile.Address || "",
           profilePhoto: existingProfile.profilePhoto || "",
           teacherIdProof: existingProfile.teacherIdProof || "",
           collegeId: existingProfile.collegeId,
-          branchId: existingProfile.branchId,
-          courseId: existingProfile.courseId,
-          academicYearId: existingProfile.academicYearId,
-          phaseId: existingProfile.phaseId,
           designation: existingProfile.designation,
           employeeId: existingProfile.employeeId,
-          joiningDate: new Date(existingProfile.joiningDate),
-          isActive: existingProfile.isActive,
-          subjectIds: selectedSubjects,
         });
       }
     }
@@ -465,7 +299,6 @@ export function TeacherProfilePage() {
         body: JSON.stringify({
           ...values,
           userId: user?.id,
-          joiningDate: values.joiningDate.toISOString(),
         }),
       });
 
@@ -477,26 +310,6 @@ export function TeacherProfilePage() {
         // If this is a new profile, now we save the subjects
         const teacherId = existingProfile ? existingProfile.id : data.id;
 
-        // Save selected subjects
-        if (values.subjectIds && values.subjectIds.length > 0) {
-          const subjectsResponse = await fetch("/api/teacher-subjects", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              teacherId,
-              subjectIds: values.subjectIds,
-              academicYearId: values.academicYearId,
-              phaseId: values.phaseId,
-            }),
-          });
-
-          if (!subjectsResponse.ok) {
-            console.error("Error saving subjects");
-          }
-        }
-
         setExistingProfile(data);
         setIsEditMode(false);
 
@@ -506,6 +319,11 @@ export function TeacherProfilePage() {
             ? "Profile updated successfully"
             : "Profile created successfully"
         );
+
+        // Refresh college admin data if college changed
+        if (values.collegeId !== existingProfile?.collegeId) {
+          fetchCollegeAdmin(values.collegeId);
+        }
       } else {
         console.error("Error saving profile:", data);
         alert(`Error: ${data.message || "Failed to save profile"}`);
@@ -616,35 +434,6 @@ export function TeacherProfilePage() {
                       </FormItem>
                     )}
                   />
-
-                  {/* Status */}
-                  <FormField
-                    control={form.control}
-                    name="isActive"
-                    render={({ field }) => (
-                      <FormItem className="w-full">
-                        <FormLabel>Status</FormLabel>
-                        <FormControl>
-                          <RadioGroup
-                            onValueChange={field.onChange}
-                            value={field.value}
-                            className="flex space-x-4"
-                            disabled={!isEditMode}
-                          >
-                            <div className="flex items-center space-x-2">
-                              <RadioGroupItem value="true" id="active" />
-                              <Label htmlFor="active">Active</Label>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                              <RadioGroupItem value="false" id="inactive" />
-                              <Label htmlFor="inactive">Inactive</Label>
-                            </div>
-                          </RadioGroup>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
                 </div>
 
                 <div className="md:col-span-2 space-y-4">
@@ -715,10 +504,10 @@ export function TeacherProfilePage() {
                     {/* Location Field */}
                     <FormField
                       control={form.control}
-                      name="location"
+                      name="Address"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Location</FormLabel>
+                          <FormLabel>Address</FormLabel>
                           <FormControl>
                             <Input
                               placeholder="Enter your location"
@@ -896,233 +685,10 @@ export function TeacherProfilePage() {
                     </FormItem>
                   )}
                 />
-
-                {/* Branch Selection */}
-                <FormField
-                  control={form.control}
-                  name="branchId"
-                  render={({ field }) => (
-                    <FormItem className="space-y-1">
-                      <FormLabel className="text-sm">
-                        Branch/Department
-                      </FormLabel>
-                      {isEditMode ? (
-                        <div className="relative">
-                          <div className="flex items-center border rounded-md">
-                            <input
-                              className="flex h-9 w-full rounded-md border-0 bg-background px-3 py-1 text-sm"
-                              placeholder="Search branches..."
-                              value={
-                                branchSearchTerm || getSelectedBranchName()
-                              }
-                              onChange={(e) => {
-                                setBranchSearchTerm(e.target.value);
-                                debouncedBranchSearch(
-                                  form.getValues("collegeId"),
-                                  e.target.value
-                                );
-                              }}
-                              onFocus={() => {
-                                setShowBranchDropdown(true);
-                                setBranchSearchTerm("");
-                              }}
-                              disabled={!form.getValues("collegeId")}
-                            />
-                            {isSearchingBranch ? (
-                              <div className="px-2">
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                              </div>
-                            ) : (
-                              <div className="px-2">
-                                <Search className="h-4 w-4" />
-                              </div>
-                            )}
-                          </div>
-                          {showBranchDropdown && (
-                            <div className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md bg-popover shadow-lg border">
-                              {filteredBranches.map((branch) => (
-                                <div
-                                  key={branch.id}
-                                  className={`relative cursor-default select-none px-3 py-2 text-sm hover:bg-accent ${
-                                    field.value === branch.id ? "bg-accent" : ""
-                                  }`}
-                                  onClick={() => {
-                                    handleBranchChange(branch.id);
-                                    setShowBranchDropdown(false);
-                                    setBranchSearchTerm("");
-                                  }}
-                                >
-                                  <div className="flex justify-between">
-                                    <span className="truncate">
-                                      {branch.name}
-                                    </span>
-                                    <span className="text-xs text-muted-foreground ml-2">
-                                      {branch.code}
-                                    </span>
-                                  </div>
-                                </div>
-                              ))}
-                              {filteredBranches.length === 0 && (
-                                <div className="px-3 py-2 text-sm text-muted-foreground">
-                                  {form.getValues("collegeId")
-                                    ? "No branches found"
-                                    : "Select college first"}
-                                </div>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      ) : (
-                        <Input
-                          value={getSelectedBranchName()}
-                          readOnly
-                          className="h-9 bg-muted text-sm"
-                        />
-                      )}
-                      <FormMessage className="text-xs" />
-                    </FormItem>
-                  )}
-                />
-
-                {/* Course Selection */}
-                <FormField
-                  control={form.control}
-                  name="courseId"
-                  render={({ field }) => (
-                    <FormItem className="space-y-1">
-                      <FormLabel className="text-sm">Course</FormLabel>
-                      {isEditMode ? (
-                        <Select
-                          onValueChange={field.onChange}
-                          value={field.value}
-                          disabled={!form.getValues("branchId")}
-                        >
-                          <SelectTrigger className="h-9 text-sm">
-                            <SelectValue placeholder="Select course" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {courses.map((course) => (
-                              <SelectItem
-                                key={course.id}
-                                value={course.id}
-                                className="text-sm"
-                              >
-                                <span className="truncate">
-                                  {course.name} ({course.code}) - {course.level}
-                                </span>
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      ) : (
-                        <Input
-                          value={
-                            courses.find((c) => c.id === field.value)?.name ||
-                            "Not selected"
-                          }
-                          readOnly
-                          className="h-9 bg-muted text-sm"
-                        />
-                      )}
-                      <FormMessage className="text-xs" />
-                    </FormItem>
-                  )}
-                />
               </div>
 
               {/* Right Column */}
               <div className="space-y-4">
-                {/* Academic Year Selection */}
-                <FormField
-                  control={form.control}
-                  name="academicYearId"
-                  render={({ field }) => (
-                    <FormItem className="space-y-1">
-                      <FormLabel className="text-sm">Academic Year</FormLabel>
-                      {isEditMode ? (
-                        <Select
-                          onValueChange={(value) => {
-                            handleAcademicYearChange(value);
-                            field.onChange(value);
-                          }}
-                          value={field.value}
-                        >
-                          <SelectTrigger className="h-9 text-sm">
-                            <SelectValue placeholder="Select academic year" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {academicYears.map((year) => (
-                              <SelectItem
-                                key={year.id}
-                                value={year.id}
-                                className="text-sm"
-                              >
-                                {year.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      ) : (
-                        <Input
-                          value={
-                            academicYears.find((y) => y.id === field.value)
-                              ?.name || "Not selected"
-                          }
-                          readOnly
-                          className="h-9 bg-muted text-sm"
-                        />
-                      )}
-                      <FormMessage className="text-xs" />
-                    </FormItem>
-                  )}
-                />
-
-                {/* Phase Selection */}
-                <FormField
-                  control={form.control}
-                  name="phaseId"
-                  render={({ field }) => (
-                    <FormItem className="space-y-1">
-                      <FormLabel className="text-sm">Phase</FormLabel>
-                      {isEditMode ? (
-                        <Select
-                          onValueChange={(value) => {
-                            handlePhaseChange(value);
-                            field.onChange(value);
-                          }}
-                          value={field.value}
-                          disabled={!form.getValues("academicYearId")}
-                        >
-                          <SelectTrigger className="h-9 text-sm">
-                            <SelectValue placeholder="Select phase" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {phases.map((phase) => (
-                              <SelectItem
-                                key={phase.id}
-                                value={phase.id}
-                                className="text-sm"
-                              >
-                                {phase.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      ) : (
-                        <Input
-                          value={
-                            phases.find((p) => p.id === field.value)?.name ||
-                            "Not selected"
-                          }
-                          readOnly
-                          className="h-9 bg-muted text-sm"
-                        />
-                      )}
-                      <FormMessage className="text-xs" />
-                    </FormItem>
-                  )}
-                />
-
                 {/* Designation and Employee ID in one row */}
                 <div className="grid grid-cols-2 gap-4">
                   <FormField
@@ -1163,103 +729,7 @@ export function TeacherProfilePage() {
                     )}
                   />
                 </div>
-
-                {/* Joining Date */}
-                {/* <FormField
-                  control={form.control}
-                  name="joiningDate"
-                  render={({ field }) => (
-                    <FormItem className="space-y-1">
-                      <FormLabel className="text-sm">Joining Date</FormLabel>
-                      {isEditMode ? (
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <Button
-                              variant="outline"
-                              className={cn(
-                                "w-full h-9 justify-start text-left font-normal text-sm",
-                                !field.value && "text-muted-foreground"
-                              )}
-                            >
-                              <CalendarIcon className="mr-2 h-4 w-4" />
-                              {field.value ? (
-                                format(field.value, "PPP")
-                              ) : (
-                                <span>Pick a date</span>
-                              )}
-                            </Button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0">
-                            <Calendar
-                              mode="single"
-                              selected={field.value}
-                              onSelect={field.onChange}
-                              initialFocus
-                            />
-                          </PopoverContent>
-                        </Popover>
-                      ) : (
-                        <Input
-                          value={
-                            field.value
-                              ? format(field.value, "PPP")
-                              : "Not specified"
-                          }
-                          readOnly
-                          className="h-9 bg-muted text-sm"
-                        />
-                      )}
-                      <FormMessage className="text-xs" />
-                    </FormItem>
-                  )}
-                /> */}
               </div>
-            </CardContent>
-          </Card>
-
-          {/* Subjects Section */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Subjects</CardTitle>
-              <CardDescription>Select the subjects you teach</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <FormField
-                control={form.control}
-                name="subjectIds"
-                render={() => (
-                  <FormItem>
-                    <div className="flex flex-wrap gap-2">
-                      {subjects.length > 0 ? (
-                        subjects.map((subject) => (
-                          <Badge
-                            key={subject.id}
-                            variant={
-                              selectedSubjects.includes(subject.id)
-                                ? "default"
-                                : "outline"
-                            }
-                            className={cn(
-                              "cursor-pointer",
-                              !isEditMode && "cursor-default"
-                            )}
-                            onClick={() => handleSubjectSelection(subject.id)}
-                          >
-                            {subject.name} ({subject.code})
-                          </Badge>
-                        ))
-                      ) : (
-                        <p className="text-sm text-muted-foreground">
-                          {form.getValues("phaseId")
-                            ? "No subjects available for the selected phase"
-                            : "Please select a phase first"}
-                        </p>
-                      )}
-                    </div>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
             </CardContent>
           </Card>
 
@@ -1283,6 +753,107 @@ export function TeacherProfilePage() {
           )}
         </form>
       </Form>
+
+      {/* Allocated Subjects Section */}
+      <Card className="mt-8">
+        <CardHeader>
+          <CardTitle>Allocated Subjects</CardTitle>
+          <CardDescription>
+            Subjects allocated to you for teaching
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {isLoadingSubjects ? (
+            <div className="flex justify-center items-center h-32">
+              <Loader2 className="h-6 w-6 animate-spin text-primary mr-2" />
+              <span>Loading subjects...</span>
+            </div>
+          ) : hasSubjects ? (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Subject Name</TableHead>
+                  <TableHead>Code</TableHead>
+                  <TableHead>Phase</TableHead>
+                  <TableHead>Branch</TableHead>
+                  <TableHead>Course</TableHead>
+                  <TableHead>Academic Year</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {subjects.map((subject) => (
+                  <TableRow key={subject.id || subject.subjectId}>
+                    <TableCell className="font-medium">
+                      {subject.name}
+                    </TableCell>
+                    <TableCell>{subject.code}</TableCell>
+                    <TableCell>{subject.phaseName}</TableCell>
+                    <TableCell>{subject.branchName}</TableCell>
+                    <TableCell>{subject.courseName}</TableCell>
+                    <TableCell>{subject.academicYearName}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          ) : (
+            <div className="space-y-6">
+              <Alert
+                variant="destructive"
+                className="bg-amber-50 border-amber-200"
+              >
+                <AlertTitle className="text-amber-800">
+                  No subjects allocated
+                </AlertTitle>
+                <AlertDescription className="text-amber-700">
+                  You don't have any subjects allocated to you yet. Please
+                  contact your college administrator for subject allocation.
+                </AlertDescription>
+              </Alert>
+
+              {isLoadingAdmin ? (
+                <div className="flex items-center justify-center h-16">
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  <span>Loading admin contact...</span>
+                </div>
+              ) : collegeAdmin ? (
+                <div className="bg-gray-50 p-4 rounded-md">
+                  <h3 className="font-medium mb-2">
+                    College Administrator Contact:
+                  </h3>
+                  <div className="space-y-2">
+                    <p className="text-sm">{collegeAdmin.name}</p>
+                    <div className="flex items-center text-sm">
+                      <Mail className="h-4 w-4 mr-2 text-muted-foreground" />
+                      <a
+                        href={`mailto:${collegeAdmin.email}`}
+                        className="text-primary hover:underline"
+                      >
+                        {collegeAdmin.email}
+                      </a>
+                    </div>
+                    {collegeAdmin.mobileNo && (
+                      <div className="flex items-center text-sm">
+                        <Phone className="h-4 w-4 mr-2 text-muted-foreground" />
+                        <a
+                          href={`tel:${collegeAdmin.mobileNo}`}
+                          className="text-primary hover:underline"
+                        >
+                          {collegeAdmin.mobileNo}
+                        </a>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  College administrator contact information is not available.
+                  Please contact your institution directly.
+                </p>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

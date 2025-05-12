@@ -67,7 +67,7 @@ const College: React.FC = () => {
   const [isViewing, setIsViewing] = useState(false);
   const [isCreatingAdmin, setIsCreatingAdmin] = useState(false);
   const [formData, setFormData] = useState({
-    userId: userId,
+    createdBy: userId,
     name: "",
     code: "",
     address: "",
@@ -273,7 +273,7 @@ useEffect(() => {
 
   const resetForm = () => {
     setFormData({
-      userId: userId,
+      createdBy: userId,
       name: "",
       code: "",
       address: "",
@@ -331,7 +331,7 @@ useEffect(() => {
     if (selectedCollege) {
       // Reset form to current college data
       setFormData({
-        userId: userId,
+        createdBy: userId,
         name: selectedCollege.name || "",
         code: selectedCollege.code || "",
         address: selectedCollege.address || "",
@@ -365,12 +365,14 @@ useEffect(() => {
       setError("Name and code are required");
       return;
     }
+    console.log("Form data:", formData);
 
     try {
       setIsLoading(true);
       let response;
 
       if (selectedCollege) {
+        console.log("Updating college:", selectedCollege);
         // Update existing college
         response = await fetch(`/api/college?id=${selectedCollege.id}`, {
           method: "PUT",
@@ -459,7 +461,7 @@ useEffect(() => {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-              collegeAdminId: userData.userId,
+              collegeAdminId: userData.createdBy,
             }),
           }
         );
@@ -473,7 +475,7 @@ useEffect(() => {
                 ? {
                     ...updatedCollege,
                     collegeAdmin: {
-                      id: userData.userId,
+                      id: userData.createdBy,
                       name: userData.name,
                       email: userData.email,
                     },
@@ -553,7 +555,7 @@ useEffect(() => {
   const handleEditCollege = (college: College) => {
     setSelectedCollege(college);
     setFormData({
-      userId: userId,
+      createdBy: userId,
       name: college.name || "",
       code: college.code || "",
       address: college.address || "",
@@ -572,7 +574,7 @@ useEffect(() => {
   const handleViewCollege = (college: College) => {
     setSelectedCollege(college);
     setFormData({
-      userId: userId,
+      createdBy: userId,
       name: college.name || "",
       code: college.code || "",
       address: college.address || "",
