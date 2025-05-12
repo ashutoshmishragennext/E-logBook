@@ -35,7 +35,7 @@ export async function GET(req: NextRequest) {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    if (!body.userId) {
+    if (!body.createdBy) {
       return NextResponse.json({ message: "Missing userId" }, { status: 400 });
     }
 
