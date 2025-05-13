@@ -138,7 +138,7 @@ const Sidebar = () => {
                 <User size={20} className="text-blue-600" />
               </div>
               <span className="hidden md:inline-block font-medium">
-                {session?.user?.name || "Admin"}
+                {session?.user?.name || "College Admin"}
               </span>
               <ChevronRight size={16} className={`transition-transform duration-200 ${profileDropdownOpen ? 'rotate-90' : ''}`} />
             </button>
@@ -204,10 +204,10 @@ const SidebarContent = ({
         <div className="flex items-center">
           {/* You can add your logo here */}
           {sidebarOpen && (
-            <span className="text-lg font-bold text-blue-600">Admin Portal</span>
+            <span className="text-lg font-bold text-blue-600">College Portal</span>
           )}
           {!sidebarOpen && (
-            <span className="text-lg font-bold text-blue-600">AP</span>
+            <span className="text-lg font-bold text-blue-600">CP</span>
           )}
         </div>
         <button
@@ -226,7 +226,7 @@ const SidebarContent = ({
           </div>
           {sidebarOpen && (
             <div>
-              <p className="font-medium text-gray-800">{session?.user?.name || "Admin"}</p>
+              <p className="font-medium text-gray-800">{session?.user?.name || "College Admin"}</p>
               <p className="text-xs text-gray-500">{session?.user?.email || "admin@example.com"}</p>
             </div>
           )}
