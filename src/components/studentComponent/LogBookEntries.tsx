@@ -1,9 +1,11 @@
 import React from 'react'
 
-const LogBookEntries = () => {
+const LogBookEntriesPage = () => {
+  
+
   return (
     <div>LogBookEntries</div>
   )
 }
 
-export default LogBookEntries
+export default LogBookEntriesPage
