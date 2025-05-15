@@ -2,6 +2,7 @@
 
 import ApprovedStudents from "@/components/teacher/ApprovedStudents";
 import PendingStudents from "@/components/teacher/PendingStudents";
+import StudentsApproval from "@/components/teacher/Students";
 import { TeacherProfilePage } from "@/components/teacher/TeacherProfile";
 import {
   ChevronLeft,
