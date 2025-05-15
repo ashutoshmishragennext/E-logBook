@@ -4,7 +4,6 @@ import LogBookEntry from "@/components/studentComponent/LogBookEntry";
 import StudentProfileCompact from "@/components/studentComponent/StudentProfile";
 import StudentSubjectSelection from "@/components/studentComponent/TeacherAllocation";
 import { useStudentProfileStore } from "@/store/student";
-import { identity } from "lodash";
 import {
   Building2,
   ChevronLeft,

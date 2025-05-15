@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 "use client";
 
 import { Check, Loader2 } from "lucide-react";
@@ -179,7 +180,7 @@ export default function SubjectSelector({
                 }}
                 className="w-full p-2 text-left text-sm text-blue-600 hover:bg-blue-50"
               >
-                + Request to add "{searchQuery}"
+                 add {searchQuery}
               </button>
             </div>
           )}

@@ -1,10 +1,5 @@
 import React from 'react'
 
-interface StudentProfileprops {
-  name: string;
-  id:string;
-  
-}
 
 const LogBookEntry = () => {
 

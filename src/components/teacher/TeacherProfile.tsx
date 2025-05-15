@@ -1,6 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/no-unused-vars */
-/* eslint-disable react-hooks/exhaustive-deps*/
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -770,7 +769,7 @@ export function TeacherProfilePage() {
                   No subjects allocated
                 </AlertTitle>
                 <AlertDescription className="text-amber-700">
-                  You don't have any subjects allocated to you yet. Please
+                  You do not have any subjects allocated to you yet. Please
                   contact your college administrator for subject allocation.
                 </AlertDescription>
               </Alert>
