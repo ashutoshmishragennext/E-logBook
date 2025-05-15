@@ -13,6 +13,7 @@ export interface Subject {
 
 
 export interface TeacherSubject {
+  teacherName: string;
   id: string;
   teacherId: string;
   subjectId: string;
@@ -45,6 +46,7 @@ export interface StudentSubjectAllocation {
   rejectionReason?: string;
   subject: Subject;
   teacherSubject: TeacherSubject;
+  teacherId: string;
 }
 
 interface teacher{
@@ -100,6 +102,7 @@ interface StudentSubjectStore {
     teacherSubjectId: string;
     academicYearId: string;
     phaseId: string;
+    teacherId: string;
   }) => Promise<void>;
 
   updateAllocation: (id: string, data: Partial<StudentSubjectAllocation>) => Promise<void>;
@@ -256,6 +259,7 @@ export const useStudentSubjectStore = create<StudentSubjectStore>((set, get) => 
       const res = await fetch(`/api/student-subject?studentId=${studentId}`);
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Failed to fetch student allocations');
+      console.log('Student Allocations:', data);
       set({ studentAllocations: data, loading: false });
     } catch (err: any) {
       console.error('Error fetching student allocations:', err);

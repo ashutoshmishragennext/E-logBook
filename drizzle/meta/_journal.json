@@ -155,6 +155,13 @@
       "when": 1746794300932,
       "tag": "0021_striped_selene",
       "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1747217260509,
+      "tag": "0022_optimal_blob",
+      "breakpoints": true
     }
   ]
 }

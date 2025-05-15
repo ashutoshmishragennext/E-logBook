@@ -316,6 +316,7 @@ export const StudentSubjectTable = pgTable(
     studentId: uuid("student_id").references(() => StudentProfileTable.id).notNull(),
     subjectId: uuid("subject_id").references(() => SubjectTable.id).notNull(),
     teacherSubjectId: uuid("teacher_subject_id").references(() => TeacherSubjectTable.id).notNull(), // Reference to the teacher-subject assignment
+    teacherId: uuid("teacher_id").references(() => TeacherProfileTable.id),
     academicYearId: uuid("academic_year_id").references(() => AcademicYearTable.id).notNull(),
     phaseId: uuid("phase_id").references(() => PhaseTable.id).notNull(),
     

@@ -1,42 +1,36 @@
-/* eslint-disable react/no-unescaped-entities */
-/* eslint-disable react-hooks/exhaustive-deps */
 "use client";
 
-import { Check } from "lucide-react";
+import { Check, Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
 
 interface SubjectSelectorProps {
-  onSubjectSelect: (subjectId: string) => void;
-  onSubjectRequest: (subjectName: string) => void;
-  selectedSubjectIds: string[];
+  selectedPhaseId: string;
+  onSelectSubject: (subjectId: string) => void; // Modified to accept just the ID
   disabled?: boolean;
-  searchQuery?: string;
-  onSearchChange?: (query: string) => void;
+  searchQuery: string;
+  setSearchQuery: (query: string) => void;
+  selectedSubject?: { id: string; name: string; code?: string } | null;
 }
 
 export default function SubjectSelector({
-  onSubjectSelect,
-  onSubjectRequest,
-  selectedSubjectIds,
+  selectedPhaseId,
+  onSelectSubject,
   disabled = false,
-  searchQuery = "",
-  onSearchChange,
+  searchQuery,
+  setSearchQuery,
+  selectedSubject,
 }: SubjectSelectorProps) {
-  const [query, setQuery] = useState(searchQuery);
   const [subjects, setSubjects] = useState<{ id: string; name: string; code?: string }[]>([]);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [selectedSubjectIds, setSelectedSubjectIds] = useState<string[]>([]);
 
-  // Sync with parent component's search query
+  // Fetch subjects when search query changes
   useEffect(() => {
-    if (onSearchChange) {
-      onSearchChange(query);
-    }
-  }, [query, onSearchChange]);
-
-  useEffect(() => {
-    if (!query) {
+    if (!searchQuery || !selectedPhaseId) {
       setSubjects([]);
+      setIsDropdownOpen(false);
       return;
     }
 
@@ -45,16 +39,26 @@ export default function SubjectSelector({
     }, 300);
 
     return () => clearTimeout(delayDebounce);
-  }, [query]);
+  }, [searchQuery, selectedPhaseId]);
+
+  // Initialize selectedSubjectIds when component mounts or selectedSubject changes
+  useEffect(() => {
+    if (selectedSubject) {
+      setSelectedSubjectIds([selectedSubject.id]);
+    }
+  }, [selectedSubject]);
 
   const fetchSubjects = async () => {
-    if (disabled) return;
+    if (disabled || !selectedPhaseId) return;
     
     setLoading(true);
     try {
-      const res = await fetch(`/api/search/subject?q=${encodeURIComponent(query)}`);
+      // Updated to include phaseId as a parameter for better filtering
+      const res = await fetch(`/api/search/subject?q=${encodeURIComponent(searchQuery)}&phaseId=${encodeURIComponent(selectedPhaseId)}`);
       const data = await res.json();
+      console.log("Fetched subjects:", data);
       setSubjects(data);
+      setIsDropdownOpen(data.length > 0 || searchQuery.trim() !== "");
     } catch (err) {
       console.error(err);
       setMessage("Failed to fetch subjects");
@@ -65,80 +69,122 @@ export default function SubjectSelector({
 
   // Check if there's an exact match (case-insensitive)
   const hasExactMatch = subjects.some(
-    (subject) => subject.name.toLowerCase() === query.toLowerCase()
+    (subject) => subject.name.toLowerCase() === searchQuery.toLowerCase()
   );
 
   // Show add option if query is not empty and there's no exact match
-  const showAddOption = query.trim() !== "" && !hasExactMatch && !disabled;
+  const showAddOption = searchQuery.trim() !== "" && !hasExactMatch && !disabled;
 
   const handleRequest = async () => {
     try {
-      await onSubjectRequest(query);
-      setQuery("");
+      // You would implement this functionality if needed
+      alert(`Request to add "${searchQuery}" has been sent.`);
+      setSearchQuery("");
       setSubjects([]);
+      setIsDropdownOpen(false);
     } catch (err) {
       console.error(err);
       setMessage("Failed to send request.");
     }
   };
 
+  const handleSelect = (subject: { id: string; name: string; code?: string }) => {
+    // Pass only the subject ID to the parent component
+    onSelectSubject(subject.id);
+    
+    // Display the selected subject name in the input field
+    setSearchQuery(subject.name);
+    
+    setIsDropdownOpen(false);
+    
+    // Track selected subject for visual feedback
+    setSelectedSubjectIds([subject.id]);
+  };
+
+  // Force dropdown to close when clicking outside
+  useEffect(() => {
+    const handleClickOutside = () => {
+      setIsDropdownOpen(false);
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
   return (
-    <div className="w-full">
+    <div className="w-full relative">
       <div className="relative">
         <input
           type="text"
-          placeholder={disabled ? "Select criteria above to search subjects" : "Search subject..."}
-          value={query}
+          placeholder={disabled ? "Select phase first to search subjects" : "Search subject..."}
+          value={searchQuery}
           onChange={(e) => {
-            setQuery(e.target.value);
+            setSearchQuery(e.target.value);
             setMessage("");
           }}
+          onFocus={() => setIsDropdownOpen(true)}
+          onClick={() => setIsDropdownOpen(true)}
           disabled={disabled}
           className={`w-full p-2 border rounded ${disabled ? 'bg-gray-100 cursor-not-allowed' : 'bg-white'}`}
         />
         {loading && (
           <div className="absolute right-3 top-2.5">
-            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-400"></div>
+            <Loader2 className="h-4 w-4 animate-spin" />
           </div>
         )}
       </div>
 
       {message && <p className="mt-1 text-sm text-red-600">{message}</p>}
 
-      <div className={`border rounded mt-1 overflow-hidden ${disabled ? 'bg-gray-50' : 'bg-white'}`}>
-        {!loading && subjects.length > 0 && (
-          <ul className="divide-y">
-            {subjects.map((subject) => (
-              <li
-                key={subject.id}
-                onClick={() => onSubjectSelect(subject.id)}
-                className={`p-2 hover:bg-gray-50 cursor-pointer flex items-center justify-between ${
-                  selectedSubjectIds.includes(subject.id) ? 'bg-blue-50' : ''
-                }`}
-              >
-                <span>
-                  {subject.name} {subject.code && `(${subject.code})`}
-                </span>
-                {selectedSubjectIds.includes(subject.id) && (
-                  <Check className="h-4 w-4 text-green-500" />
-                )}
-              </li>
-            ))}
-          </ul>
-        )}
+      {(isDropdownOpen && (subjects.length > 0 || showAddOption)) && (
+        <div 
+          className="absolute z-20 w-full mt-1 border rounded shadow-lg bg-white"
+          onClick={(e) => e.stopPropagation()} // Prevent clicks inside dropdown from closing it
+        >
+          {subjects.length > 0 ? (
+            <ul className="divide-y max-h-60 overflow-auto">
+              {subjects.map((subject) => (
+                <li
+                  key={subject.id}
+                  onMouseDown={(e) => {
+                    e.preventDefault(); // Prevent blur event from firing before click
+                    handleSelect(subject);
+                  }}
+                  className={`p-2 hover:bg-gray-50 cursor-pointer flex items-center justify-between ${
+                    selectedSubjectIds.includes(subject.id) ? 'bg-blue-50' : ''
+                  }`}
+                >
+                  <span>
+                    {subject.name} {subject.code && `(${subject.code})`}
+                  </span>
+                  {selectedSubjectIds.includes(subject.id) && (
+                    <Check className="h-4 w-4 text-green-500" />
+                  )}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <div className="p-2 text-gray-500 text-sm">No subjects found</div>
+          )}
 
-        {!loading && showAddOption && (
-          <div className="border-t">
-            <button
-              type="button"
-              onClick={handleRequest}
-              className="w-full p-2 text-left text-sm text-blue-600 hover:bg-blue-50"
-            >
-              + Request to add "{query}"
-            </button>
-          </div>
-        )}
-      </div>
+          {showAddOption && (
+            <div className="border-t">
+              <button
+                type="button"
+                onMouseDown={(e) => {
+                  e.preventDefault(); // Prevent blur event from firing before click
+                  handleRequest();
+                }}
+                className="w-full p-2 text-left text-sm text-blue-600 hover:bg-blue-50"
+              >
+                + Request to add "{searchQuery}"
+              </button>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

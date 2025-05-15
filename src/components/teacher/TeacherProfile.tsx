@@ -2,6 +2,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable react-hooks/exhaustive-deps*/
 
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -19,15 +20,6 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { useCurrentUser } from "@/hooks/auth";
-import { UploadButton } from "@/utils/uploadthing";
-import debounce from "lodash/debounce";
-import { Edit, Loader2, Mail, Phone, Save, Search, X } from "lucide-react";
-import Image from "next/image";
-import { useEffect, useState } from "react";
-import { useForm } from "react-hook-form";
-import { z } from "zod";
-import { useTeacherStore } from "@/store/teacherStore";
 import {
   Table,
   TableBody,
@@ -36,7 +28,15 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { useCurrentUser } from "@/hooks/auth";
+import { useTeacherStore } from "@/store/teacherStore";
+import { UploadButton } from "@/utils/uploadthing";
+import debounce from "lodash/debounce";
+import { Edit, Loader2, Mail, Phone, Save, Search, X } from "lucide-react";
+import Image from "next/image";
+import { useEffect, useState } from "react";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
 
 // Types based on the schema
 type College = {
@@ -44,25 +44,6 @@ type College = {
   name: string;
   code: string;
 };
-
-type Subject = {
-  id: string;
-  name: string;
-  code: string;
-  phaseId: string;
-  phaseName?: string;
-  branchName?: string;
-  courseName?: string;
-  academicYearName?: string;
-};
-
-type CollegeAdmin = {
-  id: string;
-  name: string;
-  email: string;
-  mobileNo: string;
-};
-
 // Teacher profile validation schema
 const teacherProfileSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters" }),
@@ -92,12 +73,19 @@ export function TeacherProfilePage() {
   const [existingProfile, setExistingProfile] = useState<any>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isFetchingData, setIsFetchingData] = useState<boolean>(true);
-  const [collegeAdmin, setCollegeAdmin] = useState<CollegeAdmin | null>(null);
-  const [isLoadingAdmin, setIsLoadingAdmin] = useState<boolean>(false);
 
   // Get data from Zustand store
-  const { subjects, fetchSubjects, isLoadingSubjects, hasSubjects } =
-    useTeacherStore();
+  const {
+    subjects,
+    fetchSubjects,
+    isLoadingSubjects,
+    hasSubjects,
+    collegeAdmin,
+    isLoadingAdmin,
+    fetchCollegeAdmin,
+  } = useTeacherStore();
+
+  console.log("Subjects in component:", subjects);
 
   // State for dropdown data
   const [colleges, setColleges] = useState<College[]>([]);
@@ -135,28 +123,6 @@ export function TeacherProfilePage() {
   useEffect(() => {
     fetchColleges("");
   }, []);
-
-  // Fetch college admin details
-  const fetchCollegeAdmin = async (collegeId: string) => {
-    if (!collegeId) return;
-
-    setIsLoadingAdmin(true);
-    try {
-      const response = await fetch(`/api/college?collegeId=${collegeId}`);
-      const data = await response.json();
-
-      if (data.success && data.data) {
-        setCollegeAdmin(data.data);
-      } else {
-        setCollegeAdmin(null);
-      }
-    } catch (error) {
-      console.error("Error fetching college admin:", error);
-      setCollegeAdmin(null);
-    } finally {
-      setIsLoadingAdmin(false);
-    }
-  };
 
   // Fetch existing profile if user is logged in
   useEffect(() => {
@@ -203,7 +169,9 @@ export function TeacherProfilePage() {
             await fetchSubjects(profile.id);
 
             // Fetch college admin details
-            fetchCollegeAdmin(profile.collegeId);
+            if (profile.collegeId) {
+              fetchCollegeAdmin(profile.collegeId);
+            }
 
             fetchColleges("");
           }
@@ -218,9 +186,7 @@ export function TeacherProfilePage() {
     }
 
     fetchExistingProfile();
-  }, [user?.id, form, fetchSubjects]);
-
-  console.log("subjects: ", subjects);
+  }, [user?.id, form, fetchSubjects, fetchCollegeAdmin]);
 
   // Fetch methods for dropdown data
   const fetchColleges = async (searchTerm: string) => {
@@ -344,7 +310,6 @@ export function TeacherProfilePage() {
       </div>
     );
   }
-
   return (
     <div className="container mx-auto py-3 max-w-9xl">
       <div className="flex justify-between items-center mb-3">
