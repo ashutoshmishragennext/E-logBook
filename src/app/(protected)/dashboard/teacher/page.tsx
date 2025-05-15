@@ -1,6 +1,4 @@
 "use client";
-
-import ApprovedStudents from "@/components/teacher/ApprovedStudents";
 import PendingStudents from "@/components/teacher/PendingStudents";
 import { TeacherProfilePage } from "@/components/teacher/TeacherProfile";
 import {
@@ -27,7 +25,6 @@ const Sidebar = () => {
   const sidebarItems = [
     { id: "Profile", label: "Profile", icon: <School size={20} />, component: <TeacherProfilePage/> },
     { id: "Students-Pending ", label: "Pending Students", icon: <User size={20} />, component: <PendingStudents/> },
-    { id: "Students-Approved", label: "Approved Students", icon: <School size={20} />, component: <ApprovedStudents/> }
   ];
 
   // Find the active component to render

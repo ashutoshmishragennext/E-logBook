@@ -1,6 +1,5 @@
 "use client";
 
-import LogBookEntry from "@/components/studentComponent/LogBookEntry";
 import StudentProfileCompact from "@/components/studentComponent/StudentProfile";
 import StudentSubjectSelection from "@/components/studentComponent/TeacherAllocation";
 import { useStudentProfileStore } from "@/store/student";
@@ -45,7 +44,6 @@ const Sidebar = () => {
       icon: <Building2 size={20} />, 
       component: <StudentSubjectSelection studentId={profile?.id || ""} /> 
     },
-    {id: "Settings", label: "Settings", icon: <User size={20} />, component: <LogBookEntry />},
   ];
 
   // Find the active component to render
