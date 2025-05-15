@@ -53,16 +53,32 @@ export async function POST(request: Request) {
 export async function PUT(request: Request) {
   const id = new URL(request.url).searchParams.get('id');
   if (!id) return NextResponse.json({ message: "Missing ID" }, { status: 400 });
+
   try {
-    const { ...data } = await request.json();
-    const updated = await db.update(CollegeTable).set(data).where(eq(CollegeTable.id, id)).returning();
-    if (!updated.length) return NextResponse.json({ message: "College not found" }, { status: 404 });
+    const data = await request.json();
+
+    // Validate: make sure there is something to update
+    if (!data || Object.keys(data).length === 0) {
+      return NextResponse.json({ message: "No data provided to update" }, { status: 400 });
+    }
+
+    const updated = await db
+      .update(CollegeTable)
+      .set(data)
+      .where(eq(CollegeTable.id, id))
+      .returning();
+
+    if (!updated.length) {
+      return NextResponse.json({ message: "College not found" }, { status: 404 });
+    }
 
     return NextResponse.json(updated[0]);
   } catch (error) {
+    console.error("Failed to update college:", error);
     return NextResponse.json({ message: "Failed to update college" }, { status: 500 });
   }
 }
+
 
 // DELETE: Delete college by ID
 export async function DELETE(req: NextRequest) {

@@ -461,7 +461,7 @@ useEffect(() => {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-              collegeAdminId: userData.createdBy,
+              collegeAdminId: userData.userId,
             }),
           }
         );
