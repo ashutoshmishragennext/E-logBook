@@ -454,6 +454,8 @@ useEffect(() => {
       if (userResponse.ok) {
         const userData = await userResponse.json();
 
+        console.log("User created:", userData);
+
         // Update college with admin ID
         const collegeResponse = await fetch(
           `/api/college?id=${selectedCollege?.id}`,

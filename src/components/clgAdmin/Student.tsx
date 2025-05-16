@@ -22,6 +22,43 @@ const formSchema = z.object({
 });
 type FormValues = z.infer<typeof formSchema>;
 
+// New component to handle branch name fetching and display
+type BranchNameProps = {
+  branchId?: string;
+};
+
+const BranchName = ({ branchId }: BranchNameProps) => {
+  const [branchName, setBranchName] = useState("Loading...");
+  
+  useEffect(() => {
+    const fetchBranchName = async () => {
+      if (!branchId) {
+        setBranchName("-");
+        return;
+      }
+      
+      try {
+        const response = await fetch(`/api/branches?id=${branchId}`);
+        const data = await response.json();
+        console.log("Branch data:", data);
+        if (data ) {
+          setBranchName(data.name);
+         
+        } else {
+          setBranchName("Unknown");
+        }
+      } catch (error) {
+        console.error("Error fetching branch name:", error);
+        setBranchName("Error");
+      }
+    };
+    
+    fetchBranchName();
+  }, [branchId]);
+  
+  return <>{branchName}</>;
+};
+
 const Students = () => {
   const user = useCurrentUser();
   const userId = user?.id;
@@ -58,6 +95,7 @@ const Students = () => {
       rollNo: "",
     },
   });
+  
 
   useEffect(() => {
     if (userId) {
@@ -106,10 +144,10 @@ const Students = () => {
         setStatus(`✅ Student created successfully!`);
         console.log("Student created:", result);
         form.reset();
-        // Refresh the teacher list
-        fetch(collegeId);
+        // Refresh the student list
+        fetchStudents({ collegeId: collegeId });
       } else {
-        setError(result.error || "Failed to create teacher");
+        setError(result.error || "Failed to create student");
         setStatus("❌ Error occurred");
       }
     } catch (err) {
@@ -372,7 +410,7 @@ const Students = () => {
                           {student.mobileNo}
                         </td>
                         <td className="px-4 py-3 text-sm text-gray-900 border-b">
-                          {student.branchId}
+                          <BranchName branchId={student.branchId} />
                         </td>
                         <td className="px-4 py-3 text-sm text-gray-900 border-b">
                           <button className="text-blue-600 hover:underline mr-3">

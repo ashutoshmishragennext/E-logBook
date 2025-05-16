@@ -500,6 +500,7 @@ const Faculty = () => {
           teacherDesignation={selectedTeacher.designation}
           teacherEmail={selectedTeacher.email}
           onClose={handleCloseAssignment}
+          collegeId={collegeId}
         />
       )}
     </div>

@@ -30,6 +30,7 @@ interface SubjectAssignmentProps {
   teacherDesignation: string;
   teacherEmail: string;
   onClose: () => void;
+  collegeId?: string;
 }
 
 const SubjectAssignment: React.FC<SubjectAssignmentProps> = ({
@@ -38,6 +39,7 @@ const SubjectAssignment: React.FC<SubjectAssignmentProps> = ({
   teacherDesignation,
   teacherEmail,
   onClose,
+  collegeId,
 }) => {
   // States for data fetching
   const { years, fetchYears } = useAcademicYearStore();
@@ -96,7 +98,8 @@ const SubjectAssignment: React.FC<SubjectAssignmentProps> = ({
   useEffect(() => {
     const fetchPhases = async () => {
       if (!academicYearId) return;
-      await fetchBatches("", academicYearId);
+      if (!collegeId) return;
+      await fetchBatches(collegeId, academicYearId);
       setPhases(useBatchStore.getState().batches);
     };
 
@@ -124,7 +127,7 @@ const SubjectAssignment: React.FC<SubjectAssignmentProps> = ({
 
     const fetchCourses = async () => {
       try {
-        const res = await fetch(`/api/course?branchId=${branchId}`);
+        const res = await fetch(`/api/course`);
         const data = await res.json();
         setCourses(data);
       } catch (err) {
@@ -145,6 +148,7 @@ const SubjectAssignment: React.FC<SubjectAssignmentProps> = ({
           `/api/subject?courseId=${courseId}&phaseId=${phaseId}&academicYearId=${academicYearId}`
         );
         const data = await res.json();
+        console.log("subjects", data);
         setSubjects(data);
       } catch (err) {
         console.error("Error fetching subjects:", err);
@@ -181,11 +185,32 @@ const SubjectAssignment: React.FC<SubjectAssignmentProps> = ({
     setAlreadyAssignedSubjects(getAlreadyAssignedSubjects());
   }, [selectedSubjectIds, academicYearId, phaseId, courseId, assignedSubjects]);
 
+  // Fixed function to properly fetch subject details
+  const fetchSubjectDetails = async (subjectId: string) => {
+    try {
+      const res = await fetch(`/api/subject?SubjectId=${subjectId}`);
+      if (!res.ok) {
+        console.error(`Error fetching subject with ID ${subjectId}: ${res.statusText}`);
+        return null;
+      }
+      const data = await res.json();
+      return data;
+    } catch (err) {
+      console.error(`Error fetching subject ${subjectId}:`, err);
+      return null;
+    }
+  };
+
   // Fetch teacher's assigned subjects with related data
   const fetchAssignedSubjects = async () => {
     try {
       const res = await fetch(`/api/teacher-subjects?teacherId=${teacherId}`);
+      if (!res.ok) {
+        throw new Error(`Failed to fetch assigned subjects: ${res.statusText}`);
+      }
+      
       const data = await res.json();
+      console.log("Raw assigned subjects data:", data);
 
       const enrichedData = await Promise.all(
         data.map(async (assignment: any) => {
@@ -196,17 +221,8 @@ const SubjectAssignment: React.FC<SubjectAssignmentProps> = ({
           let course = null;
 
           if (assignment.subjectId) {
-            try {
-              const subjectRes = await fetch(
-                `/api/subject?subjectId=${assignment.subjectId}`
-              );
-              subject = await subjectRes.json();
-            } catch (err) {
-              console.error(
-                `Error fetching subject ${assignment.subjectId}:`,
-                err
-              );
-            }
+            // Fixed subject fetching logic
+            subject = await fetchSubjectDetails(assignment.subjectId);
           }
 
           if (assignment.academicYearId) {
@@ -214,7 +230,8 @@ const SubjectAssignment: React.FC<SubjectAssignmentProps> = ({
               const yearRes = await fetch(
                 `/api/academicYears?id=${assignment.academicYearId}`
               );
-              academicYear = await yearRes.json();
+              const yearData = await yearRes.json();
+              academicYear = yearData;
             } catch (err) {
               console.error(
                 `Error fetching academic year ${assignment.academicYearId}:`,
@@ -228,7 +245,8 @@ const SubjectAssignment: React.FC<SubjectAssignmentProps> = ({
               const phaseRes = await fetch(
                 `/api/phase?id=${assignment.phaseId}`
               );
-              phase = await phaseRes.json();
+              const phaseData = await phaseRes.json();
+              phase = phaseData;
             } catch (err) {
               console.error(`Error fetching phase ${assignment.phaseId}:`, err);
             }
@@ -239,7 +257,8 @@ const SubjectAssignment: React.FC<SubjectAssignmentProps> = ({
               const branchRes = await fetch(
                 `/api/branches?id=${assignment.branchId}`
               );
-              branch = await branchRes.json();
+              const branchData = await branchRes.json();
+              branch = branchData;
             } catch (err) {
               console.error(
                 `Error fetching branch ${assignment.branchId}:`,
@@ -253,7 +272,8 @@ const SubjectAssignment: React.FC<SubjectAssignmentProps> = ({
               const courseRes = await fetch(
                 `/api/course?id=${assignment.courseId}`
               );
-              course = await courseRes.json();
+              const courseData = await courseRes.json();
+              course = courseData;
             } catch (err) {
               console.error(
                 `Error fetching course ${assignment.courseId}:`,
@@ -262,7 +282,7 @@ const SubjectAssignment: React.FC<SubjectAssignmentProps> = ({
             }
           }
 
-          return {
+          const enrichedAssignment = {
             ...assignment,
             subject,
             academicYear,
@@ -270,6 +290,9 @@ const SubjectAssignment: React.FC<SubjectAssignmentProps> = ({
             branch,
             course,
           };
+          
+          console.log("Enriched assignment:", enrichedAssignment);
+          return enrichedAssignment;
         })
       );
 
@@ -371,6 +394,17 @@ const SubjectAssignment: React.FC<SubjectAssignmentProps> = ({
     }
   };
 
+  // Helper function to safely render subject name 
+  const renderSubjectName = (assignment: any) => {
+    if (!assignment) return "N/A";
+    
+    if (assignment.subject && assignment.subject.name && assignment.subject.code) {
+      return `${assignment.subject.name} (${assignment.subject.code})`;
+    }
+    
+    return `Subject ID: ${assignment.subjectId || "N/A"}`;
+  };
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg shadow-lg w-4/5 max-w-6xl max-h-[80vh] overflow-hidden flex flex-col">
@@ -460,24 +494,20 @@ const SubjectAssignment: React.FC<SubjectAssignmentProps> = ({
                           }
                         >
                           <td className="px-4 py-3 text-sm text-gray-900 border-b">
-                            {assignment.subject
-                              ? `${assignment.subject.name} (${assignment.subject.code})`
-                              : `Subject ID: ${assignment.subjectId ?? "N/A"}`}
+                            {renderSubjectName(assignment)}
                           </td>
                           <td className="px-4 py-3 text-sm text-gray-900 border-b">
-                            {assignment.academicYear
+                            {assignment.academicYear && assignment.academicYear.name
                               ? assignment.academicYear.name
-                              : `Academic Year ID: ${
-                                  assignment.academicYearId ?? "N/A"
-                                }`}
+                              : `Academic Year ID: ${assignment.academicYearId || "N/A"}`}
                           </td>
                           <td className="px-4 py-3 text-sm text-gray-900 border-b">
-                            {assignment.phase
+                            {assignment.phase && assignment.phase.name
                               ? assignment.phase.name
-                              : `Phase ID: ${assignment.phaseId ?? "N/A"}`}
+                              : `Phase ID: ${assignment.phaseId || "N/A"}`}
                           </td>
                           <td className="px-4 py-3 text-sm text-gray-900 border-b">
-                            {assignment.branch
+                            {assignment.branch && assignment.branch.name
                               ? assignment.branch.name
                               : `${
                                   assignment.branchId
@@ -486,7 +516,7 @@ const SubjectAssignment: React.FC<SubjectAssignmentProps> = ({
                                 }`}
                           </td>
                           <td className="px-4 py-3 text-sm text-gray-900 border-b">
-                            {assignment.course
+                            {assignment.course && assignment.course.name
                               ? assignment.course.name
                               : `${
                                   assignment.courseId

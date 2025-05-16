@@ -86,7 +86,7 @@ interface StudentSubjectStore {
   fetchSubjects: () => Promise<void>;
   fetchTeacherSubjectsBySubjectId: (subjectId: string) => Promise<void>;
   fetchAcademicYears: () => Promise<void>;
-  fetchPhases: (query: { id?: string; academicYearId?: string; collegeId?: string }) => Promise<void>;
+  fetchPhases: (query: { id?: string; academicYears?: string; collegeId?: string }) => Promise<void>;
   fetchStudentAllocations: (studentId: string) => Promise<void>;
 
   // UI actions

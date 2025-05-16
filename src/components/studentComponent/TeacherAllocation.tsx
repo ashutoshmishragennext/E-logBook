@@ -399,12 +399,15 @@ export default function StudentSubjectSelection({
   // Fetch phases when academic year and college are selected
   useEffect(() => {
     if (selectedAcademicYearId && selectedCollegeId) {
+      console.log(
+        "Fetching phases for academic year and college:", selectedAcademicYearId, selectedCollegeId)
       fetchPhases({
-        academicYearId: selectedAcademicYearId,
+        academicYears: selectedAcademicYearId,
         collegeId: selectedCollegeId,
       });
     }
   }, [selectedAcademicYearId, selectedCollegeId, fetchPhases]);
+  console.log("phases", phases);
 
   // Clear selections when criteria changes
   useEffect(() => {
