@@ -11,12 +11,6 @@ export async function GET(req: NextRequest) {
     const collegeId = searchParams.get("collegeId");
     const userId = searchParams.get("userId");
 
-    if (!id && !collegeId && !userId) {
-      return NextResponse.json(
-        { error: "Either 'id' or 'collegeId' query parameter is required." },
-        { status: 400 }
-      );
-    }
 
     if (userId) {
       const profile = await db
@@ -58,6 +52,15 @@ export async function GET(req: NextRequest) {
 
       return NextResponse.json({ data: profiles }, { status: 200 });
     }
+    // If no ID or college ID is provided, return all teachers
+    const allProfiles = await db
+      .select()
+      .from(TeacherProfileTable);
+    if (!allProfiles || allProfiles.length === 0) {
+      return NextResponse.json({ error: "No teachers found" }, { status: 404 });
+    }
+    return NextResponse.json({ data: allProfiles }, { status: 200 });
+
   } catch (error) {
     console.error("Error fetching teacher profile:", error);
     return NextResponse.json(

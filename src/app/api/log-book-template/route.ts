@@ -65,11 +65,13 @@ export async function GET(request: NextRequest) {
     const phaseId = searchParams.get("phaseId");
     const subjectId = searchParams.get("subjectId");
 
-    // Build up WHERE conditions
     const conditions = [];
 
-    if (templateType) {
-      conditions.push(eq(LogBookTemplateTable.templateType, templateType));
+    if (templateType === "general") {
+      conditions.push(eq(LogBookTemplateTable.templateType, "general"));
+    } else if (templateType === "subject" && subjectId) {
+      conditions.push(eq(LogBookTemplateTable.templateType, "subject"));
+      conditions.push(eq(LogBookTemplateTable.subjectId, subjectId));
     }
 
     if (academicYearId) {
@@ -78,10 +80,6 @@ export async function GET(request: NextRequest) {
 
     if (phaseId) {
       conditions.push(eq(LogBookTemplateTable.batchId, phaseId));
-    }
-
-    if (subjectId) {
-      conditions.push(eq(LogBookTemplateTable.subjectId, subjectId));
     }
 
     const templates = await db
