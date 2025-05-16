@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db';
 import { StudentSubjectTable } from '@/db/schema';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 
 
 
@@ -16,11 +16,27 @@ export async function GET(req: NextRequest) {
   const id = searchParams.get('id');
   const teacherId = searchParams.get('teacherId');
   const studentId = searchParams.get('studentId');
-  if (!id && !teacherId && !studentId) {
+  const has_logbook_access = searchParams.get('has_logbook_access');
+  if (!id && !teacherId && !studentId && !has_logbook_access) {
     return NextResponse.json({ error: 'Missing id' }, { status: 400 });
   }
   if (teacherId) {
     const data = await db.select().from(StudentSubjectTable).where(eq(StudentSubjectTable.teacherId, teacherId));
+    return NextResponse.json(data);
+  }
+  if( studentId && has_logbook_access) {
+    const data = await db.select().from(StudentSubjectTable).where(
+      and(
+        eq(StudentSubjectTable.studentId, studentId),
+        eq(StudentSubjectTable.hasLogbookAccess, has_logbook_access)
+      )
+    );
+    return NextResponse.json(data);
+  }
+
+
+  if (has_logbook_access) {
+    const data = await db.select().from(StudentSubjectTable).where(eq(StudentSubjectTable.hasLogbookAccess, has_logbook_access));
     return NextResponse.json(data);
   }
   if (studentId) {

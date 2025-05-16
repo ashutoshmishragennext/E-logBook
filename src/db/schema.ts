@@ -391,7 +391,7 @@ export const LogBookEntryTable = pgTable(
     teacherId: uuid("teacher_id").references(() => TeacherProfileTable.id),
     
     // Link to the specific student-subject-teacher registration
-    studentSubjectId: uuid("student_subject_id").references(() => StudentSubjectTable.id).notNull(),
+    studentSubjectId: uuid("student_subject_id").references(() => StudentSubjectTable.id),
     
     // Dynamic Field Values
     dynamicFields: jsonb("dynamic_fields").default({}),

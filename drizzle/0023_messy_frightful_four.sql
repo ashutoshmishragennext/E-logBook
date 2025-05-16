@@ -1,0 +1,1 @@
+ALTER TABLE "log_book_entries" ALTER COLUMN "student_subject_id" DROP NOT NULL;

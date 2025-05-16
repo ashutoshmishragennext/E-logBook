@@ -105,120 +105,138 @@ const Sidebar = () => {
   }, [profileDropdownOpen]);
 
   return (
-    <div className="flex h-screen bg-gray-50">
-      {/* Mobile menu button */}
-      <div className="lg:hidden fixed top-4 left-4 z-30">
+  <div className="flex h-screen bg-gray-50">
+  {/* Mobile menu button - positioned properly */}
+  <div className="lg:hidden fixed top-4 left-4 z-30">
+    <button
+      onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+      className="p-2 rounded-md bg-white shadow-md text-gray-600 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+      aria-label="Toggle menu"
+    >
+      <Menu size={24} />
+    </button>
+  </div>
+
+  {/* Sidebar - Desktop */}
+  <div
+    className={`hidden lg:flex flex-col ${
+      sidebarOpen ? "w-64" : "w-20"
+    } transition-all duration-300 bg-white border-r border-gray-200 shadow-sm`}
+  >
+    <SidebarContent 
+      sidebarOpen={sidebarOpen}
+      setSidebarOpen={setSidebarOpen}
+      activeComponent={activeComponent}
+      setActiveComponent={setActiveComponent}
+      session={session}
+      handleLogout={handleLogout}
+      templatesOpen={templatesOpen}
+      setTemplatesOpen={setTemplatesOpen}
+    />
+  </div>
+
+  {/* Sidebar - Mobile - Improved positioning */}
+  <div
+    className={`lg:hidden fixed inset-0 z-20 transform ${
+      mobileMenuOpen ? "translate-x-0" : "-translate-x-full"
+    } transition-transform duration-300 ease-in-out`}
+  >
+    <div className="relative flex flex-col w-64 h-full bg-white border-r border-gray-200 shadow-xl">
+      <div className="h-16 flex-shrink-0 flex items-center justify-end px-4">
         <button
-          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          className="p-2 rounded-md bg-white shadow-md text-gray-600"
+          onClick={() => setMobileMenuOpen(false)}
+          className="rounded-full p-2 text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          aria-label="Close menu"
         >
-          <Menu size={24} />
+          <ChevronLeft size={24} />
         </button>
       </div>
-
-      {/* Sidebar - Desktop */}
-      <div
-        className={`hidden lg:flex flex-col ${
-          sidebarOpen ? "w-64" : "w-20"
-        } transition-all duration-300 bg-white border-r border-gray-200 shadow-sm`}
-      >
+      <div className="flex-1 overflow-y-auto">
         <SidebarContent 
-          sidebarOpen={sidebarOpen}
-          setSidebarOpen={setSidebarOpen}
+          sidebarOpen={true}
+          setSidebarOpen={() => {}}
           activeComponent={activeComponent}
-          setActiveComponent={setActiveComponent}
+          setActiveComponent={(id: SetStateAction<string>) => {
+            setActiveComponent(id);
+            setMobileMenuOpen(false);
+          }}
           session={session}
           handleLogout={handleLogout}
           templatesOpen={templatesOpen}
           setTemplatesOpen={setTemplatesOpen}
         />
       </div>
-
-      {/* Sidebar - Mobile */}
-      <div
-        className={`lg:hidden fixed inset-0 z-20 transform ${
-          mobileMenuOpen ? "translate-x-0" : "-translate-x-full"
-        } transition-transform duration-300 ease-in-out`}
-      >
-        <div className="relative flex flex-col w-64 h-full bg-white border-r border-gray-200 shadow-xl">
-          <button
-            onClick={() => setMobileMenuOpen(false)}
-            className="absolute top-4 right-4 text-gray-500"
-          >
-            <ChevronLeft size={24} />
-          </button>
-          <SidebarContent 
-            sidebarOpen={true}
-            setSidebarOpen={() => {}}
-            activeComponent={activeComponent}
-            setActiveComponent={(id: SetStateAction<string>) => {
-              setActiveComponent(id);
-              setMobileMenuOpen(false);
-            }}
-            session={session}
-            handleLogout={handleLogout}
-            templatesOpen={templatesOpen}
-            setTemplatesOpen={setTemplatesOpen}
-          />
-        </div>
-      </div>
-
-      {/* Main content */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Top navigation bar */}
-        <header className="bg-white shadow-sm border-b border-gray-200 h-16 flex items-center justify-between px-4 lg">
-          <div className="flex items-center">
-            {/* Optional header content */}
-          </div>
-
-          {/* Profile dropdown */}
-          <div className="relative profile-dropdown">
-            <button
-              onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
-              className="flex items-center space-x-2 text-gray-700 hover:text-gray-900 focus:outline-none"
-            >
-              <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
-                <User size={20} className="text-blue-600" />
-              </div>
-              <span className="hidden md:inline-block font-medium">
-                {session?.user?.name || "Admin"}
-              </span>
-              <ChevronRight size={16} className={`transition-transform duration-200 ${profileDropdownOpen ? 'rotate-90' : ''}`} />
-            </button>
-
-            {/* Dropdown menu */}
-            {profileDropdownOpen && (
-              <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 border border-gray-200 z-10">
-                <a href="#" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
-                  <div className="flex items-center space-x-2">
-                    <User size={16} />
-                    <span>My Profile</span>
-                  </div>
-                </a>
-                <hr className="my-1 border-gray-200" />
-                <button
-                  onClick={handleLogout}
-                  className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100"
-                >
-                  <div className="flex items-center space-x-2">
-                    <LogOut size={16} />
-                    <span>Logout</span>
-                  </div>
-                </button>
-              </div>
-            )}
-          </div>
-        </header>
-
-        {/* Content area */}
-        <main className="flex-1 overflow-auto bg-gray-50">
-          {/* Render the active component */}
-          <div className="bg-white rounded-lg shadow p-3 min-h-[calc(100vh-10rem)]">
-            {activeComponentToRender}
-          </div>
-        </main>
-      </div>
     </div>
+  </div>
+
+  {/* Main content */}
+  <div className={`flex-1 flex flex-col overflow-hidden ${
+    mobileMenuOpen ? "ml-64" : "ml-0"
+  } transition-all duration-300 lg:ml-0`}>
+    {/* Top navigation bar */}
+    <header className="bg-white shadow-sm border-b border-gray-200 h-16 flex items-center justify-between px-4 lg:px-6">
+      <div className="flex items-center">
+        {/* Optional header content */}
+      </div>
+
+      {/* Profile dropdown - Enhanced styling */}
+      <div className="relative">
+        <button
+          onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
+          className="flex items-center space-x-2 text-gray-700 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 rounded-full p-1"
+        >
+          <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
+            <User size={20} className="text-blue-600" />
+          </div>
+          <span className="hidden md:inline-block font-medium text-sm">
+            {session?.user?.name || "Admin"}
+          </span>
+          <ChevronDown 
+            size={16} 
+            className={`transition-transform duration-200 ${
+              profileDropdownOpen ? 'rotate-180' : ''
+            }`} 
+          />
+        </button>
+
+        {/* Dropdown menu - Improved styling */}
+        {profileDropdownOpen && (
+          <div 
+            className="absolute right-0 mt-2 w-56 bg-white rounded-md shadow-lg py-1 border border-gray-200 z-10"
+            onMouseLeave={() => setProfileDropdownOpen(false)}
+          >
+            {/* <a 
+              href="#" 
+              className="block px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-150"
+            >
+              <div className="flex items-center space-x-3">
+                <User size={16} className="text-gray-500" />
+                <span>My Profile</span>
+              </div>
+            </a>
+            <hr className="my-1 border-gray-200" /> */}
+            <button
+              onClick={handleLogout}
+              className="block w-full text-left px-4 py-2.5 text-sm text-red-600 hover:bg-gray-100 transition-colors duration-150"
+            >
+              <div className="flex items-center space-x-3">
+                <LogOut size={16} className="text-red-500" />
+                <span>Logout</span>
+              </div>
+            </button>
+          </div>
+        )}
+      </div>
+    </header>
+
+    {/* Content area - Improved padding */}
+    <main className="flex-1 overflow-auto bg-gray-50 p-4">
+      <div className="bg-white  h-full overflow-auto">
+        {activeComponentToRender}
+      </div>
+    </main>
+  </div>
+</div>
   );
 };
 

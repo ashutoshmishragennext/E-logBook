@@ -8,13 +8,14 @@ import { z } from 'zod';
 const logBookEntryCreateSchema = z.object({
   logBookTemplateId: z.string().uuid(),
   studentId: z.string().uuid(),
-  studentSubjectId: z.string().uuid(), // ✅ required field
+  studentSubjectId: z.string().uuid().nullable().optional(), // ✅ allows null
   teacherId: z.string().uuid().optional(),
   dynamicFields: z.record(z.any()).optional(),
   studentRemarks: z.string().optional(),
-  status: z.enum(["DRAFT", "SUBMITTED", "REVIEWED"]).default("DRAFT"),
+  status: z.enum([ "SUBMITTED", "REVIEWED" ,"REJECTED"]).default("SUBMITTED"),
   teacherRemarks: z.string().optional(),
 }).strict();
+
 
 
 // Zod schema for updating log book entries (with ID)
@@ -36,7 +37,7 @@ export async function POST(req: NextRequest) {
         studentRemarks: validatedData.studentRemarks || null,
         status: validatedData.status,
         // ✅ add required field missing from payload
-        studentSubjectId: validatedData.studentSubjectId, // <-- make sure this is in your Zod schema!
+        studentSubjectId: validatedData.studentSubjectId, 
         createdAt: new Date(),
         updatedAt: new Date()
       })
@@ -79,6 +80,7 @@ export async function GET(req: NextRequest) {
     if (studentId) conditions.push(eq(LogBookEntryTable.studentId, studentId));
     if (logBookTemplateId) conditions.push(eq(LogBookEntryTable.logBookTemplateId, logBookTemplateId));
     if (status) conditions.push(eq(LogBookEntryTable.status, status));
+
 
     // Fetch log book entries based on conditions
     const logBookEntries = await db
