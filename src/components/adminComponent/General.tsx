@@ -28,6 +28,7 @@ import {
   LogBookTemplateSchema,
   TemplateFormValues,
 } from "./types";
+import { toast } from 'sonner';
 
 // Form validation schema for general template details
 const generalTemplateSchema = z.object({
@@ -75,7 +76,7 @@ export function GeneralTemplateForm({
     try {
       // Validate that there are fields in the template
       if (templateSchema.groups.every((group) => group.fields.length === 0)) {
-        alert("Please add at least one field to your template");
+        toast("Please add at least one field to your template");
         return;
       }
 
@@ -103,11 +104,11 @@ export function GeneralTemplateForm({
       // Execute success callback or navigate to templates list
      if (onSuccess) {
         onSuccess();
-        alert("Template saved successfully!");
+        toast("Template saved successfully!");
       }
     } catch (error) {
       console.error("Error saving template:", error);
-      alert("Failed to save template. Please try again.");
+      toast("Failed to save template. Please try again.");
     }
   };
 

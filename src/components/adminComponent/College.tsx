@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable react-hooks/exhaustive-deps*/
+/* eslint-disable @typescript-eslint/no-unused-vars */
 "use client";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -30,6 +31,7 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
+import DeleteConfirmation from "../common/DeleteComfirmation";
 
 const College: React.FC = () => {
   const user = useCurrentUser();
@@ -96,7 +98,6 @@ const College: React.FC = () => {
   const [loadingAdminIds, setLoadingAdminIds] = useState<string[]>([]);
   const formRef = useRef<HTMLFormElement>(null);
   const adminFormRef = useRef<HTMLDivElement>(null);
-  console.log(profilePhotoFileName)
 
   useEffect(() => {
     fetchColleges();
@@ -107,76 +108,67 @@ const College: React.FC = () => {
     Record<string, boolean>
   >({});
 
-  // Modified fetch function
- // Add this console log in the component to track data
-useEffect(() => {
-  console.log("Current colleges state:", colleges);
-  console.log("Failed admin fetches:", failedAdminFetches);
-  console.log("Loading admin IDs:", loadingAdminIds);
-}, [colleges, failedAdminFetches, loadingAdminIds]);
+  // Fix the fetchCollegeAdminData function to properly update the state
+  const fetchCollegeAdminData = async (college: College) => {
+    if (!college.collegeAdminId || failedAdminFetches[college.id]) return;
 
-// Fix the fetchCollegeAdminData function to properly update the state
-const fetchCollegeAdminData = async (college: College) => {
-  if (!college.collegeAdminId || failedAdminFetches[college.id]) return;
+    try {
+      setLoadingAdminIds((prev) => [...prev, college.id]);
 
-  try {
-    setLoadingAdminIds((prev) => [...prev, college.id]);
+      const response = await fetch(
+        `/api/user?userId=${college.collegeAdminId}`
+      );
 
-    const response = await fetch(
-      `/api/user?userId=${college.collegeAdminId}`
-    );
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
 
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+      const userData = await response.json();
+
+      if (!userData?.id) {
+        throw new Error("Invalid admin data received");
+      }
+
+      // Important fix: update both colleges and filteredColleges
+      setColleges((prev) =>
+        prev.map((c) =>
+          c.id === college.id
+            ? {
+                ...c,
+                collegeAdmin: {
+                  id: userData.id,
+                  name: userData.name,
+                  email: userData.email,
+                  phone: userData.phone || "",
+                },
+              }
+            : c
+        )
+      );
+
+      // Also update filteredColleges to ensure UI reflects the change
+      setFilteredColleges((prev) =>
+        prev.map((c) =>
+          c.id === college.id
+            ? {
+                ...c,
+                collegeAdmin: {
+                  id: userData.id,
+                  name: userData.name,
+                  email: userData.email,
+                  phone: userData.phone || "",
+                },
+              }
+            : c
+        )
+      );
+    } catch (err) {
+      console.error(`Error fetching admin for college ${college.id}:`, err);
+      setFailedAdminFetches((prev) => ({ ...prev, [college.id]: true }));
+    } finally {
+      setLoadingAdminIds((prev) => prev.filter((id) => id !== college.id));
     }
-
-    const userData = await response.json();
-
-    if (!userData?.id) {
-      throw new Error("Invalid admin data received");
-    }
-
-    // Important fix: update both colleges and filteredColleges
-    setColleges((prev) =>
-      prev.map((c) =>
-        c.id === college.id
-          ? {
-              ...c,
-              collegeAdmin: {
-                id: userData.id,
-                name: userData.name,
-                email: userData.email,
-                phone: userData.phone || "",
-              },
-            }
-          : c
-      )
-    );
-
-    // Also update filteredColleges to ensure UI reflects the change
-    setFilteredColleges((prev) =>
-      prev.map((c) =>
-        c.id === college.id
-          ? {
-              ...c,
-              collegeAdmin: {
-                id: userData.id,
-                name: userData.name,
-                email: userData.email,
-                phone: userData.phone || "",
-              },
-            }
-          : c
-      )
-    );
-    
-  } catch (err) {
-    console.error(`Error fetching admin for college ${college.id}:`, err);
-    setFailedAdminFetches((prev) => ({ ...prev, [college.id]: true }));
-  } finally {
-    setLoadingAdminIds((prev) => prev.filter((id) => id !== college.id));
-  }
-};
+  };
   // Auto-fetch effect
   useEffect(() => {
     filteredColleges.forEach((college) => {
@@ -252,24 +244,25 @@ const fetchCollegeAdminData = async (college: College) => {
   }, [isEditing, isCreatingAdmin, isLoading]);
 
   // Add this useEffect to handle search filtering
-useEffect(() => {
-  if (searchQuery.trim() === "") {
-    setFilteredColleges(colleges);
-  } else {
-    const query = searchQuery.toLowerCase();
-    const filtered = colleges.filter(
-      (college) =>
-        college.name.toLowerCase().includes(query) ||
-        college.code.toLowerCase().includes(query) ||
-        (college.email && college.email.toLowerCase().includes(query)) ||
-        (college.city && college.city.toLowerCase().includes(query)) ||
-        (college.state && college.state.toLowerCase().includes(query)) ||
-        (college.country && college.country.toLowerCase().includes(query)) ||
-        (college.collegeAdmin && college.collegeAdmin.name.toLowerCase().includes(query))
-    );
-    setFilteredColleges(filtered);
-  }
-}, [searchQuery, colleges]);
+  useEffect(() => {
+    if (searchQuery.trim() === "") {
+      setFilteredColleges(colleges);
+    } else {
+      const query = searchQuery.toLowerCase();
+      const filtered = colleges.filter(
+        (college) =>
+          college.name.toLowerCase().includes(query) ||
+          college.code.toLowerCase().includes(query) ||
+          (college.email && college.email.toLowerCase().includes(query)) ||
+          (college.city && college.city.toLowerCase().includes(query)) ||
+          (college.state && college.state.toLowerCase().includes(query)) ||
+          (college.country && college.country.toLowerCase().includes(query)) ||
+          (college.collegeAdmin &&
+            college.collegeAdmin.name.toLowerCase().includes(query))
+      );
+      setFilteredColleges(filtered);
+    }
+  }, [searchQuery, colleges]);
 
   const resetForm = () => {
     setFormData({
@@ -365,14 +358,12 @@ useEffect(() => {
       setError("Name and code are required");
       return;
     }
-    console.log("Form data:", formData);
 
     try {
       setIsLoading(true);
       let response;
 
       if (selectedCollege) {
-        console.log("Updating college:", selectedCollege);
         // Update existing college
         response = await fetch(`/api/college?id=${selectedCollege.id}`, {
           method: "PUT",
@@ -454,8 +445,6 @@ useEffect(() => {
       if (userResponse.ok) {
         const userData = await userResponse.json();
 
-        console.log("User created:", userData);
-
         // Update college with admin ID
         const collegeResponse = await fetch(
           `/api/college?id=${selectedCollege?.id}`,
@@ -521,37 +510,45 @@ useEffect(() => {
     }
   };
 
-  const handleDeleteCollege = async (collegeId: string) => {
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [confirmText, setConfirmText] = useState("");
+  const [onConfirmCallback, setOnConfirmCallback] = useState<
+    (() => void) | null
+  >(null);
+
+  const handleDeleteCollege = (collegeId: string) => {
     const collegeToDelete = colleges.find((c) => c.id === collegeId);
     if (!collegeToDelete) return;
 
-    if (!confirm(`Are you sure you want to delete ${collegeToDelete.name}?`))
-      return;
+    setConfirmText(`Are you sure you want to delete ${collegeToDelete.name}?`);
+    setOnConfirmCallback(() => async () => {
+      try {
+        setIsLoading(true);
+        const response = await fetch(`/api/college?id=${collegeId}`, {
+          method: "DELETE",
+        });
 
-    try {
-      setIsLoading(true);
-      const response = await fetch(`/api/college?id=${collegeId}`, {
-        method: "DELETE",
-      });
-
-      if (response.ok) {
-        setColleges((prev) => prev.filter((c) => c.id !== collegeId));
-        if (selectedCollege && selectedCollege.id === collegeId) {
-          setSelectedCollege(null);
-          resetForm();
+        if (response.ok) {
+          setColleges((prev) => prev.filter((c) => c.id !== collegeId));
+          if (selectedCollege && selectedCollege.id === collegeId) {
+            setSelectedCollege(null);
+            resetForm();
+          }
+        } else {
+          const errorData = await response.json();
+          setError(errorData.message || "Failed to delete college");
         }
-      } else {
-        const errorData = await response.json();
-        setError(errorData.message || "Failed to delete college");
+      } catch (err) {
+        setError(
+          "Error deleting college: " +
+            (err instanceof Error ? err.message : "Unknown error")
+        );
+      } finally {
+        setIsLoading(false);
+        setIsDeleteModalOpen(false);
       }
-    } catch (err) {
-      setError(
-        "Error deleting college: " +
-          (err instanceof Error ? err.message : "Unknown error")
-      );
-    } finally {
-      setIsLoading(false);
-    }
+    });
+    setIsDeleteModalOpen(true);
   };
 
   const handleEditCollege = (college: College) => {
@@ -988,7 +985,6 @@ useEffect(() => {
       day: "numeric",
     });
   };
-  console.log("Colleges:", colleges);
 
   return (
     <div className="relative min-h-screen ">
@@ -998,7 +994,7 @@ useEffect(() => {
         </Alert>
       )}
 
-      <div className="bg-white rounded-lg shadow-sm md:p-6 mb-4">
+      <div className="bg-white rounded-lg shadow-sm md:p-3 mb-4">
         {/* Header Section */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
           <div>
@@ -1218,57 +1214,65 @@ useEffect(() => {
                       </div>
                     </td>
                     {/* College Admin column fix */}
-                   {/* Fixed College Admin column */}
-<td className="px-4 py-2 text-sm text-gray-700">
-  {college.collegeAdmin ? (
-    // Admin data is available
-    <div>
-      <div className="font-semibold">{college.collegeAdmin.name}</div>
-      <div className="text-gray-500 text-xs">{college.collegeAdmin.email}</div>
-      {college.collegeAdmin.phone && (
-        <div className="text-gray-500 text-xs">{college.collegeAdmin.phone}</div>
-      )}
-    </div>
-  ) : college.collegeAdminId ? (
-    // Admin ID exists but data isn't loaded yet
-    loadingAdminIds.includes(college.id) ? (
-      <div className="flex items-center space-x-2">
-        <Loader2 className="h-4 w-4 animate-spin text-gray-500" />
-        <span className="text-gray-400 text-sm">Loading admin...</span>
-      </div>
-    ) : (
-      <div className="text-sm">
-        <div className="text-gray-500">Admin assigned</div>
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            // Reset failed state and retry fetching
-            setFailedAdminFetches((prev) => ({
-              ...prev,
-              [college.id]: false,
-            }));
-            fetchCollegeAdminData(college);
-          }}
-          className="text-blue-600 hover:underline text-xs"
-        >
-          Load admin info
-        </button>
-      </div>
-    )
-  ) : (
-    // No admin assigned
-    <button
-      onClick={(e) => {
-        e.stopPropagation();
-        handleCreateCollegeAdmin(college);
-      }}
-      className="flex items-center text-blue-600 hover:underline text-sm"
-    >
-      <UserPlus className="h-3 w-3 mr-1" />
-      Add Admin
-    </button>
-  )}
-</td>
+                    {/* Fixed College Admin column */}
+                    <td className="px-4 py-2 text-sm text-gray-700">
+                      {college.collegeAdmin ? (
+                        // Admin data is available
+                        <div>
+                          <div className="font-semibold">
+                            {college.collegeAdmin.name}
+                          </div>
+                          <div className="text-gray-500 text-xs">
+                            {college.collegeAdmin.email}
+                          </div>
+                          {college.collegeAdmin.phone && (
+                            <div className="text-gray-500 text-xs">
+                              {college.collegeAdmin.phone}
+                            </div>
+                          )}
+                        </div>
+                      ) : college.collegeAdminId ? (
+                        // Admin ID exists but data isn't loaded yet
+                        loadingAdminIds.includes(college.id) ? (
+                          <div className="flex items-center space-x-2">
+                            <Loader2 className="h-4 w-4 animate-spin text-gray-500" />
+                            <span className="text-gray-400 text-sm">
+                              Loading admin...
+                            </span>
+                          </div>
+                        ) : (
+                          <div className="text-sm">
+                            <div className="text-gray-500">Admin assigned</div>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                // Reset failed state and retry fetching
+                                setFailedAdminFetches((prev) => ({
+                                  ...prev,
+                                  [college.id]: false,
+                                }));
+                                fetchCollegeAdminData(college);
+                              }}
+                              className="text-blue-600 hover:underline text-xs"
+                            >
+                              Load admin info
+                            </button>
+                          </div>
+                        )
+                      ) : (
+                        // No admin assigned
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleCreateCollegeAdmin(college);
+                          }}
+                          className="flex items-center text-blue-600 hover:underline text-sm"
+                        >
+                          <UserPlus className="h-3 w-3 mr-1" />
+                          Add Admin
+                        </button>
+                      )}
+                    </td>
                     <td className="px-4 py-3 whitespace-nowrap text-center">
                       <div
                         className="flex items-center space-x-1 justify-center"
@@ -1368,7 +1372,6 @@ useEffect(() => {
                     <div className="flex flex-col items-center mb-6">
                       {formData.logo ? (
                         <Image
-
                           width={128}
                           height={128}
                           src={formData.logo}
@@ -1584,6 +1587,13 @@ useEffect(() => {
           </motion.div>
         )}
       </AnimatePresence>
+
+      <DeleteConfirmation
+        text={confirmText}
+        onConfirm={onConfirmCallback ?? (() => {})}
+        isOpen={isDeleteModalOpen}
+        setIsOpen={setIsDeleteModalOpen}
+      />
     </div>
   );
 };

@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Search, Plus, Trash2, Edit, X, Save } from "lucide-react";
+import DeleteConfirmation from "../common/DeleteComfirmation";
 
 const Department = () => {
   const [branches, setBranches] = useState<{ id: string; name: string; code?: string; description?: string }[]>([]);
@@ -21,6 +22,10 @@ const Department = () => {
     code: "",
     description: "",
   });
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [confirmText, setConfirmText] = useState("");
+  const [onConfirmCallback, setOnConfirmCallback] = useState<(() => void) | null>(null);
+  
   
   // Fetch branches on component mount - adding empty dependency array to run only once
   useEffect(() => {
@@ -130,28 +135,34 @@ const Department = () => {
   };
 
   const handleDelete = async (id: string | undefined) => {
-    if (!confirm("Are you sure you want to delete this branch?")) return;
+    setConfirmText(`Are you sure you want to delete this branch?`);
+    
+    setOnConfirmCallback(() => async () => {
+      try {
+        setIsLoading(true);
+        const response = await fetch(`/api/branches?id=${id}`, {
+          method: "DELETE",
+        });
 
-    try {
-      setIsLoading(true);
-      const response = await fetch(`/api/branches?id=${id}`, {
-        method: "DELETE",
-      });
-
-      if (response.ok) {
-        await fetchBranches();
-        if (currentBranch?.id === id) {
-          closeSidebar();
+        if (response.ok) {
+          await fetchBranches();
+          if (currentBranch?.id === id) {
+            closeSidebar();
+          }
+        } else {
+          const errorData = await response.json();
+          setError(errorData.message || "Failed to delete branch");
         }
-      } else {
-        const errorData = await response.json();
-        setError(errorData.message || "Failed to delete branch");
+      } catch (err) {
+        setError("Error deleting branch: " + (err instanceof Error ? err.message : "Unknown error"));
+      } finally {
+        setIsLoading(false);
+        setIsDeleteModalOpen(false); // Close the modal after operation completes
       }
-    } catch (err) {
-      setError("Error deleting branch: " + (err instanceof Error ? err.message : "Unknown error"));
-    } finally {
-      setIsLoading(false);
-    }
+    });
+    
+    // Open the delete confirmation modal
+    setIsDeleteModalOpen(true);
   };
 
   const filteredBranches = branches.filter(branch => 
@@ -353,6 +364,13 @@ const Department = () => {
       onClick={closeSidebar}
     />
   )}
+
+  <DeleteConfirmation
+    text={confirmText}
+    onConfirm={onConfirmCallback ?? (() => {})}
+    isOpen={isDeleteModalOpen}
+    setIsOpen={setIsDeleteModalOpen}
+  />
 </div>
   );
 };

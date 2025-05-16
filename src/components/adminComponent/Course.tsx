@@ -1,4 +1,3 @@
-
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
@@ -9,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Edit, Plus, Save, Search, Trash2, X } from "lucide-react";
 import { useEffect, useState } from "react";
-
+import DeleteConfirmation from "../common/DeleteComfirmation";
 const Course = () => {
   const [courses, setCourses] = useState<
     { id: string; name: string; duration?: string; description?: string }[]
@@ -29,6 +28,11 @@ const Course = () => {
     duration: "",
     description: "",
   });
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [confirmText, setConfirmText] = useState("");
+  const [onConfirmCallback, setOnConfirmCallback] = useState<
+    (() => void) | null
+  >(null);
 
   useEffect(() => {
     fetchCourses();
@@ -149,31 +153,35 @@ const Course = () => {
   };
 
   const handleDelete = async (id: string | undefined) => {
-    if (!confirm("Are you sure you want to delete this Course?")) return;
+    setConfirmText(`Are you sure you want to delete this Course?`);
 
-    try {
-      setIsLoading(true);
-      const response = await fetch(`/api/course?id=${id}`, {
-        method: "DELETE",
-      });
+    setOnConfirmCallback(() => async () => {
+      try {
+        setIsLoading(true);
+        const response = await fetch(`/api/course?id=${id}`, {
+          method: "DELETE",
+        });
 
-      if (response.ok) {
-        await fetchCourses();
-        if (currentCourse?.id === id) {
-          closeSidebar();
+        if (response.ok) {
+          await fetchCourses();
+          if (currentCourse?.id === id) {
+            closeSidebar();
+          }
+        } else {
+          const errorData = await response.json();
+          setError(errorData.message || "Failed to delete Course");
         }
-      } else {
-        const errorData = await response.json();
-        setError(errorData.message || "Failed to delete Course");
+      } catch (err) {
+        setError(
+          "Error deleting Course: " +
+            (err instanceof Error ? err.message : "Unknown error")
+        );
+      } finally {
+        setIsLoading(false);
+        setIsDeleteModalOpen(false);
       }
-    } catch (err) {
-      setError(
-        "Error deleting Course: " +
-          (err instanceof Error ? err.message : "Unknown error")
-      );
-    } finally {
-      setIsLoading(false);
-    }
+    });
+    setIsDeleteModalOpen(true);
   };
 
   const filteredCoures = courses.filter(
@@ -196,32 +204,29 @@ const Course = () => {
 
       {/* Header Section - Now responsive */}
       <div className="flex flex-col md:flex-row justify-between items-stretch md:items-center gap-3 mb-4">
-  {/* Title - takes full width on mobile, auto width on desktop */}
-  <h2 className="text-xl font-semibold md:mr-4">Course Management</h2>
-  
-  {/* Search and Button container - stacks on mobile, row on desktop */}
-  <div className="flex flex-col md:flex-row gap-3 w-full md:w-auto">
-    {/* Search input - full width on mobile, fixed width on desktop */}
-    <div className="relative w-full md:w-64">
-      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-      <Input
-        placeholder="Search Courses..."
-        value={searchTerm}
-        onChange={(e) => setSearchTerm(e.target.value)}
-        className="pl-9 w-full"
-      />
-    </div>
-    
-    {/* Button - full width on mobile, auto width on desktop */}
-    <Button 
-      onClick={() => openSidebar()} 
-      className="w-full md:w-auto"
-    >
-      <Plus className="h-4 w-4 mr-2" />
-      Add Course
-    </Button>
-  </div>
-</div>
+        {/* Title - takes full width on mobile, auto width on desktop */}
+        <h2 className="text-xl font-semibold md:mr-4">Course Management</h2>
+
+        {/* Search and Button container - stacks on mobile, row on desktop */}
+        <div className="flex flex-col md:flex-row gap-3 w-full md:w-auto">
+          {/* Search input - full width on mobile, fixed width on desktop */}
+          <div className="relative w-full md:w-64">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <Input
+              placeholder="Search Courses..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-9 w-full"
+            />
+          </div>
+
+          {/* Button - full width on mobile, auto width on desktop */}
+          <Button onClick={() => openSidebar()} className="w-full md:w-auto">
+            <Plus className="h-4 w-4 mr-2" />
+            Add Course
+          </Button>
+        </div>
+      </div>
 
       {/* Courses Table - Now scrollable on mobile */}
       <div className="bg-white rounded-md shadow overflow-hidden">
@@ -439,6 +444,12 @@ const Course = () => {
           onClick={closeSidebar}
         />
       )}
+      <DeleteConfirmation
+        text={confirmText}
+        onConfirm={onConfirmCallback ?? (() => {})}
+        isOpen={isDeleteModalOpen}
+        setIsOpen={setIsDeleteModalOpen}
+      />
     </div>
   );
 };

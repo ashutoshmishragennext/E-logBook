@@ -8,21 +8,21 @@ import { Input } from "@/components/ui/input";
 import { useSubjectStore } from "@/store/subject";
 import { Edit, Plus, Save, Search, Trash2, X } from "lucide-react";
 import { useEffect, useState } from "react";
-
+import DeleteConfirmation from "../common/DeleteComfirmation";
 
 const Subject = () => {
   // Get state and methods from Zustand store
-  const { 
-    subjects, 
-    isLoading, 
-    error, 
-    currentSubject, 
+  const {
+    subjects,
+    isLoading,
+    error,
+    currentSubject,
     sidebarOpen,
-    fetchSubjects, 
-    setError, 
-    setCurrentSubject, 
+    fetchSubjects,
+    setError,
+    setCurrentSubject,
     setSidebarOpen,
-    removeSubjectById
+    removeSubjectById,
   } = useSubjectStore();
 
   // Keep local state for form and filtering
@@ -30,37 +30,49 @@ const Subject = () => {
   const [formData, setFormData] = useState({
     name: "",
     code: "",
-    approved: true
+    approved: true,
   });
-  const [approvedFilter, setApprovedFilter] = useState<"all" | "approved" | "pending">("all");
+  const [approvedFilter, setApprovedFilter] = useState<
+    "all" | "approved" | "pending"
+  >("all");
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [confirmText, setConfirmText] = useState("");
+  const [onConfirmCallback, setOnConfirmCallback] = useState<
+    (() => void) | null
+  >(null);
 
   // Fetch subjects on component mount
   useEffect(() => {
     fetchSubjects();
   }, [fetchSubjects]);
 
-  const handleInputChange = (e: { target: { name: any; value: any; }; }) => {
+  const handleInputChange = (e: { target: { name: any; value: any } }) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   const resetForm = () => {
     setFormData({
       name: "",
       code: "",
-      approved: true
+      approved: true,
     });
   };
 
-  const openSidebar = (subject: {
-    approved: boolean; id: string; name: string; code?: string 
-} | null = null) => {
+  const openSidebar = (
+    subject: {
+      approved: boolean;
+      id: string;
+      name: string;
+      code?: string;
+    } | null = null
+  ) => {
     if (subject) {
       setCurrentSubject(subject);
       setFormData({
         name: subject.name,
         code: subject.code || "",
-        approved: subject.approved ?? true
+        approved: subject.approved ?? true,
       });
     } else {
       setCurrentSubject(null);
@@ -75,7 +87,7 @@ const Subject = () => {
     resetForm();
   };
 
-  const handleSubmit = async (e: { preventDefault: () => void; }) => {
+  const handleSubmit = async (e: { preventDefault: () => void }) => {
     e?.preventDefault();
     setError("");
 
@@ -88,14 +100,13 @@ const Subject = () => {
       setError("Subject code is required");
       return;
     }
-    if(formData.approved == false){
-      formData.approved = true
+    if (formData.approved == false) {
+      formData.approved = true;
     }
 
     try {
       const isEditing = !!currentSubject;
       let response;
-      console.log("Form Data", formData);
 
       if (isEditing && currentSubject) {
         response = await fetch(`/api/subject?id=${currentSubject.id}`, {
@@ -119,49 +130,61 @@ const Subject = () => {
         setError(errorData.message || "Failed to save subject");
       }
     } catch (err) {
-      setError("Error saving subject: " + (err instanceof Error ? err.message : "Unknown error"));
+      setError(
+        "Error saving subject: " +
+          (err instanceof Error ? err.message : "Unknown error")
+      );
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this subject?")) return;
 
-    try {
-      const response = await fetch(`/api/subject?id=${id}`, {
-        method: "DELETE",
-      });
+    setConfirmText(`Are you sure you want to delete this Subject?`);
 
-      if (response.ok) {
-        // Update local store immediately for better UX
-        removeSubjectById(id);
-        
-        // Refresh data from server
-        await fetchSubjects();
-        
-        if (currentSubject?.id === id) {
-          closeSidebar();
+    setOnConfirmCallback(() => async () => {
+      try {
+        const response = await fetch(`/api/subject?id=${id}`, {
+          method: "DELETE",
+        });
+
+        if (response.ok) {
+          // Update local store immediately for better UX
+          removeSubjectById(id);
+
+          // Refresh data from server
+          await fetchSubjects();
+
+          if (currentSubject?.id === id) {
+            closeSidebar();
+          }
+        } else {
+          const errorData = await response.json();
+          setError(errorData.message || "Failed to delete subject");
         }
-      } else {
-        const errorData = await response.json();
-        setError(errorData.message || "Failed to delete subject");
+      } catch (err) {
+        setError(
+          "Error deleting Subject: " +
+            (err instanceof Error ? err.message : "Unknown error")
+        );
+      } finally {
+        setIsDeleteModalOpen(false);
       }
-    } catch (err) {
-      setError("Error deleting Subject: " + (err instanceof Error ? err.message : "Unknown error"));
-    }
+    });
+    setIsDeleteModalOpen(true);
   };
 
-  const filteredSubjects = subjects.filter(subject => {
+  const filteredSubjects = subjects.filter((subject) => {
     // Search filter
-    const matchesSearch = 
+    const matchesSearch =
       subject.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (subject.code ?? "").toLowerCase().includes(searchTerm.toLowerCase());
-    
+
     // Approved status filter
-    const matchesApprovedFilter = 
+    const matchesApprovedFilter =
       approvedFilter === "all" ||
       (approvedFilter === "approved" && subject.approved) ||
       (approvedFilter === "pending" && !subject.approved);
-    
+
     return matchesSearch && matchesApprovedFilter;
   });
 
@@ -173,7 +196,7 @@ const Subject = () => {
         </Alert>
       )}
 
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-3">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-3 p-2">
         <h2 className="text-xl font-semibold">Subject Management</h2>
         <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3 w-full md:w-auto">
           <div className="relative w-full md:w-64">
@@ -187,7 +210,11 @@ const Subject = () => {
           </div>
           <select
             value={approvedFilter}
-            onChange={(e) => setApprovedFilter(e.target.value as "all" | "approved" | "pending")}
+            onChange={(e) =>
+              setApprovedFilter(
+                e.target.value as "all" | "approved" | "pending"
+              )
+            }
             className="border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             <option value="all">All Statuses</option>
@@ -207,11 +234,36 @@ const Subject = () => {
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-12">#</th>
-                <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[120px]">Name</th>
-                <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[80px]">Code</th>
-                <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[100px]">Status</th>
-                <th scope="col" className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[100px]">Actions</th>
+                <th
+                  scope="col"
+                  className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-12"
+                >
+                  #
+                </th>
+                <th
+                  scope="col"
+                  className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[120px]"
+                >
+                  Name
+                </th>
+                <th
+                  scope="col"
+                  className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[80px]"
+                >
+                  Code
+                </th>
+                <th
+                  scope="col"
+                  className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[100px]"
+                >
+                  Status
+                </th>
+                <th
+                  scope="col"
+                  className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[100px]"
+                >
+                  Actions
+                </th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
@@ -228,8 +280,8 @@ const Subject = () => {
                 <tr>
                   <td colSpan={5} className="text-center py-10">
                     <p className="text-gray-500">
-                      {searchTerm || approvedFilter !== "all" 
-                        ? "No subjects match your filters" 
+                      {searchTerm || approvedFilter !== "all"
+                        ? "No subjects match your filters"
                         : "No subjects found"}
                     </p>
                   </td>
@@ -237,8 +289,12 @@ const Subject = () => {
               ) : (
                 filteredSubjects.map((subject, index) => (
                   <tr key={subject.id} className="hover:bg-gray-50">
-                    <td className="px-3 py-1 whitespace-nowrap text-sm text-gray-500">{index + 1}</td>
-                    <td className="px-3 py-1 whitespace-nowrap text-sm font-medium">{subject.name}</td>
+                    <td className="px-3 py-1 whitespace-nowrap text-sm text-gray-500">
+                      {index + 1}
+                    </td>
+                    <td className="px-3 py-1 whitespace-nowrap text-sm font-medium">
+                      {subject.name}
+                    </td>
                     <td className="px-3 py-1 whitespace-nowrap">
                       <Badge variant="outline" className="bg-blue-50 text-xs">
                         {subject.code || "—"}
@@ -246,25 +302,34 @@ const Subject = () => {
                     </td>
                     <td className="px-3 py-1 whitespace-nowrap text-sm font-medium">
                       {subject.approved ? (
-                        <Badge variant="default" className="text-xs">Approved</Badge>
+                        <Badge variant="default" className="text-xs">
+                          Approved
+                        </Badge>
                       ) : (
-                        <Badge variant="destructive" className="text-xs">Pending</Badge>
+                        <Badge variant="destructive" className="text-xs">
+                          Pending
+                        </Badge>
                       )}
                     </td>
                     <td className="px-3 py-1 whitespace-nowrap text-right text-sm font-medium">
                       <div className="flex justify-end gap-1">
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          className="h-8 w-8 p-0" 
-                          onClick={() => openSidebar({ ...subject, approved: subject.approved ?? false })}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 p-0"
+                          onClick={() =>
+                            openSidebar({
+                              ...subject,
+                              approved: subject.approved ?? false,
+                            })
+                          }
                         >
                           <Edit className="h-4 w-4" />
                         </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          className="h-8 w-8 p-0 text-red-500 hover:text-red-600 hover:bg-red-50" 
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 p-0 text-red-500 hover:text-red-600 hover:bg-red-50"
                           onClick={() => handleDelete(subject.id)}
                         >
                           <Trash2 className="h-4 w-4" />
@@ -280,16 +345,20 @@ const Subject = () => {
       </div>
 
       {/* Right Sidebar for Create/Edit */}
-      <div className={`fixed inset-y-0 right-0 w-full md:w-1/3 lg:max-w-md bg-white shadow-lg border-l border-gray-200 transform transition-transform duration-300 ease-in-out z-50 ${sidebarOpen ? 'translate-x-0' : 'translate-x-full'}`}>
+      <div
+        className={`fixed inset-y-0 right-0 w-full md:w-1/3 lg:max-w-md bg-white shadow-lg border-l border-gray-200 transform transition-transform duration-300 ease-in-out z-50 ${
+          sidebarOpen ? "translate-x-0" : "translate-x-full"
+        }`}
+      >
         <div className="flex flex-col h-full">
           <div className="flex items-center justify-between p-4 border-b">
             <h3 className="text-lg font-medium">
               {currentSubject ? "Edit Subject" : "Add New Subject"}
             </h3>
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="h-8 w-8 p-0 rounded-full" 
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0 rounded-full"
               onClick={closeSidebar}
             >
               <X className="h-4 w-4" />
@@ -298,7 +367,10 @@ const Subject = () => {
           <div className="p-4 flex-1 overflow-y-auto">
             <div className="space-y-4">
               <div>
-                <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
+                <label
+                  htmlFor="name"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
                   Subject Name <span className="text-red-500">*</span>
                 </label>
                 <Input
@@ -309,9 +381,12 @@ const Subject = () => {
                   placeholder="Enter subject name"
                 />
               </div>
-              
+
               <div>
-                <label htmlFor="code" className="block text-sm font-medium text-gray-700 mb-1">
+                <label
+                  htmlFor="code"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
                   Subject Code <span className="text-red-500">*</span>
                 </label>
                 <Input
@@ -329,15 +404,17 @@ const Subject = () => {
               <Button variant="outline" onClick={closeSidebar}>
                 Cancel
               </Button>
-              <Button 
-                onClick={handleSubmit} 
+              <Button
+                onClick={handleSubmit}
                 disabled={isLoading}
                 className="flex items-center gap-2"
               >
                 {isLoading ? (
                   <>
                     <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div>
-                    <span>{currentSubject ? "Updating..." : "Creating..."}</span>
+                    <span>
+                      {currentSubject ? "Updating..." : "Creating..."}
+                    </span>
                   </>
                 ) : (
                   <>
@@ -350,14 +427,20 @@ const Subject = () => {
           </div>
         </div>
       </div>
-      
+
       {/* Overlay for sidebar */}
       {sidebarOpen && (
-        <div 
+        <div
           className="fixed inset-0 bg-black bg-opacity-30 z-40"
           onClick={closeSidebar}
         />
       )}
+      <DeleteConfirmation
+        text={confirmText}
+        onConfirm={onConfirmCallback ?? (() => {})}
+        isOpen={isDeleteModalOpen}
+        setIsOpen={setIsDeleteModalOpen}
+      />
     </div>
   );
 };

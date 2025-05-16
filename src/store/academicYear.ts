@@ -47,7 +47,7 @@ export const useAcademicYearStore = create<AcademicYearStore>((set) => ({
   },
 
   deleteYear: async (id) => {
-    await fetch(`/api/academic-year?id=${id}`, { method: 'DELETE' })
+    await fetch(`/api/academicYears?id=${id}`, { method: 'DELETE' })
     set((state) => ({
       years: state.years.filter((y) => y.id !== id),
     }))

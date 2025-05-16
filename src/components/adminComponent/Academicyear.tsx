@@ -8,10 +8,16 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { useAcademicYearStore } from '@/store/academicYear'
 import { format } from 'date-fns'
 import React, { useEffect, useState } from 'react'
+import DeleteConfirmation from "../common/DeleteComfirmation"
 
 const Academicyear = () => {
   const { years, fetchYears, addYear, deleteYear } = useAcademicYearStore()
   const [form, setForm] = useState({ name: '', startDate: '', endDate: '' })
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    const [confirmText, setConfirmText] = useState("");
+    const [onConfirmCallback, setOnConfirmCallback] = useState<
+      (() => void) | null
+    >(null);
 
   useEffect(() => {
     fetchYears()
@@ -25,6 +31,17 @@ const Academicyear = () => {
     if (!form.name || !form.startDate || !form.endDate) return
     await addYear(form)
     setForm({ name: '', startDate: '', endDate: '' })
+  }
+
+  const handleDelete = async (id: string) => {
+    setConfirmText(`Are you sure you want to delete this Subject?`);
+
+    setOnConfirmCallback(() => async () => {
+      await deleteYear(id)
+      setIsDeleteModalOpen(false);
+    });
+    setIsDeleteModalOpen(true);
+    
   }
 
   return (
@@ -64,7 +81,7 @@ const Academicyear = () => {
                   <TableCell>{format(new Date(year.startDate), 'yyyy-MM-dd')}</TableCell>
                   <TableCell>{format(new Date(year.endDate), 'yyyy-MM-dd')}</TableCell>
                   <TableCell className="text-right">
-                    <Button variant="destructive" onClick={() => deleteYear(year.id)}>Delete</Button>
+                    <Button variant="destructive" onClick={() => handleDelete(year.id)}>Delete</Button>
                   </TableCell>
                 </TableRow>
               ))}
@@ -72,6 +89,16 @@ const Academicyear = () => {
           </Table>
         </CardContent>
       </Card>
+      <DeleteConfirmation
+        text={confirmText}
+        onConfirm={() => {
+          if (onConfirmCallback) {
+            onConfirmCallback();
+          }
+        }}
+        isOpen={isDeleteModalOpen}
+        setIsOpen={setIsDeleteModalOpen} 
+        /> 
     </div>
   )
 }

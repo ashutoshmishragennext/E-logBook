@@ -37,6 +37,8 @@ import {
   TemplateFormValues,
 } from "./types";
 
+import { toast } from 'sonner';
+
 // Simplified form validation schema
 const subjectTemplateSchema = z.object({
   name: z.string().min(3, "Template name must be at least 3 characters"),
@@ -59,6 +61,7 @@ export function SubjectTemplateForm({
   const userId = user?.id || "1875bc17-47cd-4273-a8d5-d2fd0503e702";
   const router = useRouter();
   const isEditing = !!initialData;
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // State for dynamic form building
   const [templateSchema, setTemplateSchema] = useState<LogBookTemplateSchema>(
@@ -91,6 +94,7 @@ export function SubjectTemplateForm({
         setSubjects(data);
       } catch (error) {
         console.error("Error fetching subjects:", error);
+        toast("Failed to load subjects. Please refresh the page.");
       }
     };
 
@@ -100,9 +104,12 @@ export function SubjectTemplateForm({
   // Handle form submission
   const onSubmit = async (data: z.infer<typeof subjectTemplateSchema>) => {
     try {
+      setIsSubmitting(true);
+      
       // Validate that there are fields in the template
       if (templateSchema.groups.every((group) => group.fields.length === 0)) {
-        alert("Please add at least one field to your template");
+        toast("Please add at least one field to your template");
+        setIsSubmitting(false);
         return;
       }
 
@@ -127,14 +134,22 @@ export function SubjectTemplateForm({
         throw new Error("Failed to save template");
       }
 
+      // Show success toast
+      toast(`Template ${isEditing ? "updated" : "created"} successfully!`,);
+
+
       // Execute success callback or navigate to templates list
       if (onSuccess) {
         onSuccess();
-        alert("Template saved successfully!");
+        toast("Template saved successfully!");  
+      } else {
+        // If no callback provided, you might want to redirect
+        console.log("Template saved successfully!");
       }
     } catch (error) {
       console.error("Error saving template:", error);
-      alert("Failed to save template. Please try again.");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -218,8 +233,9 @@ export function SubjectTemplateForm({
             >
               Cancel
             </Button>
-            <Button type="submit">
-              <Save className="h-4 w-4 mr-1" /> Save Template
+            <Button type="submit" disabled={isSubmitting}>
+              <Save className="h-4 w-4 mr-1" /> 
+              {isSubmitting ? "Saving..." : "Save Template"}
             </Button>
           </div>
         </form>
