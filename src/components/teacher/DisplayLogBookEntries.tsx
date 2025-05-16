@@ -25,12 +25,13 @@ import {
   ChevronsUpDown,
   Loader2,
   Search,
+  X,
 } from "lucide-react";
 
 export enum LogBookEntryStatus {
-  DRAFT = "DRAFT",
   SUBMITTED = "SUBMITTED",
   REVIEWED = "REVIEWED",
+  REJECTED = "REJECTED", // Added new status for rejected entries
   ALL = "ALL",
 }
 
@@ -45,7 +46,8 @@ export interface LogBookEntry {
   studentRemarks: string | null;
   teacherRemarks: string | null;
   student?: StudentProfile;
-  template?: LogBookTemplate;
+  logBookTemplate?: LogBookTemplate;
+  teacherId?: string;
 }
 
 export interface StudentProfile {
@@ -59,95 +61,48 @@ export interface StudentProfile {
 }
 
 interface DynamicField {
-  name: any;
-  sequence: number;
-  type: string;
-  label: string;
-  required: boolean;
+  fieldName: string;
+  fieldType: string;
+  fieldLabel: string;
+  isRequired: boolean;
   options?: string[];
-  validationRegex?: string;
-  defaultValue?: string;
 }
 
-interface DynamicGroup {
-  sequence: number;
-  name: string;
-  fields: DynamicField[];
+interface DynamicSchema {
+  groups: {
+    groupName: string;
+    fields: DynamicField[];
+  }[];
 }
 
 interface LogBookTemplate {
   id: string;
   name: string;
   description: string;
-  dynamicSchema: {
-    groups: DynamicGroup[];
-  };
-  academicYearId: string;
-  batchId: string;
-  moduleId: string;
-  subjectId: string;
+  dynamicSchema: DynamicSchema;
+  templateType: string;
+  academicYearId: string | null;
+  batchId: string | null;
+  subjectId: string | null;
   createdAt: string;
   updatedAt: string;
-  academicYear?: { id: string; name: string };
-  batch?: { id: string; name: string };
-  subject?: { id: string; name: string };
-  module?: { id: string; name: string };
-}
-
-interface FilterOption {
-  id: string;
-  name: string;
-}
-
-interface LoadingState {
-  entries: boolean;
-  students: boolean;
-  academicYears: boolean;
-  batches: boolean;
-  subjects: boolean;
-  modules: boolean;
-  approval: boolean;
 }
 
 const DisplayLogBookEntries = () => {
-  // State for entries and filters
+  // State for entries
   const [logBookEntries, setLogBookEntries] = useState<LogBookEntry[]>([]);
-  const [loading, setLoading] = useState<LoadingState>({
-    entries: true,
-    students: false,
-    academicYears: true,
-    batches: false,
-    subjects: false,
-    modules: false,
-    approval: false,
-  });
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({});
   const [processingEntry, setProcessingEntry] = useState<string | null>(null);
-
-  // Filter state
-  const [statusFilter, setStatusFilter] = useState<LogBookEntryStatus | "ALL">(
-    "ALL"
-  );
-  const [academicYears, setAcademicYears] = useState<FilterOption[]>([]);
-  const [batches, setBatches] = useState<FilterOption[]>([]);
-  const [subjects, setSubjects] = useState<FilterOption[]>([]);
-  const [modules, setModules] = useState<FilterOption[]>([]);
-
-  // Selected filter values
-  const [selectedAcademicYear, setSelectedAcademicYear] = useState<string>("");
-  const [selectedBatch, setSelectedBatch] = useState<string>("");
-  const [selectedSubject, setSelectedSubject] = useState<string>("");
-  const [selectedModule, setSelectedModule] = useState<string>("");
-  const [teacherRemarks, setTeacherRemarks] = useState<Record<string, string>>(
-    {}
-  );
+  const [statusFilter, setStatusFilter] = useState<LogBookEntryStatus | "ALL">("ALL");
+  const [teacherRemarks, setTeacherRemarks] = useState<Record<string, string>>({});
 
   // User context
   const user = useCurrentUser();
-  const UserId = user?.id || "";
-  const [teacherId, setTeacherId] = useState<string>("");
+  const userId = user?.id || "";
+  const [teacherId, setTeacherId] = useState<string | null>(null);
 
   // Toggle row expansion
   const toggleRowExpansion = (entryId: string) => {
@@ -157,220 +112,97 @@ const DisplayLogBookEntries = () => {
     }));
   };
 
+  // Fetch teacher profile
   useEffect(() => {
     const fetchTeacherProfile = async () => {
-      if (!UserId) return;
-    
+      if (!userId) return;
+
       try {
-        const response = await fetch("/api/teacher-profile?id=" + UserId);
+        const response = await fetch(`/api/teacher-profile?userId=${userId}`);
         if (!response.ok) {
           throw new Error("Failed to fetch teacher profile");
         }
-        const teacherData = await response.json();
-        setTeacherId(teacherData[0].id); // This line assumes teacherData[0] exists
+
+        const result = await response.json();
+        const teacherData = result.data;
+
+        if (teacherData && teacherData.id) {
+          setTeacherId(teacherData.id);
+        } else {
+          console.warn("No teacher ID found in response");
+        }
+
         console.log("Fetched teacher data:", teacherData);
       } catch (error) {
         console.error("Error fetching teacher profile:", error);
-        alert("Failed to load teacher profile. Please try again.");
+        setError("Failed to load teacher profile. Please try again.");
       }
     };
 
-    if (UserId) {
-      fetchTeacherProfile();
-    }
-  }, [UserId]);
-  // Fetch academic years
+    if (userId) fetchTeacherProfile();
+  }, [userId]);
+
+  // Fetch log book entries with student & template info
   useEffect(() => {
-    const fetchAcademicYears = async () => {
+    const fetchLogBookEntries = async () => {
+      if (!teacherId) return;
+
+      setLoading(true);
       try {
-        const response = await fetch("/api/academicYears");
-        if (response.ok) {
-          const data = await response.json();
-          setAcademicYears(data);
-          if (data.length > 0) {
-            setSelectedAcademicYear(data[0].id);
-          }
-        } else {
-          console.error("Failed to fetch academic years");
-        }
-      } catch (error) {
-        console.error("Error fetching academic years:", error);
-      } finally {
-        setLoading((prev) => ({ ...prev, academicYears: false }));
-      }
-    };
-
-    fetchAcademicYears();
-  }, []);
-
-  // Fetch batches when academic year changes
-  useEffect(() => {
-    const fetchBatches = async () => {
-      if (!selectedAcademicYear) {
-        setBatches([]);
-        setSelectedBatch("");
-        setLoading((prev) => ({ ...prev, batches: false }));
-        return;
-      }
-
-      try {
-        setLoading((prev) => ({ ...prev, batches: true }));
-        const response = await fetch(
-          `/api/phase?academicYears=${selectedAcademicYear}`
-        );
-        if (response.ok) {
-          const data = await response.json();
-          setBatches(data);
-          if (data.length > 0) {
-            setSelectedBatch(data[0].id);
-          } else {
-            setSelectedBatch("");
-          }
-        } else {
-          console.error("Failed to fetch batches");
-        }
-      } catch (error) {
-        console.error("Error fetching batches:", error);
-      } finally {
-        setLoading((prev) => ({ ...prev, batches: false }));
-      }
-    };
-
-    fetchBatches();
-  }, [selectedAcademicYear]);
-
-  // Fetch subjects when batch changes
-  useEffect(() => {
-    const fetchSubjects = async () => {
-      if (!selectedBatch) {
-        setSubjects([]);
-        setSelectedSubject("");
-        setLoading((prev) => ({ ...prev, subjects: false }));
-        return;
-      }
-
-      try {
-        setLoading((prev) => ({ ...prev, subjects: true }));
-        const response = await fetch(`/api/subject?PhaseId=${selectedBatch}`);
-        if (response.ok) {
-          const data = await response.json();
-          setSubjects(data);
-          if (data.length > 0) {
-            setSelectedSubject(data[0].id);
-          } else {
-            setSelectedSubject("");
-          }
-        } else {
-          console.error("Failed to fetch subjects");
-        }
-      } catch (error) {
-        console.error("Error fetching subjects:", error);
-      } finally {
-        setLoading((prev) => ({ ...prev, subjects: false }));
-      }
-    };
-
-    fetchSubjects();
-  }, [selectedBatch]);
-
-  // Fetch modules when subject changes
-  useEffect(() => {
-    const fetchModules = async () => {
-      if (!selectedSubject) {
-        setModules([]);
-        setSelectedModule("");
-        setLoading((prev) => ({ ...prev, modules: false }));
-        return;
-      }
-
-      try {
-        setLoading((prev) => ({ ...prev, modules: true }));
-        const response = await fetch(
-          `/api/module?subjectId=${selectedSubject}`
-        );
-        if (response.ok) {
-          const data = await response.json();
-          setModules(data);
-          if (data.length > 0) {
-            setSelectedModule(data[0].id);
-          } else {
-            setSelectedModule("");
-          }
-        } else {
-          console.error("Failed to fetch modules");
-        }
-      } catch (error) {
-        console.error("Error fetching modules:", error);
-      } finally {
-        setLoading((prev) => ({ ...prev, modules: false }));
-      }
-    };
-
-    fetchModules();
-  }, [selectedSubject]);
-
-  // Fetch log book entries when filters change
-
-  useEffect(() => {
-    const fetchData = async () => {
-      if (!teacherId) {
-        console.error("Teacher ID is not set");
-        return;
-      }
-      try {
-        setLoading((prev) => ({ ...prev, entries: true }));
-
-        const entriesResponse = await fetch(
-          `/api/log-books?teacherId=${teacherId}`
-        );
-        if (!entriesResponse.ok) {
+        const response = await fetch(`/api/log-books?teacherId=${teacherId}`);
+        if (!response.ok) {
           throw new Error("Failed to fetch log book entries");
         }
-        const entriesData = await entriesResponse.json();
-        console.log("entriesData", entriesData);
 
-        const enrichedEntries = await Promise.all(
-          entriesData.map(async (entry: LogBookEntry) => {
+        const entries = await response.json();
+
+        // Fetch student and template data for each entry
+        const entriesWithDetails = await Promise.all(
+          entries.map(async (entry: LogBookEntry) => {
             try {
-              const studentResponse = await fetch(
-                `/api/student-profile?id=${entry.studentId}`
-              );
-              const studentData = studentResponse.ok
-                ? await studentResponse.json()
-                : null;
+              // Fetch student data
+              const studentResponse = await fetch(`/api/student-profile?id=${entry.studentId}`);
+              const studentData = studentResponse.ok ? await studentResponse.json() : null;
+
+              // Fetch template data if needed
+              let templateData = entry.logBookTemplate;
+              if (!templateData && entry.logBookTemplateId) {
+                const templateResponse = await fetch(`/api/log-book-template?id=${entry.logBookTemplateId}`);
+                if (templateResponse.ok) {
+                  const templates = await templateResponse.json();
+                  templateData = templates[0] || null;
+                }
+              }
 
               return {
                 ...entry,
                 student: studentData,
+                logBookTemplate: templateData,
               };
             } catch (error) {
-              console.error(
-                `Error fetching student for entry ${entry.id}:`,
-                error
-              );
+              console.error(`Error fetching details for entry ${entry.id}:`, error);
               return entry;
             }
           })
         );
 
-        setLogBookEntries(enrichedEntries);
-        setLoading((prev) => ({ ...prev, entries: false }));
+        setLogBookEntries(entriesWithDetails);
+        console.log("Detailed log book entries:", entriesWithDetails);
       } catch (error: any) {
-        console.error("Error fetching data:", error);
-        setError(error.message);
-        setLoading((prev) => ({ ...prev, entries: false }));
-        // toast.error("Failed to load log book entries");
+        console.error("Error fetching log book entries:", error);
+        setError(error.message || "Failed to load log book entries");
+      } finally {
+        setLoading(false);
       }
     };
 
-    fetchData();
+    if (teacherId) fetchLogBookEntries();
   }, [teacherId]);
 
   // Handle log book entry approval
   const handleApprove = async (entryId: string) => {
     try {
       setProcessingEntry(entryId);
-      setLoading((prev) => ({ ...prev, approval: true }));
 
       const entry = logBookEntries.find((e) => e.id === entryId);
       if (!entry) {
@@ -401,7 +233,7 @@ const DisplayLogBookEntries = () => {
       setLogBookEntries((prevEntries) =>
         prevEntries.map((entry) =>
           entry.id === entryId
-            ? { ...updatedEntry, student: entry.student }
+            ? { ...entry, status: LogBookEntryStatus.REVIEWED, teacherRemarks: teacherRemarks[entryId] || "" }
             : entry
         )
       );
@@ -413,7 +245,62 @@ const DisplayLogBookEntries = () => {
       setError(error.message || "Failed to approve log book entry");
       setTimeout(() => setError(null), 3000);
     } finally {
-      setLoading((prev) => ({ ...prev, approval: false }));
+      setProcessingEntry(null);
+    }
+  };
+
+  // Handle log book entry rejection
+  const handleReject = async (entryId: string) => {
+    try {
+      setProcessingEntry(entryId);
+
+      const entry = logBookEntries.find((e) => e.id === entryId);
+      if (!entry) {
+        throw new Error("Entry not found");
+      }
+
+      // Ensure teacher remarks are provided before rejection
+      if (!teacherRemarks[entryId] || teacherRemarks[entryId].trim() === "") {
+        alert("Please provide feedback in the Teacher Remarks field before rejecting");
+        return
+      }
+
+      const response = await fetch(`/api/log-books?id=${entryId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          id: entryId,
+          logBookTemplateId: entry.logBookTemplateId,
+          studentId: entry.studentId,
+          status: LogBookEntryStatus.REJECTED,
+          teacherRemarks: teacherRemarks[entryId] || "",
+        }),
+      });
+
+      if (!response.ok) {
+        const errorBody = await response.json();
+        throw new Error(errorBody.error || "Failed to reject log book entry");
+      }
+
+      const updatedEntry = await response.json();
+
+      setLogBookEntries((prevEntries) =>
+        prevEntries.map((entry) =>
+          entry.id === entryId
+            ? { ...entry, status: LogBookEntryStatus.REJECTED, teacherRemarks: teacherRemarks[entryId] || "" }
+            : entry
+        )
+      );
+
+      setSuccessMessage("Log book entry rejected successfully");
+      setTimeout(() => setSuccessMessage(null), 3000);
+    } catch (error: any) {
+      console.error("Rejection error:", error);
+      setError(error.message || "Failed to reject log book entry");
+      setTimeout(() => setError(null), 3000);
+    } finally {
       setProcessingEntry(null);
     }
   };
@@ -436,62 +323,64 @@ const DisplayLogBookEntries = () => {
     return entry.status === statusFilter;
   });
 
-  return (
-    <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-6">Log Book Reviews</h1>
+  // Function to render dynamic fields
+  const renderDynamicFields = (entry: LogBookEntry) => {
+    if (!entry.dynamicFields) return null;
 
-      {/* Filter Section */}
-      {/* <div className="mb-8">
-        <Card>
-          <CardHeader>
-            <CardTitle>Filters</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div >
-              <div>
-                <LogBookFilters
-                  academicYears={academicYears}
-                  batches={batches}
-                  subjects={subjects}
-                  modules={modules}
-                  selectedAcademicYear={selectedAcademicYear}
-                  selectedBatch={selectedBatch}
-                  selectedSubject={selectedSubject}
-                  selectedModule={selectedModule}
-                  onAcademicYearChange={setSelectedAcademicYear}
-                  onBatchChange={setSelectedBatch}
-                  onSubjectChange={setSelectedSubject}
-                  onModuleChange={setSelectedModule}
-                  loading={{
-                    academicYears: loading.academicYears,
-                    batches: loading.batches,
-                    subjects: loading.subjects,
-                    modules: loading.modules,
-                  }}
-                />
-              </div>
-              
-              <div>
-                <Select
-                  value={statusFilter}
-                  onValueChange={(value: LogBookEntryStatus | "ALL") => setStatusFilter(value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Filter by status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="ALL">All Entries</SelectItem>
-                    <SelectItem value="DRAFT">Draft</SelectItem>
-                    <SelectItem value="SUBMITTED">Submitted</SelectItem>
-                    <SelectItem value="REVIEWED">Reviewed</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+    return (
+      <>
+        {Object.entries(entry.dynamicFields).map(([fieldName, value]) => {
+          // Try to find the field label if template is available
+          let fieldLabel = fieldName;
+          if (entry.logBookTemplate?.dynamicSchema?.groups) {
+            for (const group of entry.logBookTemplate.dynamicSchema.groups) {
+              const field = group.fields.find(f => f.fieldName === fieldName);
+              if (field) {
+                fieldLabel = field.fieldLabel;
+                break;
+              }
+            }
+          }
+          
+          // Format display value appropriately
+          let displayValue = value;
+          
+          // Handle file URLs (just display as "File Uploaded")
+          if (typeof value === 'string' && value.startsWith('https://')) {
+            displayValue = <a href={value} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">View File</a>;
+          }
+          // Handle dates
+          else if (isValidDate(value)) {
+            displayValue = new Date(value).toLocaleDateString();
+          }
+          
+          return (
+            <div key={fieldName} className="bg-white p-3 rounded border">
+              <p className="text-sm font-medium">{fieldLabel}</p>
+              <p className="text-sm">{displayValue}</p>
             </div>
-          </CardContent>
-        </Card>
-      </div> */}
+          );
+        })}
+      </>
+    );
+  };
 
+  // Get badge variant based on status
+  const getBadgeVariant = (status: LogBookEntryStatus) => {
+    switch (status) {
+      case LogBookEntryStatus.SUBMITTED:
+        return "secondary";
+      case LogBookEntryStatus.REVIEWED:
+        return "default";
+      case LogBookEntryStatus.REJECTED:
+        return "destructive";
+      default:
+        return "outline";
+    }
+  };
+
+  return (
+    <div className="container mx-auto p-2">
       {/* Status Messages */}
       {error && (
         <Alert variant="destructive" className="mb-6">
@@ -512,10 +401,40 @@ const DisplayLogBookEntries = () => {
         <CardHeader>
           <div className="flex justify-between items-center">
             <CardTitle>Log Book Entries</CardTitle>
+            <div className="flex gap-2 flex-wrap">
+              <Button 
+                variant={statusFilter === "ALL" ? "default" : "outline"}
+                onClick={() => setStatusFilter("ALL")}
+                size="sm"
+              >
+                All
+              </Button>
+              <Button 
+                variant={statusFilter === "SUBMITTED" ? "default" : "outline"}
+                onClick={() => setStatusFilter("SUBMITTED" as LogBookEntryStatus)}
+                size="sm"
+              >
+                Submitted
+              </Button>
+              <Button 
+                variant={statusFilter === "REVIEWED" ? "default" : "outline"}
+                onClick={() => setStatusFilter("REVIEWED" as LogBookEntryStatus)}
+                size="sm"
+              >
+                Reviewed
+              </Button>
+              <Button 
+                variant={statusFilter === "REJECTED" ? "default" : "outline"}
+                onClick={() => setStatusFilter("REJECTED" as LogBookEntryStatus)}
+                size="sm"
+              >
+                Rejected
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
-          {loading.entries ? (
+          {loading ? (
             <div className="flex justify-center items-center py-8">
               <Loader2 className="h-8 w-8 animate-spin" />
             </div>
@@ -530,7 +449,7 @@ const DisplayLogBookEntries = () => {
                 <TableRow>
                   <TableHead>Student</TableHead>
                   <TableHead>Roll No</TableHead>
-
+                  <TableHead>Template</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Submitted Date</TableHead>
                   <TableHead>Actions</TableHead>
@@ -544,16 +463,10 @@ const DisplayLogBookEntries = () => {
                         {entry.student?.name || "N/A"}
                       </TableCell>
                       <TableCell>{entry.student?.rollNo || "N/A"}</TableCell>
-
+                      <TableCell>{entry.logBookTemplate?.name || "N/A"}</TableCell>
                       <TableCell>
                         <Badge
-                          variant={
-                            entry.status === LogBookEntryStatus.DRAFT
-                              ? "outline"
-                              : entry.status === LogBookEntryStatus.SUBMITTED
-                              ? "secondary"
-                              : "default"
-                          }
+                          variant={getBadgeVariant(entry.status)}
                         >
                           {entry.status}
                         </Badge>
@@ -571,21 +484,35 @@ const DisplayLogBookEntries = () => {
                           <span className="sr-only">Toggle Details</span>
                         </Button>
                         {entry.status === LogBookEntryStatus.SUBMITTED && (
-                          <Button
-                            size="sm"
-                            onClick={() => handleApprove(entry.id)}
-                            disabled={
-                              loading.approval && processingEntry === entry.id
-                            }
-                          >
-                            {loading.approval &&
-                            processingEntry === entry.id ? (
-                              <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                            ) : (
-                              <Check className="h-4 w-4 mr-2" />
-                            )}
-                            Approve
-                          </Button>
+                          <>
+                            <Button
+                              size="sm"
+                              variant="default"
+                              onClick={() => handleApprove(entry.id)}
+                              disabled={processingEntry === entry.id}
+                              className="bg-green-600 hover:bg-green-700"
+                            >
+                              {processingEntry === entry.id ? (
+                                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                              ) : (
+                                <Check className="h-4 w-4 mr-2" />
+                              )}
+                              Approve
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              onClick={() => handleReject(entry.id)}
+                              disabled={processingEntry === entry.id}
+                            >
+                              {processingEntry === entry.id ? (
+                                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                              ) : (
+                                <X className="h-4 w-4 mr-2" />
+                              )}
+                              Reject
+                            </Button>
+                          </>
                         )}
                       </TableCell>
                     </TableRow>
@@ -593,45 +520,25 @@ const DisplayLogBookEntries = () => {
                       <TableRow>
                         <TableCell colSpan={8}>
                           <div className="p-4 bg-slate-50 rounded-lg">
+                            {/* Template information */}
+                            {entry.logBookTemplate && (
+                              <div className="mb-4">
+                                <h4 className="font-semibold text-lg mb-2">
+                                  {entry.logBookTemplate.name}
+                                </h4>
+                                <p className="text-sm text-gray-600 mb-4">
+                                  {entry.logBookTemplate.description}
+                                </p>
+                              </div>
+                            )}
+                            
                             {/* Dynamic Fields Section */}
-                            {Object.entries(entry.dynamicFields)
-                              .filter(([section]) => section !== "personalInfo")
-                              .sort(
-                                ([, a], [, b]) =>
-                                  (a._sequence || 0) - (b._sequence || 0)
-                              )
-                              .map(([section, fields]) => {
-                                const { _sequence, ...cleanFields } =
-                                  fields as Record<string, any>;
-                                return (
-                                  <div key={section} className="mb-6">
-                                    <h4 className="font-semibold text-lg mb-2 capitalize">
-                                      {section.replace(/_/g, " ").trim()}
-                                    </h4>
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                      {Object.entries(cleanFields).map(
-                                        ([field, value]) => (
-                                          <div
-                                            key={field}
-                                            className="bg-white p-3 rounded border"
-                                          >
-                                            <p className="text-sm font-medium capitalize">
-                                              {field.replace(/_/g, " ").trim()}
-                                            </p>
-                                            <p className="text-sm">
-                                              {isValidDate(value)
-                                                ? new Date(
-                                                    value
-                                                  ).toLocaleDateString()
-                                                : String(value)}
-                                            </p>
-                                          </div>
-                                        )
-                                      )}
-                                    </div>
-                                  </div>
-                                );
-                              })}
+                            <div className="mb-6">
+                              <h4 className="font-semibold text-lg mb-2">Form Fields</h4>
+                              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                {renderDynamicFields(entry)}
+                              </div>
+                            </div>
 
                             {/* Remarks Section */}
                             <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -641,21 +548,18 @@ const DisplayLogBookEntries = () => {
                                   Student Remarks
                                 </h4>
                                 <div className="p-3 bg-white rounded border min-h-24">
-                                  {entry.studentRemarks ||
-                                    "No remarks provided"}
+                                  {entry.studentRemarks || "No remarks provided"}
                                 </div>
                               </div>
 
                               {/* Teacher Remarks */}
                               <div>
                                 <h4 className="font-semibold mb-2">
-                                  Teacher Remarks
+                                  Teacher Remarks {entry.status === LogBookEntryStatus.SUBMITTED && <span className="text-red-500 text-xs">*Required for rejection</span>}
                                 </h4>
-                                {entry.status ===
-                                LogBookEntryStatus.REVIEWED ? (
+                                {entry.status === LogBookEntryStatus.REVIEWED || entry.status === LogBookEntryStatus.REJECTED ? (
                                   <div className="p-3 bg-white rounded border min-h-24">
-                                    {entry.teacherRemarks ||
-                                      "No remarks provided"}
+                                    {entry.teacherRemarks || "No remarks provided"}
                                   </div>
                                 ) : (
                                   <Textarea
@@ -675,21 +579,30 @@ const DisplayLogBookEntries = () => {
 
                             {/* Action Buttons */}
                             {entry.status === LogBookEntryStatus.SUBMITTED && (
-                              <div className="mt-4 flex justify-end">
+                              <div className="mt-4 flex justify-end gap-4">
                                 <Button
                                   onClick={() => handleApprove(entry.id)}
-                                  disabled={
-                                    loading.approval &&
-                                    processingEntry === entry.id
-                                  }
+                                  disabled={processingEntry === entry.id}
+                                  className="bg-green-600 hover:bg-green-700"
                                 >
-                                  {loading.approval &&
-                                  processingEntry === entry.id ? (
+                                  {processingEntry === entry.id ? (
                                     <Loader2 className="h-4 w-4 animate-spin mr-2" />
                                   ) : (
                                     <Check className="h-4 w-4 mr-2" />
                                   )}
                                   Approve Entry
+                                </Button>
+                                <Button
+                                  variant="destructive"
+                                  onClick={() => handleReject(entry.id)}
+                                  disabled={processingEntry === entry.id}
+                                >
+                                  {processingEntry === entry.id ? (
+                                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                                  ) : (
+                                    <X className="h-4 w-4 mr-2" />
+                                  )}
+                                  Reject Entry
                                 </Button>
                               </div>
                             )}

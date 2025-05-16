@@ -12,7 +12,7 @@ const logBookEntryCreateSchema = z.object({
   teacherId: z.string().uuid().optional(),
   dynamicFields: z.record(z.any()).optional(),
   studentRemarks: z.string().optional(),
-  status: z.enum(["DRAFT", "SUBMITTED", "REVIEWED"]).default("DRAFT"),
+  status: z.enum([ "SUBMITTED", "REVIEWED" ,"REJECTED"]).default("SUBMITTED"),
   teacherRemarks: z.string().optional(),
 }).strict();
 
@@ -80,6 +80,7 @@ export async function GET(req: NextRequest) {
     if (studentId) conditions.push(eq(LogBookEntryTable.studentId, studentId));
     if (logBookTemplateId) conditions.push(eq(LogBookEntryTable.logBookTemplateId, logBookTemplateId));
     if (status) conditions.push(eq(LogBookEntryTable.status, status));
+
 
     // Fetch log book entries based on conditions
     const logBookEntries = await db

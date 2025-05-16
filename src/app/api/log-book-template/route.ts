@@ -64,8 +64,13 @@ export async function GET(request: NextRequest) {
     const academicYearId = searchParams.get("academicYearId");
     const phaseId = searchParams.get("phaseId");
     const subjectId = searchParams.get("subjectId");
+    const id = searchParams.get("id");
 
     const conditions = [];
+
+    if (id) {
+      conditions.push(eq(LogBookTemplateTable.id, id));
+    }
 
     if (templateType === "general") {
       conditions.push(eq(LogBookTemplateTable.templateType, "general"));
