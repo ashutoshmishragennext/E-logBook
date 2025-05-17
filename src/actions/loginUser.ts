@@ -12,7 +12,7 @@ import { generateEmailVerificationToken } from "@/lib/token";
 
 export async function loginUser(values: z.infer<typeof LoginSchema>) {
   const validation = LoginSchema.safeParse(values);
-  
+
   if (!validation.success) {
     return { error: "Invalid fields!" };
   }
@@ -26,18 +26,23 @@ export async function loginUser(values: z.infer<typeof LoginSchema>) {
 
   if (!existingUser.emailVerified) {
     const verificationToken = await generateEmailVerificationToken(existingUser.email);
-    
+
     if (verificationToken) {
       const emailVerificationUrl = `${process.env.NEXT_PUBLIC_BASE_URL}${process.env.NEXT_PUBLIC_EMAIL_VERIFICATION_ENDPOINT}`;
       const url = `${emailVerificationUrl}?token=${verificationToken.token}`;
-      
+
       await sendEmail(
-        "Nextjs Auth",
+        "Elog Book",
         verificationToken.email,
-        "Activate your account",
-        `<p>Click <a href="${url}">here</a> to activate your account.</p>`
+        "Verify Your Elog Book Account",
+        `<p>Hello,</p>
+     <p>Welcome to <strong>Elog Book</strong>!</p>
+     <p>To complete your registration, please verify your email address by clicking the button below:</p>
+     <p><a href="${url}" style="display: inline-block; padding: 10px 20px; background-color: #4f46e5; color: white; text-decoration: none; border-radius: 5px;">Verify Email</a></p>
+     <p>If you didn’t sign up for Elog Book, please ignore this email.</p>
+     <p>Best regards,<br>The Elog Book Team</p>`
       );
-      
+
       return { success: "Email sent for email verification!" };
     }
   }

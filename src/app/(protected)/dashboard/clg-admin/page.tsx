@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any*/
 "use client";
 
 import Batch from "@/components/clgAdmin/Batch";
@@ -17,7 +18,7 @@ import {
 } from "lucide-react";
 import { signOut, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { SetStateAction, useEffect, useState } from "react";
+import {  useEffect, useState } from "react";
 
 const sidebarItems = [
   {
@@ -63,8 +64,22 @@ const Sidebar = () => {
   // Find the active component to render
   const activeItem = sidebarItems.find((item) => item.id === activeComponent);
 
-  const handleLogout = async () => {
-    await signOut({ redirectTo: "/auth/login" });
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+  const handleLogout = async (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
+    // Ensure we have the event parameter and prevent default behavior
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    
+    setIsLoggingOut(true);
+    try {
+      await signOut({ callbackUrl: "/auth/login"});
+    } catch (error) {
+      console.error("Logout error:", error);
+      setIsLoggingOut(false);
+    }
   };
 
   useEffect(() => {
@@ -138,7 +153,7 @@ const Sidebar = () => {
               sidebarOpen={true}
               setSidebarOpen={() => {}}
               activeComponent={activeComponent}
-              setActiveComponent={(id: SetStateAction<string>) => {
+              setActiveComponent={(id: string) => {
                 setActiveComponent(id);
                 setMobileMenuOpen(false);
               }}
@@ -162,7 +177,7 @@ const Sidebar = () => {
           </div>
 
           {/* Profile dropdown - enhanced */}
-          <div className="relative">
+          <div className="relative profile-dropdown">
             <button
               onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
               className="flex items-center space-x-2 text-gray-700 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-full p-1"
@@ -181,18 +196,18 @@ const Sidebar = () => {
               />
             </button>
 
-            {/* Dropdown menu - polished */}
+            {/* Dropdown menu - fixed with proper event handling */}
             {profileDropdownOpen && (
               <div
-                className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 border border-gray-200 z-10"
-                onMouseLeave={() => setProfileDropdownOpen(false)}
+                className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 border border-gray-200 z-10 profile-dropdown"
               >
                 <button
-                  onClick={handleLogout}
+                  onClick={(e) => handleLogout(e)}
+                  disabled={isLoggingOut}
                   className="w-full text-left px-4 py-2.5 text-sm text-red-600 hover:bg-gray-100 transition-colors flex items-center space-x-3"
                 >
                   <LogOut size={16} className="text-red-500" />
-                  <span>Logout</span>
+                  <span>{isLoggingOut ? "Logging out..." : "Logout"}</span>
                 </button>
               </div>
             )}
@@ -201,7 +216,7 @@ const Sidebar = () => {
 
         {/* Content area - improved */}
         <main className="flex-1 overflow-auto bg-gray-50 p-4">
-          <div className="bg-white  h-full overflow-auto">
+          <div className="bg-white h-full overflow-auto">
             {activeItem?.component}
           </div>
         </main>
@@ -211,14 +226,14 @@ const Sidebar = () => {
 };
 
 // Extracted sidebar content component for reuse
-interface SidebarContentProps {
+type SidebarContentProps = {
   sidebarOpen: boolean;
-  setSidebarOpen: (open: boolean) => void;
+  setSidebarOpen: React.Dispatch<React.SetStateAction<boolean>>;
   activeComponent: string;
-  setActiveComponent: (id: string) => void;
-  session: { user?: { name?: string | null; email?: string | null } } | null;
-  handleLogout: () => void;
-}
+  setActiveComponent: React.Dispatch<React.SetStateAction<string>> | ((id: string) => void);
+  session: any;
+  handleLogout: (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => void;
+};
 
 const SidebarContent = ({
   sidebarOpen,
@@ -295,7 +310,8 @@ const SidebarContent = ({
       {/* Logout button */}
       <div className="p-4 border-t border-gray-200">
         <button
-          onClick={handleLogout}
+          onClick={(e) => handleLogout(e)}
+          disabled={false}
           className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-red-600 hover:bg-red-50 transition-colors ${
             !sidebarOpen && "justify-center"
           }`}

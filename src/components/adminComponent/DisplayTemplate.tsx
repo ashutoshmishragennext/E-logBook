@@ -34,6 +34,7 @@ import { Edit, Ellipsis, FileEdit, Plus, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
+
 // Define template types
 interface Template {
   id: string;
@@ -87,7 +88,7 @@ export default function TemplatesPage() {
         setSubjectTemplates(subjectData);
       } catch (error) {
         console.error("Error fetching templates:", error);
-        toast.error("Failed to load templates");
+        toast("Failed to load templates");
       } finally {
         setIsLoading(false);
       }
@@ -113,11 +114,11 @@ export default function TemplatesPage() {
       setGeneralTemplates(prev => prev.filter(template => template.id !== id));
       setSubjectTemplates(prev => prev.filter(template => template.id !== id));
       
-      toast.success("Template deleted successfully");
+      toast("Template deleted successfully");
       setTemplateToDelete(null);
     } catch (error) {
       console.error("Error deleting template:", error);
-      toast.error("Failed to delete template");
+      toast("Failed to delete template");
     } finally {
       setIsDeleting(false);
     }

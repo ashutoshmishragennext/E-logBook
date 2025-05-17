@@ -49,7 +49,6 @@ export async function POST(request: Request) {
 
 }
 
-// PUT: Update college by ID
 export async function PUT(request: Request) {
   const id = new URL(request.url).searchParams.get('id');
   if (!id) return NextResponse.json({ message: "Missing ID" }, { status: 400 });
@@ -61,6 +60,17 @@ export async function PUT(request: Request) {
     if (!data || Object.keys(data).length === 0) {
       return NextResponse.json({ message: "No data provided to update" }, { status: 400 });
     }
+
+    // Only convert valid date fields
+    if (data.updatedAt && typeof data.updatedAt === 'string') {
+      data.updatedAt = new Date(data.updatedAt);
+    }
+
+    if (data.createdAt && typeof data.createdAt === 'string') {
+      data.createdAt = new Date(data.createdAt);
+    }
+
+    console.log("Updating college with ID:", id, "Data:", data);
 
     const updated = await db
       .update(CollegeTable)
@@ -78,6 +88,7 @@ export async function PUT(request: Request) {
     return NextResponse.json({ message: "Failed to update college" }, { status: 500 });
   }
 }
+
 
 
 // DELETE: Delete college by ID

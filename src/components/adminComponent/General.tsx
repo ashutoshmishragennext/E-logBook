@@ -72,7 +72,6 @@ export function GeneralTemplateForm({
 
   // Handle form submission
   const onSubmit = async (data: z.infer<typeof generalTemplateSchema>) => {
-    console.log("Form data:", data);
     try {
       // Validate that there are fields in the template
       if (templateSchema.groups.every((group) => group.fields.length === 0)) {
@@ -107,8 +106,8 @@ export function GeneralTemplateForm({
         toast("Template saved successfully!");
       }
     } catch (error) {
-      console.error("Error saving template:", error);
-      toast("Failed to save template. Please try again.");
+      toast(`Error saving template: ${error instanceof Error ? error.message : String(error)}`);
+      
     }
   };
 

@@ -31,21 +31,24 @@ export async function registerUser(values: z.infer<typeof RegisterUserSchema>) {
   });
 
   const verificationToken = await generateEmailVerificationToken(email);
+
   if (verificationToken) {
     const emailVerificationUrl = `${process.env.NEXT_PUBLIC_BASE_URL}${process.env.NEXT_PUBLIC_EMAIL_VERIFICATION_ENDPOINT}`;
     const url = `${emailVerificationUrl}?token=${verificationToken.token}`;
+
     await sendEmail(
-      "Nextjs Auth",
+      "Elog Book",
       verificationToken.email,
-      "Activate Your Account",
+      "Verify Your Elog Book Account",
       `<p>Hello,</p>
-       <p>Thank you for registering with us!</p>
-       <p>Please verify your email address by clicking the link below:</p>
-       <p><a href="${url}">Activate Account</a></p>
-       <p>If you did not request this, you can safely ignore this email.</p>
-       <p>Thank you,<br>The [Your Company Name] Team</p>`
+     <p>Welcome to <strong>Elog Book</strong>!</p>
+     <p>To complete your registration, please verify your email address by clicking the button below:</p>
+     <p><a href="${url}" style="display: inline-block; padding: 10px 20px; background-color: #4f46e5; color: white; text-decoration: none; border-radius: 5px;">Verify Email</a></p>
+     <p>If you didn’t sign up for Elog Book, please ignore this email.</p>
+     <p>Best regards,<br>The Elog Book Team</p>`
     );
-    
+
+
 
     return {
       success: "User created successfully and confirmation email sent!",

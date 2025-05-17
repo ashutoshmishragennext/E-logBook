@@ -28,10 +28,14 @@ export async function initiatePasswordReset(
     const url = `${resetPasswordUrl}?token=${passwordResetToken.token}`;
 
     await sendEmail(
-      "Nextjs Auth",
+      "Elog Book ",
       passwordResetToken.email,
-      "Reset your password",
-      `<p>Click <a href="${url}">here</a> to reset your password.</p>`
+      "Verify Your Elog Book Account",
+      `<p>Hello,</p>
+     <p>Welcome to <strong>Elog Book</strong>!</p>
+     <p><a href="${url}" style="display: inline-block; padding: 10px 20px; background-color: #4f46e5; color: white; text-decoration: none; border-radius: 5px;">Please reset Your password</a></p>
+     <p>If you didn’t sign up for Elog Book, please ignore this email.</p>
+     <p>Best regards,<br>The Elog Book Team</p>`
     );
 
 

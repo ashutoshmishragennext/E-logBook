@@ -1,4 +1,5 @@
 /* eslint-disable react-hooks/exhaustive-deps */
+/* eslint-disable @typescript-eslint/no-unused-vars*/
 "use client";
 
 import { Check, Loader2 } from "lucide-react";
@@ -55,7 +56,7 @@ export default function SubjectSelector({
     setLoading(true);
     try {
       // Updated to include phaseId as a parameter for better filtering
-      const res = await fetch(`/api/search/subject?q=${encodeURIComponent(searchQuery)}&phaseId=${encodeURIComponent(selectedPhaseId)}`);
+      const res = await fetch(`/api/search/subject?q=${encodeURIComponent(searchQuery)}&phaseId=${encodeURIComponent(selectedPhaseId)}&Approved=TRUE`);
       const data = await res.json();
       console.log("Fetched subjects:", data);
       setSubjects(data);
@@ -80,6 +81,15 @@ export default function SubjectSelector({
     try {
       // You would implement this functionality if needed
       alert(`Request to add "${searchQuery}" has been sent.`);
+
+      // Optionally, you can send a request to your backend to handle the addition
+      const res = await fetch(`/api/subject`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ name: searchQuery, code: searchQuery }),
+      });
       setSearchQuery("");
       setSubjects([]);
       setIsDropdownOpen(false);

@@ -93,8 +93,7 @@ export function SubjectTemplateForm({
         const data = await response.json();
         setSubjects(data);
       } catch (error) {
-        console.error("Error fetching subjects:", error);
-        toast("Failed to load subjects. Please refresh the page.");
+        toast(`Error fetching subjects: ${error instanceof Error ? error.message : String(error)}`);
       }
     };
 
@@ -144,10 +143,10 @@ export function SubjectTemplateForm({
         toast("Template saved successfully!");  
       } else {
         // If no callback provided, you might want to redirect
-        console.log("Template saved successfully!");
+        toast("Template saved successfully!");
       }
     } catch (error) {
-      console.error("Error saving template:", error);
+      toast(error instanceof Error ? error.message : "Error saving template");
     } finally {
       setIsSubmitting(false);
     }

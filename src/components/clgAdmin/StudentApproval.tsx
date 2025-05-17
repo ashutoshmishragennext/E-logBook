@@ -1,4 +1,5 @@
 /* eslint-disable react-hooks/exhaustive-deps*/
+/* eslint-disable @typescript-eslint/no-explicit-any*/
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -18,7 +19,7 @@ const StudentApproval = () => {
   const { college, fetchCollegeDetail } = useCollegeStore()
   const [collegeId, setCollegeId] = useState<string | null>(null)
   const { profiles, fetchProfile, updateProfile } = useStudentProfileStore()
-  const { branches, fetchBranches , course ,fetchCourses ,academicYears,fetchAcademicYears} = useStudentSubjectStore() // Add branch store hooks
+  const { branches, fetchBranches, course, fetchCourses, academicYears, fetchAcademicYears } = useStudentSubjectStore()
   
   // States for managing table functionality
   const [selectedStudents, setSelectedStudents] = useState<string[]>([])
@@ -27,6 +28,8 @@ const StudentApproval = () => {
   const [rejectionDialogOpen, setRejectionDialogOpen] = useState(false)
   const [rejectionReason, setRejectionReason] = useState("")
   const [searchQuery, setSearchQuery] = useState("")
+  const [currentProfiles, setCurrentProfiles] = useState<any[]>([])
+  const [isLoading, setIsLoading] = useState(false)
   
   // Fetch college details when component mounts
   useEffect(() => {
@@ -47,10 +50,21 @@ const StudentApproval = () => {
   useEffect(() => {
     const fetchData = async () => {
       if (collegeId) {
-        await fetchProfile({ 
-          collegeId: collegeId, 
-          verificationStatus: filterStatus.toUpperCase() 
-        })
+        setIsLoading(true)
+        try {
+          await fetchProfile({ 
+            collegeId: collegeId, 
+            verificationStatus: filterStatus.toUpperCase() 
+          })
+          // Set current profiles
+          setCurrentProfiles(profiles)
+        } catch (error) {
+          console.error("Error fetching profiles:", error)
+          // If we get an error (like 404), set current profiles to empty array
+          setCurrentProfiles([])
+        } finally {
+          setIsLoading(false)
+        }
       }
     }
     fetchData()
@@ -59,47 +73,44 @@ const StudentApproval = () => {
   // Fetch branches when collegeId is available
   useEffect(() => {
     const fetchCollegeBranches = async () => {
-        await fetchBranches()
-        await fetchCourses()
-        await fetchAcademicYears()
-      
+      await fetchBranches()
+      await fetchCourses()
+      await fetchAcademicYears()
     }
     fetchCollegeBranches()
-  }, [ fetchBranches , fetchCourses])
+  }, [fetchBranches, fetchCourses])
 
   // Handle select all checkbox
   useEffect(() => {
     if (selectAll) {
-      setSelectedStudents(profiles.map(profile => profile.id))
-    } else if (selectedStudents.length === profiles.length) {
+      setSelectedStudents(currentProfiles.map(profile => profile.id))
+    } else if (selectedStudents.length === currentProfiles.length) {
       setSelectedStudents([])
     }
-  }, [selectAll, profiles])
+  }, [selectAll, currentProfiles])
 
   // Filter profiles based on search query
-  const filteredProfiles = profiles.filter(profile => 
+  const filteredProfiles = currentProfiles.filter(profile => 
     profile.name?.toLowerCase().includes(searchQuery.toLowerCase()) || 
     profile.rollNo?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     profile.email?.toLowerCase().includes(searchQuery.toLowerCase())
   )
 
   // Helper function to get branch name from branchId
-
   const getCourseName = (courseId: string) => {
     const courseName = course.find(b => b.id === courseId)
     return courseName ? courseName.name : 'Unknown Course'
   }
+  
   const getBranchName = (branchId: string) => {
     const branch = branches.find(b => b.id === branchId)
     return branch ? branch.name : 'Unknown Branch'
   }
 
-const getAcademicYearName = (academicYearId: string) => {
-  const academicYear = academicYears.find(b => b.id === academicYearId)
-  return academicYear ? academicYear.name : 'Unknown Academic Year'
-}
-
-
+  const getAcademicYearName = (academicYearId: string) => {
+    const academicYear = academicYears.find(b => b.id === academicYearId)
+    return academicYear ? academicYear.name : 'Unknown Academic Year'
+  }
 
   // Toggle single student selection
   const toggleStudentSelection = (id: string) => {
@@ -124,10 +135,16 @@ const getAcademicYearName = (academicYearId: string) => {
       
       // Refresh the list after bulk operation
       if (collegeId) {
-        await fetchProfile({ 
-          collegeId: collegeId, 
-          verificationStatus: filterStatus.toUpperCase() 
-        })
+        try {
+          await fetchProfile({ 
+            collegeId: collegeId, 
+            verificationStatus: filterStatus.toUpperCase() 
+          })
+          setCurrentProfiles(profiles)
+        } catch (error) {
+          console.error("Error refreshing profiles:", error)
+          setCurrentProfiles([])
+        }
       }
       
       // Clear selection
@@ -155,10 +172,16 @@ const getAcademicYearName = (academicYearId: string) => {
       
       // Refresh the list after bulk operation
       if (collegeId) {
-        await fetchProfile({ 
-          collegeId: collegeId, 
-          verificationStatus: filterStatus.toUpperCase() 
-        })
+        try {
+          await fetchProfile({ 
+            collegeId: collegeId, 
+            verificationStatus: filterStatus.toUpperCase() 
+          })
+          setCurrentProfiles(profiles)
+        } catch (error) {
+          console.error("Error refreshing profiles:", error)
+          setCurrentProfiles([])
+        }
       }
       
       // Close dialog and reset states
@@ -169,6 +192,14 @@ const getAcademicYearName = (academicYearId: string) => {
     } catch (error) {
       console.error("Error rejecting students:", error)
     }
+  }
+
+  // Calculate the number of columns based on the current filter
+  const getColumnCount = () => {
+    // Base columns: checkbox, name, roll no, email, mobile, branch, course, year, actions
+    const baseColumnCount = 9
+    // Add one more column for rejection reason when viewing rejected profiles
+    return filterStatus === "REJECTED" ? baseColumnCount + 1 : baseColumnCount
   }
 
   return (
@@ -249,7 +280,13 @@ const getAcademicYearName = (academicYearId: string) => {
             </tr>
           </thead>
           <tbody className="divide-y">
-            {filteredProfiles.length > 0 ? (
+            {isLoading ? (
+              <tr>
+                <td colSpan={getColumnCount()} className="p-4 text-center text-gray-500">
+                  Loading student data...
+                </td>
+              </tr>
+            ) : filteredProfiles.length > 0 ? (
               filteredProfiles.map((student) => (
                 <tr key={student.id} className="hover:bg-gray-50">
                   <td className="p-4">
@@ -275,18 +312,28 @@ const getAcademicYearName = (academicYearId: string) => {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => {
-                            updateProfile(
-                              { id: student.id },
-                              { verificationStatus: VerificationStatus.APPROVED }
-                            ).then(() => {
+                          onClick={async () => {
+                            try {
+                              await updateProfile(
+                                { id: student.id },
+                                { verificationStatus: VerificationStatus.APPROVED }
+                              )
+                              
                               if (collegeId) {
-                                fetchProfile({
-                                  collegeId: collegeId,
-                                  verificationStatus: filterStatus.toUpperCase()
-                                })
+                                try {
+                                  await fetchProfile({
+                                    collegeId: collegeId,
+                                    verificationStatus: filterStatus.toUpperCase()
+                                  })
+                                  setCurrentProfiles(profiles)
+                                } catch (error) {
+                                  console.error("Error refreshing profiles:", error)
+                                  setCurrentProfiles([])
+                                }
                               }
-                            })
+                            } catch (error) {
+                              console.error("Error approving student:", error)
+                            }
                           }}
                           className="text-green-600 hover:text-green-700 hover:bg-green-50"
                         >
@@ -316,8 +363,8 @@ const getAcademicYearName = (academicYearId: string) => {
               ))
             ) : (
               <tr>
-                <td colSpan={8} className="p-4 text-center text-gray-500">
-                  No student profiles found
+                <td colSpan={getColumnCount()} className="p-4 text-center text-gray-500">
+                  {`No students found with ${filterStatus.toLowerCase()} status`}
                 </td>
               </tr>
             )}

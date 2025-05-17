@@ -21,6 +21,7 @@ export interface College {
 export interface CollegeState {
   college: College | null;
   fetchCollegeDetail: (userId: string) => Promise<void>;
+  updateCollege: (college: College) => void;
 }
 
 export const useCollegeStore = create<CollegeState>((set) => ({
@@ -31,9 +32,13 @@ export const useCollegeStore = create<CollegeState>((set) => ({
       const response = await fetch(`/api/college?collegeAdminId=${userId}`);
       if (!response.ok) throw new Error("Network response was not ok");
       const data = await response.json();
-      set({ college: data[0] }); // assume only one college per user
+      set({ college: data[0] });
     } catch (error) {
       console.error("Error fetching college details:", error);
     }
+  },
+
+  updateCollege: (college: College) => {
+    set({ college });
   },
 }));
