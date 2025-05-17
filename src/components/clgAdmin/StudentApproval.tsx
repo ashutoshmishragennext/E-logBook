@@ -43,7 +43,9 @@ const StudentApproval = () => {
 
   // Update collegeId when college data changes
   useEffect(() => {
-    setCollegeId(college?.id ?? null)
+    if (college?.id) {
+      setCollegeId(college.id)
+    }
   }, [college])
 
   // Fetch student profiles when collegeId or filter changes
@@ -56,11 +58,14 @@ const StudentApproval = () => {
             collegeId: collegeId, 
             verificationStatus: filterStatus.toUpperCase() 
           })
-          // Set current profiles
-          setCurrentProfiles(profiles)
+          
+          // Debug
+          console.log("Fetched profiles:", profiles)
+          
+          // Make sure to set current profiles AFTER the fetch operation completes
+          setCurrentProfiles([...profiles])
         } catch (error) {
           console.error("Error fetching profiles:", error)
-          // If we get an error (like 404), set current profiles to empty array
           setCurrentProfiles([])
         } finally {
           setIsLoading(false)
@@ -69,6 +74,11 @@ const StudentApproval = () => {
     }
     fetchData()
   }, [collegeId, filterStatus, fetchProfile])
+
+  // Update currentProfiles whenever profiles changes
+  useEffect(() => {
+    setCurrentProfiles([...profiles])
+  }, [profiles])
 
   // Fetch branches when collegeId is available
   useEffect(() => {
@@ -84,7 +94,7 @@ const StudentApproval = () => {
   useEffect(() => {
     if (selectAll) {
       setSelectedStudents(currentProfiles.map(profile => profile.id))
-    } else if (selectedStudents.length === currentProfiles.length) {
+    } else if (selectedStudents.length === currentProfiles.length && currentProfiles.length > 0) {
       setSelectedStudents([])
     }
   }, [selectAll, currentProfiles])
@@ -135,15 +145,17 @@ const StudentApproval = () => {
       
       // Refresh the list after bulk operation
       if (collegeId) {
+        setIsLoading(true)
         try {
           await fetchProfile({ 
             collegeId: collegeId, 
             verificationStatus: filterStatus.toUpperCase() 
           })
-          setCurrentProfiles(profiles)
         } catch (error) {
           console.error("Error refreshing profiles:", error)
           setCurrentProfiles([])
+        } finally {
+          setIsLoading(false)
         }
       }
       
@@ -172,15 +184,17 @@ const StudentApproval = () => {
       
       // Refresh the list after bulk operation
       if (collegeId) {
+        setIsLoading(true)
         try {
           await fetchProfile({ 
             collegeId: collegeId, 
             verificationStatus: filterStatus.toUpperCase() 
           })
-          setCurrentProfiles(profiles)
         } catch (error) {
           console.error("Error refreshing profiles:", error)
           setCurrentProfiles([])
+        } finally {
+          setIsLoading(false)
         }
       }
       
@@ -202,16 +216,41 @@ const StudentApproval = () => {
     return filterStatus === "REJECTED" ? baseColumnCount + 1 : baseColumnCount
   }
 
+  // Debug function to help troubleshoot
+  const debugStateInfo = () => {
+    console.log({
+      collegeId,
+      filterStatus,
+      profilesFromStore: profiles.length,
+      currentProfilesState: currentProfiles.length,
+      filteredProfilesCount: filteredProfiles.length
+    })
+  }
+
   return (
     <div className="container mx-auto p-6">
       <h1 className="text-2xl font-bold mb-6">Student Verification</h1>
+      
+      {/* Debug button - remove in production */}
+      <Button 
+        onClick={debugStateInfo} 
+        variant="outline" 
+        className="mb-2"
+        size="sm"
+      >
+        Debug State
+      </Button>
       
       {/* Filters and Actions */}
       <div className="flex flex-wrap justify-between items-center mb-6 gap-4">
         <div className="flex items-center space-x-2">
           <Select
             value={filterStatus}
-            onValueChange={setFilterStatus}
+            onValueChange={(value) => {
+              setFilterStatus(value)
+              setSelectedStudents([])
+              setSelectAll(false)
+            }}
           >
             <SelectTrigger className="w-[180px]">
               <SelectValue placeholder="Filter by status" />
@@ -241,7 +280,7 @@ const StudentApproval = () => {
             disabled={selectedStudents.length === 0 || filterStatus !== "PENDING"}
             className="bg-red-50 text-red-600 border-red-200 hover:bg-red-100"
           >
-            Reject Selected
+            Reject Selected ({selectedStudents.length})
           </Button>
           
           <Button
@@ -249,7 +288,7 @@ const StudentApproval = () => {
             disabled={selectedStudents.length === 0 || filterStatus !== "PENDING"}
             className="bg-green-600 hover:bg-green-700"
           >
-            Approve Selected
+            Approve Selected ({selectedStudents.length})
           </Button>
         </div>
       </div>
@@ -263,7 +302,7 @@ const StudentApproval = () => {
                 <Checkbox
                   checked={selectAll}
                   onCheckedChange={() => setSelectAll(!selectAll)}
-                  disabled={filterStatus !== "PENDING"}
+                  disabled={filterStatus !== "PENDING" || currentProfiles.length === 0}
                 />
               </th>
               <th className="p-4 text-left font-medium">Name</th>
@@ -286,7 +325,7 @@ const StudentApproval = () => {
                   Loading student data...
                 </td>
               </tr>
-            ) : filteredProfiles.length > 0 ? (
+            ) : filteredProfiles && filteredProfiles.length > 0 ? (
               filteredProfiles.map((student) => (
                 <tr key={student.id} className="hover:bg-gray-50">
                   <td className="p-4">
@@ -296,13 +335,13 @@ const StudentApproval = () => {
                       disabled={filterStatus !== "PENDING"}
                     />
                   </td>
-                  <td className="p-4">{student.name}</td>
-                  <td className="p-4">{student.rollNo}</td>
-                  <td className="p-4">{student.email}</td>
-                  <td className="p-4">{student.mobileNo}</td>
-                  <td className="p-4">{getBranchName(student.branchId)}</td>
-                  <td className="p-4">{getCourseName(student.courseId)}</td>
-                  <td className="p-4">{getAcademicYearName(student.academicYearId)}</td>
+                  <td className="p-4">{student.name || 'N/A'}</td>
+                  <td className="p-4">{student.rollNo || 'N/A'}</td>
+                  <td className="p-4">{student.email || 'N/A'}</td>
+                  <td className="p-4">{student.mobileNo || 'N/A'}</td>
+                  <td className="p-4">{student.branchId ? getBranchName(student.branchId) : 'N/A'}</td>
+                  <td className="p-4">{student.courseId ? getCourseName(student.courseId) : 'N/A'}</td>
+                  <td className="p-4">{student.academicYearId ? getAcademicYearName(student.academicYearId) : 'N/A'}</td>
                   {filterStatus === "REJECTED" && (
                     <td className="p-4 text-red-600">{student.rejectionReason || "No reason provided"}</td>
                   )}
@@ -320,15 +359,16 @@ const StudentApproval = () => {
                               )
                               
                               if (collegeId) {
+                                setIsLoading(true)
                                 try {
                                   await fetchProfile({
                                     collegeId: collegeId,
                                     verificationStatus: filterStatus.toUpperCase()
                                   })
-                                  setCurrentProfiles(profiles)
                                 } catch (error) {
                                   console.error("Error refreshing profiles:", error)
-                                  setCurrentProfiles([])
+                                } finally {
+                                  setIsLoading(false)
                                 }
                               }
                             } catch (error) {
@@ -364,7 +404,9 @@ const StudentApproval = () => {
             ) : (
               <tr>
                 <td colSpan={getColumnCount()} className="p-4 text-center text-gray-500">
-                  {`No students found with ${filterStatus.toLowerCase()} status`}
+                  {searchQuery 
+                    ? `No students found matching "${searchQuery}"` 
+                    : `No students found with ${filterStatus.toLowerCase()} status`}
                 </td>
               </tr>
             )}
