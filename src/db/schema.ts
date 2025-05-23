@@ -56,6 +56,20 @@ export const UsersTable = pgTable(
   ]
 );
 
+export const LocationsTable = pgTable(
+  "locations",
+  {
+    id: uuid("id").defaultRandom().primaryKey().notNull(),
+    name: text("name").notNull(), // e.g. "New York"
+    code: text("code").notNull(), // e.g. "JFK"
+    country: text("country").notNull(),
+    type: text("type").notNull(), // "AIRPORT", "CITY", etc.
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").notNull(),
+  },
+  
+);
+
 // Email Verification Token Table
 export const EmailVerificationTokenTable = pgTable(
   "email_verification_tokens",

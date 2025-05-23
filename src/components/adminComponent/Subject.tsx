@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+
 "use client";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useSubjectStore } from "@/store/subject";
-import { Edit, Plus, Save, Search, Trash2, X } from "lucide-react";
+import { Edit, Plus, Save, Search, Trash2, X, Check, CheckCircle2Icon } from "lucide-react";
 import { useEffect, useState } from "react";
 import DeleteConfirmation from "../common/DeleteComfirmation";
 
@@ -46,10 +46,31 @@ const Subject = () => {
     fetchSubjects();
   }, [fetchSubjects]);
 
-  const handleInputChange = (e: { target: { name: any; value: any } }) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const { name, value, type, checked } = e.target;
+  const updatedFormData = { 
+    ...formData, 
+    [name]: type === 'checkbox' ? checked : value 
   };
+
+  if (name === 'name') {
+    updatedFormData.code = generateSubjectCode(value);
+  }
+
+  setFormData(updatedFormData);
+};
+
+function generateSubjectCode(subjectName: string) {
+  if (!subjectName) return '';
+  
+  // Take first 3 letters of subject name, uppercase and no spaces
+  const namePart = subjectName.trim().toUpperCase().replace(/\s+/g, '').slice(0, 3);
+
+  // Get last 3 digits of current timestamp for uniqueness
+  const timestampPart = Date.now().toString().slice(-3);
+
+  return `${namePart}${timestampPart}`; // Example: MAT451
+}
 
   const resetForm = () => {
     setFormData({
@@ -100,9 +121,6 @@ const Subject = () => {
       setError("Subject code is required");
       return;
     }
-    if (formData.approved == false) {
-      formData.approved = true;
-    }
 
     try {
       const isEditing = !!currentSubject;
@@ -137,8 +155,30 @@ const Subject = () => {
     }
   };
 
-  const handleDelete = async (id: string) => {
+  // Quick approval toggle function
+  const handleQuickApproval = async (id: string, currentApprovalStatus: boolean) => {
+    try {
+      const response = await fetch(`/api/subject?id=${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ approved: !currentApprovalStatus }),
+      });
 
+      if (response.ok) {
+        await fetchSubjects();
+      } else {
+        const errorData = await response.json();
+        setError(errorData.message || "Failed to update approval status");
+      }
+    } catch (err) {
+      setError(
+        "Error updating approval status: " +
+          (err instanceof Error ? err.message : "Unknown error")
+      );
+    }
+  };
+
+  const handleDelete = async (id: string) => {
     setConfirmText(`Are you sure you want to delete this Subject?`);
 
     setOnConfirmCallback(() => async () => {
@@ -187,6 +227,11 @@ const Subject = () => {
 
     return matchesSearch && matchesApprovedFilter;
   });
+
+   const capitalizeFirstLetter = (str: string): string => {
+    if (!str) return "";
+    return str.charAt(0).toUpperCase() + str.slice(1);
+  };
 
   return (
     <div className="relative space-y-4">
@@ -242,15 +287,15 @@ const Subject = () => {
                 </th>
                 <th
                   scope="col"
-                  className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[120px]"
-                >
-                  Name
-                </th>
-                <th
-                  scope="col"
                   className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[80px]"
                 >
                   Code
+                </th>
+                <th
+                  scope="col"
+                  className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[120px]"
+                >
+                  Name
                 </th>
                 <th
                   scope="col"
@@ -260,7 +305,7 @@ const Subject = () => {
                 </th>
                 <th
                   scope="col"
-                  className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[100px]"
+                  className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[140px]"
                 >
                   Actions
                 </th>
@@ -292,13 +337,13 @@ const Subject = () => {
                     <td className="px-3 py-1 whitespace-nowrap text-sm text-gray-500">
                       {index + 1}
                     </td>
-                    <td className="px-3 py-1 whitespace-nowrap text-sm font-medium">
-                      {subject.name}
-                    </td>
                     <td className="px-3 py-1 whitespace-nowrap">
                       <Badge variant="outline" className="bg-blue-50 text-xs">
                         {subject.code || "—"}
                       </Badge>
+                    </td>
+                    <td className="px-3 py-1 whitespace-nowrap text-sm font-medium">
+                      {capitalizeFirstLetter(subject.name)}
                     </td>
                     <td className="px-3 py-1 whitespace-nowrap text-sm font-medium">
                       {subject.approved ? (
@@ -313,6 +358,25 @@ const Subject = () => {
                     </td>
                     <td className="px-3 py-1 whitespace-nowrap text-right text-sm font-medium">
                       <div className="flex justify-end gap-1">
+                        {/* Quick Approval Toggle Button */}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className={`h-8 w-8 p-0 ${
+                            subject.approved 
+                              ? 'text-orange-500 hover:text-orange-600 hover:bg-orange-50' 
+                              : 'text-green-500 hover:text-green-600 hover:bg-green-50'
+                          }`}
+                          onClick={() => handleQuickApproval(subject.id, subject.approved ?? false)}
+                          title={subject.approved ? "Mark as Pending" : "Approve Subject"}
+                        >
+                          {subject.approved ? (
+                            <CheckCircle2Icon className="h-4 w-4 text-green-700" />
+                          ) : (
+                            <Check className="h-4 w-4" />
+                          )}
+                        </Button>
+                        
                         <Button
                           variant="ghost"
                           size="sm"
@@ -393,9 +457,41 @@ const Subject = () => {
                   id="code"
                   name="code"
                   value={formData.code}
+                  disabled={true}
                   onChange={handleInputChange}
-                  placeholder="Enter subject code"
+                  placeholder="subject code"
                 />
+              </div>
+
+              {/* Approval Status Control */}
+              <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
+                <input
+                  type="checkbox"
+                  id="approved"
+                  name="approved"
+                  checked={formData.approved}
+                  onChange={handleInputChange}
+                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                />
+                <label
+                  htmlFor="approved"
+                  className="text-sm font-medium text-gray-700"
+                >
+                  Approve Subject
+                </label>
+              </div>
+
+              {/* Approval Status Info */}
+              <div className="text-xs text-gray-500 bg-blue-50 p-2 rounded">
+                {formData.approved ? (
+                  <span className="text-green-600">
+                    ✓ This subject will be approved and available for use
+                  </span>
+                ) : (
+                  <span className="text-orange-600">
+                    ⏳ This subject will be pending approval
+                  </span>
+                )}
               </div>
             </div>
           </div>

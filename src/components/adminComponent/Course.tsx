@@ -194,6 +194,11 @@ const Course = () => {
         course.description.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
+  const capitalizeFirstLetter = (str: string): string => {
+    if (!str) return "";
+    return str.charAt(0).toUpperCase() + str.slice(1);
+  };
+
   return (
     <div className="relative space-y-4">
       {error && (
@@ -293,7 +298,7 @@ const Course = () => {
                       {index + 1}
                     </td>
                     <td className="px-3 py-1 whitespace-nowrap text-sm font-medium">
-                      {course.name}
+                      {capitalizeFirstLetter(course.name)}
                     </td>
                     <td className="px-3 py-1 whitespace-nowrap">
                       <Badge variant="outline" className="bg-blue-50 text-xs">
@@ -381,14 +386,15 @@ const Course = () => {
                   htmlFor="code"
                   className="block text-sm font-medium text-gray-700 mb-1"
                 >
-                  Course Duration <span className="text-red-500">*</span>
+                  Course Duration (Years) <span className="text-red-500">*</span>
                 </label>
                 <Input
+                  type="number"
                   id="duration"
                   name="duration"
                   value={formData.duration}
                   onChange={handleInputChange}
-                  placeholder="Enter course duration"
+                  placeholder="Enter course duration in Years"
                 />
               </div>
 

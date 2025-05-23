@@ -25,19 +25,19 @@ import Course from "@/components/adminComponent/Course";
 import Department from "@/components/adminComponent/Department";
 import { GeneralTemplateForm } from "@/components/adminComponent/General";
 import Subject from "@/components/adminComponent/Subject";
-import { SubjectTemplateForm } from "@/components/adminComponent/SubjectTemplate";
+// import { SubjectTemplateForm } from "@/components/adminComponent/SubjectTemplate";
 // import TemplatesPage from "@/components/adminComponent/DisplayTemplate";
 
 const sidebarItems = [
   {
     id: "college",
-    label: "College",
+    label: "Colleges",
     icon: <School size={20} />,
     component: <College />,
   },
   {
     id: "department",
-    label: "Department",
+    label: "Departments",
     icon: <Building2 size={20} />,
     component: <Department />,
   },
@@ -49,7 +49,7 @@ const sidebarItems = [
   },
   {
     id: "subject",
-    label: "Subject",
+    label: "Subjects",
     icon: <Book size={20} />,
     component: <Subject />,
   },
@@ -70,11 +70,11 @@ const sidebarItems = [
         label: "General",
         component: <GeneralTemplateForm />,
       },
-      {
-        id: "specified-templates",
-        label: "Specified",
-        component: <SubjectTemplateForm />,
-      },
+      // {
+      //   id: "specified-templates",
+      //   label: "Specified",
+      //   component: <SubjectTemplateForm />,
+      // },
       // {
       //   id: "logbook-templates",
       //   label: "Templates",

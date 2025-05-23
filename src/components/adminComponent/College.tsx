@@ -32,8 +32,33 @@ import {
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import DeleteConfirmation from "../common/DeleteComfirmation";
+import {
+  ICountry,
+  IState,
+  ICity,
+  Country,
+  State,
+  City,
+} from "country-state-city";
+import { ComboBox } from "../ui/combo-box";
 
 const College: React.FC = () => {
+  const [selectedCountry, setSelectedCountry] = useState<ICountry | null>(null);
+  const [selectedState, setSelectedState] = useState<IState | null>(null);
+  const [selectedCity, setSelectedCity] = useState<ICity | null>(null);
+
+  // Get all countries
+  const allCountries = Country.getAllCountries();
+
+  // Get states for selected country
+  const states = selectedCountry
+    ? State.getStatesOfCountry(selectedCountry.isoCode)
+    : [];
+
+  // Get cities for selected state
+  const cities = selectedState
+    ? City.getCitiesOfState(selectedState.countryCode, selectedState.isoCode)
+    : [];
   const user = useCurrentUser();
   const userId = user?.id || null;
   interface College {
@@ -606,7 +631,7 @@ const College: React.FC = () => {
   const renderCollegeForm = () => (
     <div className="space-y-4 overflow-y-auto max-h-[80vh] p-4">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="space-y-2">
+        <div className="space-y-1">
           <label htmlFor="name" className="text-sm font-medium text-gray-700">
             College Name*
           </label>
@@ -620,7 +645,7 @@ const College: React.FC = () => {
           />
         </div>
 
-        <div className="space-y-2">
+        <div className="space-y-1">
           <label htmlFor="code" className="text-sm font-medium text-gray-700">
             College Code*
           </label>
@@ -629,59 +654,61 @@ const College: React.FC = () => {
             name="code"
             value={formData.code}
             onChange={handleInputChange}
-            placeholder="Enter college code"
+            placeholder="AIIMS2003"
             required
           />
         </div>
       </div>
-
-      <div className="space-y-2">
-        <label htmlFor="logo" className="text-sm font-medium text-gray-700">
-          College Logo
-        </label>
-        <div className="flex flex-col space-y-2">
-          {formData.logo && (
-            <div className="flex items-center">
-              <Image
-                width={48}
-                height={48}
-                src={formData.logo}
-                alt="College Logo"
-                className="h-12 w-12 object-cover rounded-md"
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="space-y-1 ">
+          <label htmlFor="logo" className="text-sm font-medium text-gray-700">
+            College Logo
+          </label>
+          <div className="flex items-center gap-2">
+            {formData.logo ? (
+              <>
+                <Image
+                  width={40}
+                  height={40}
+                  src={formData.logo}
+                  alt="College Logo"
+                  className="h-10 w-10 object-cover rounded-md"
+                />
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-red-600 h-8 px-2 m-2"
+                  onClick={() => setFormData((prev) => ({ ...prev, logo: "" }))}
+                >
+                  <X className="h-3 w-3 mr-1" />
+                  Remove
+                </Button>
+              </>
+            ) : (
+              <UploadButton
+                endpoint="imageUploader"
+                className="h-16 text-xs  mt-2"
+                appearance={{
+                  button: "h-9 text-md p-3",
+                }}
+                onClientUploadComplete={(res) => {
+                  if (res.length > 0) {
+                    setFormData((prev) => ({
+                      ...prev,
+                      logo: res[0].serverData.fileUrl,
+                    }));
+                    setProfilePhotoFileName(res[0].name);
+                  }
+                }}
+                onUploadError={(error) => {
+                  console.error("Upload Error:", error);
+                  setError("Logo upload failed: " + error.message);
+                }}
               />
-              <Button
-                variant="ghost"
-                size="sm"
-                className="ml-2 text-red-600 h-8"
-                onClick={() => setFormData((prev) => ({ ...prev, logo: "" }))}
-              >
-                <X className="h-4 w-4 mr-1" />
-                Remove
-              </Button>
-            </div>
-          )}
-
-          <UploadButton
-            endpoint="imageUploader"
-            onClientUploadComplete={(res) => {
-              if (res.length > 0) {
-                const uploadedFileUrl = res[0].serverData.fileUrl;
-                setFormData((prev) => ({
-                  ...prev,
-                  logo: uploadedFileUrl,
-                }));
-                setProfilePhotoFileName(res[0].name);
-              }
-            }}
-            onUploadError={(error) => {
-              console.error("Upload Error:", error);
-              setError("Logo upload failed: " + error.message);
-            }}
-          />
+            )}
+          </div>
         </div>
-      </div>
-
-      <div className="space-y-2">
+            <div className="space-y-1">
         <label
           htmlFor="description"
           className="text-sm font-medium text-gray-700"
@@ -697,12 +724,13 @@ const College: React.FC = () => {
           rows={3}
         />
       </div>
+      </div>
 
-      <Separator className="my-4" />
-      <h3 className="font-medium">Contact Information</h3>
+      <Separator className="my-3" />
+      <h3 className="font-medium text-sm">Contact Information</h3>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="space-y-2">
+        <div className="space-y-1">
           <label htmlFor="email" className="text-sm font-medium text-gray-700">
             Email
           </label>
@@ -716,7 +744,7 @@ const College: React.FC = () => {
           />
         </div>
 
-        <div className="space-y-2">
+        <div className="space-y-1">
           <label htmlFor="phone" className="text-sm font-medium text-gray-700">
             Phone
           </label>
@@ -730,7 +758,7 @@ const College: React.FC = () => {
         </div>
       </div>
 
-      <div className="space-y-2">
+      <div className="space-y-1">
         <label htmlFor="website" className="text-sm font-medium text-gray-700">
           Website
         </label>
@@ -743,10 +771,10 @@ const College: React.FC = () => {
         />
       </div>
 
-      <Separator className="my-4" />
-      <h3 className="font-medium">Address Information</h3>
+      <Separator className="my-3" />
+      <h3 className="font-medium text-sm">Address Information</h3>
 
-      <div className="space-y-2">
+      <div className="space-y-1">
         <label htmlFor="address" className="text-sm font-medium text-gray-700">
           Street Address
         </label>
@@ -761,7 +789,7 @@ const College: React.FC = () => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="space-y-2">
+        <div className="space-y-1">
           <label htmlFor="city" className="text-sm font-medium text-gray-700">
             City
           </label>
@@ -774,7 +802,7 @@ const College: React.FC = () => {
           />
         </div>
 
-        <div className="space-y-2">
+        <div className="space-y-1">
           <label htmlFor="state" className="text-sm font-medium text-gray-700">
             State/Province
           </label>
@@ -787,7 +815,7 @@ const College: React.FC = () => {
           />
         </div>
 
-        <div className="space-y-2">
+        <div className="space-y-1">
           <label
             htmlFor="country"
             className="text-sm font-medium text-gray-700"
@@ -804,7 +832,7 @@ const College: React.FC = () => {
         </div>
       </div>
 
-      <div className="pt-6 flex justify-end space-x-2">
+      <div className="pt-4 flex justify-end gap-2">
         <Button
           variant="outline"
           onClick={handleCancelEdit}
