@@ -1,5 +1,4 @@
 /* eslint-disable react-hooks/exhaustive-deps*/
-/* eslint-disable @typescript-eslint/no-explicit-any*/
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -11,14 +10,13 @@ import { useCollegeStore } from '@/store/college'
 import { useStudentProfileStore, VerificationStatus } from '@/store/student'
 import { useStudentSubjectStore } from '@/store/studentSubjectStore'
 import { Search } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
 
 const StudentApproval = () => {
   const user = useCurrentUser()
   const userId = user?.id
   const { college, fetchCollegeDetail } = useCollegeStore()
-  const [collegeId, setCollegeId] = useState<string | null>(null)
-  const { profiles, fetchProfile, updateProfile } = useStudentProfileStore()
+  const { fetchProfile, updateProfile, profiles } = useStudentProfileStore() // Add profiles from store
   const { branches, fetchBranches, course, fetchCourses, academicYears, fetchAcademicYears } = useStudentSubjectStore()
   
   // States for managing table functionality
@@ -28,175 +26,231 @@ const StudentApproval = () => {
   const [rejectionDialogOpen, setRejectionDialogOpen] = useState(false)
   const [rejectionReason, setRejectionReason] = useState("")
   const [searchQuery, setSearchQuery] = useState("")
-  const [currentProfiles, setCurrentProfiles] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(false)
+  const [collegeFetched, setCollegeFetched] = useState(false)
   
-  // Fetch college details when component mounts
+  // Memoize collegeId to prevent unnecessary re-renders
+  const collegeId = useMemo(() => college?.id || null, [college?.id])
+
+  // Fetch college details when component mounts - only once
   useEffect(() => {
     const fetchData = async () => {
-      if (userId) {
+      if (userId && !collegeFetched) {
+        console.log("🏫 Fetching college details for userId:", userId)
+        setCollegeFetched(true)
         await fetchCollegeDetail(userId)
       }
     }
     fetchData()
-  }, [userId, fetchCollegeDetail])
+  }, [userId, collegeFetched, fetchCollegeDetail])
 
-  // Update collegeId when college data changes
+  // Fetch initial data (branches, courses, academic years) - only once
   useEffect(() => {
-    if (college?.id) {
-      setCollegeId(college.id)
-    }
-  }, [college])
-
-  // Fetch student profiles when collegeId or filter changes
-  useEffect(() => {
-    const fetchData = async () => {
-      if (collegeId) {
-        setIsLoading(true)
-        try {
-          await fetchProfile({ 
-            collegeId: collegeId, 
-            verificationStatus: filterStatus.toUpperCase() 
-          })
-          
-          // Debug
-          console.log("Fetched profiles:", profiles)
-          
-          // Make sure to set current profiles AFTER the fetch operation completes
-          setCurrentProfiles([...profiles])
-        } catch (error) {
-          console.error("Error fetching profiles:", error)
-          setCurrentProfiles([])
-        } finally {
-          setIsLoading(false)
-        }
+    const fetchInitialData = async () => {
+      console.log("📚 Fetching initial data (branches, courses, academic years)")
+      try {
+        await Promise.all([
+          fetchBranches(),
+          fetchCourses(),
+          fetchAcademicYears()
+        ])
+        console.log("📚 Initial data fetched successfully")
+      } catch (error) {
+        console.error("❌ Error fetching initial data:", error)
       }
     }
-    fetchData()
-  }, [collegeId, filterStatus, fetchProfile])
+    fetchInitialData()
+  }, []) // Empty dependency array - only run once
 
-  // Update currentProfiles whenever profiles changes
-  useEffect(() => {
-    setCurrentProfiles([...profiles])
-  }, [profiles])
-
-  // Fetch branches when collegeId is available
-  useEffect(() => {
-    const fetchCollegeBranches = async () => {
-      await fetchBranches()
-      await fetchCourses()
-      await fetchAcademicYears()
+  // Memoized function to fetch profiles
+  const fetchProfilesForStatus = useCallback(async (status: string, logPrefix: string = "") => {
+    if (!collegeId) {
+      console.log(`${logPrefix}⚠️ No collegeId available, skipping fetch`)
+      return []
     }
-    fetchCollegeBranches()
-  }, [fetchBranches, fetchCourses])
+
+    console.log(`${logPrefix}🔄 Starting fetch for status: ${status}, collegeId: ${collegeId}`)
+    setIsLoading(true)
+    
+    try {
+      const startTime = Date.now()
+      
+      // Fetch profiles and ensure we get the return value
+      await fetchProfile({ 
+        collegeId: collegeId, 
+        verificationStatus: status.toUpperCase() 
+      });
+      
+      // Get profiles from store after fetch
+      const fetchedProfiles = profiles || [];
+      
+      const endTime = Date.now()
+      const duration = endTime - startTime
+      
+      console.log(`${logPrefix}✅ Fetch completed for status: ${status}`)
+      console.log(`${logPrefix}⏱️ Fetch duration: ${duration}ms`)
+      console.log(`${logPrefix}📊 Number of profiles fetched: ${fetchedProfiles.length}`)
+      console.log(`${logPrefix}📋 Fetched profiles data:`, fetchedProfiles)
+      
+      return fetchedProfiles
+    } catch (error) {
+      console.error(`${logPrefix}❌ Error fetching profiles for status ${status}:`, error)
+      return []
+    } finally {
+      setIsLoading(false)
+    }
+  }, [collegeId, fetchProfile, profiles])
+
+  // Filter profiles by status from store
+  const currentProfiles = useMemo(() => {
+    if (!profiles || !Array.isArray(profiles)) return []
+    
+    return profiles.filter(profile => 
+      profile.verificationStatus?.toUpperCase() === filterStatus.toUpperCase()
+    )
+  }, [profiles, filterStatus])
+
+  // Main effect to fetch profiles when collegeId or filterStatus changes
+  useEffect(() => {
+    const fetchData = async () => {
+      if (!collegeId) {
+        console.log("⚠️ CollegeId not available, skipping profile fetch")
+        return
+      }
+
+      console.log("🚀 === STARTING PROFILE FETCH ===")
+      console.log("📊 Current state:", {
+        collegeId,
+        filterStatus,
+        timestamp: new Date().toISOString()
+      })
+
+      // Clear selections
+      setSelectedStudents([])
+      setSelectAll(false)
+
+      await fetchProfilesForStatus(filterStatus, "[MAIN_FETCH] ")
+      
+      console.log("✅ === PROFILE FETCH COMPLETED ===")
+    }
+
+    fetchData()
+  }, [collegeId, filterStatus, fetchProfilesForStatus])
 
   // Handle select all checkbox
   useEffect(() => {
-    if (selectAll) {
+    if (selectAll && currentProfiles.length > 0) {
+      console.log("☑️ Selecting all students:", currentProfiles.length)
       setSelectedStudents(currentProfiles.map(profile => profile.id))
-    } else if (selectedStudents.length === currentProfiles.length && currentProfiles.length > 0) {
-      setSelectedStudents([])
+    } else if (!selectAll) {
+      // Only clear if we're explicitly unsetting selectAll, not on initial load
+      if (selectedStudents.length > 0) {
+        console.log("☐ Clearing all selections")
+        setSelectedStudents([])
+      }
     }
-  }, [selectAll, currentProfiles])
+  }, [selectAll, currentProfiles.length])
 
   // Filter profiles based on search query
-  const filteredProfiles = currentProfiles.filter(profile => 
-    profile.name?.toLowerCase().includes(searchQuery.toLowerCase()) || 
-    profile.rollNo?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    profile.email?.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredProfiles = useMemo(() => 
+    currentProfiles.filter(profile => 
+      profile.name?.toLowerCase().includes(searchQuery.toLowerCase()) || 
+      profile.rollNo?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      profile.email?.toLowerCase().includes(searchQuery.toLowerCase())
+    ), [currentProfiles, searchQuery]
   )
 
-  // Helper function to get branch name from branchId
-  const getCourseName = (courseId: string) => {
+  // Helper functions to get names from IDs
+  const getCourseName = useCallback((courseId: string) => {
     const courseName = course.find(b => b.id === courseId)
     return courseName ? courseName.name : 'Unknown Course'
-  }
+  }, [course])
   
-  const getBranchName = (branchId: string) => {
+  const getBranchName = useCallback((branchId: string) => {
     const branch = branches.find(b => b.id === branchId)
     return branch ? branch.name : 'Unknown Branch'
-  }
+  }, [branches])
 
-  const getAcademicYearName = (academicYearId: string) => {
+  const getAcademicYearName = useCallback((academicYearId: string) => {
     const academicYear = academicYears.find(b => b.id === academicYearId)
     return academicYear ? academicYear.name : 'Unknown Academic Year'
-  }
+  }, [academicYears])
 
   // Toggle single student selection
-  const toggleStudentSelection = (id: string) => {
+  const toggleStudentSelection = useCallback((id: string) => {
     setSelectedStudents(prev => 
       prev.includes(id) 
         ? prev.filter(studentId => studentId !== id)
         : [...prev, id]
     )
-  }
+  }, [])
+
+  // Handle filter status change
+  const handleFilterChange = useCallback((newStatus: string) => {
+    console.log("🔄 Filter changed from", filterStatus, "to", newStatus)
+    setFilterStatus(newStatus)
+    setSelectedStudents([])
+    setSelectAll(false)
+    setSearchQuery("") // Clear search when changing filters
+  }, [filterStatus])
+
+  // Helper function to refresh current filter data
+  const refreshCurrentFilter = useCallback(async () => {
+    console.log("🔄 Refreshing current filter data for status:", filterStatus)
+    await fetchProfilesForStatus(filterStatus, "[REFRESH] ")
+    console.log("✅ Refresh completed")
+  }, [filterStatus, fetchProfilesForStatus])
 
   // Handle bulk approval
-  const handleBulkApprove = async () => {
+  const handleBulkApprove = useCallback(async () => {
     if (selectedStudents.length === 0) return
     
+    console.log("✅ Starting bulk approval for students:", selectedStudents)
+    
     try {
-      for (const studentId of selectedStudents) {
-        await updateProfile(
+      const updatePromises = selectedStudents.map(studentId => 
+        updateProfile(
           { id: studentId },
           { verificationStatus: VerificationStatus.APPROVED }
         )
-      }
+      )
       
-      // Refresh the list after bulk operation
-      if (collegeId) {
-        setIsLoading(true)
-        try {
-          await fetchProfile({ 
-            collegeId: collegeId, 
-            verificationStatus: filterStatus.toUpperCase() 
-          })
-        } catch (error) {
-          console.error("Error refreshing profiles:", error)
-          setCurrentProfiles([])
-        } finally {
-          setIsLoading(false)
-        }
-      }
+      await Promise.all(updatePromises)
+      console.log("✅ Bulk approval completed successfully")
+      
+      // Refresh the current filter data
+      await refreshCurrentFilter()
       
       // Clear selection
       setSelectedStudents([])
       setSelectAll(false)
     } catch (error) {
-      console.error("Error approving students:", error)
+      console.error("❌ Error in bulk approval:", error)
     }
-  }
+  }, [selectedStudents, updateProfile, refreshCurrentFilter])
 
   // Handle bulk rejection
-  const handleBulkReject = async () => {
+  const handleBulkReject = useCallback(async () => {
     if (selectedStudents.length === 0) return
     
+    console.log("❌ Starting bulk rejection for students:", selectedStudents, "with reason:", rejectionReason)
+    
     try {
-      for (const studentId of selectedStudents) {
-        await updateProfile(
+      const updatePromises = selectedStudents.map(studentId => 
+        updateProfile(
           { id: studentId },
           { 
             verificationStatus: VerificationStatus.REJECTED,
             rejectionReason: rejectionReason
           }
         )
-      }
+      )
       
-      // Refresh the list after bulk operation
-      if (collegeId) {
-        setIsLoading(true)
-        try {
-          await fetchProfile({ 
-            collegeId: collegeId, 
-            verificationStatus: filterStatus.toUpperCase() 
-          })
-        } catch (error) {
-          console.error("Error refreshing profiles:", error)
-          setCurrentProfiles([])
-        } finally {
-          setIsLoading(false)
-        }
-      }
+      await Promise.all(updatePromises)
+      console.log("❌ Bulk rejection completed successfully")
+      
+      // Refresh the current filter data
+      await refreshCurrentFilter()
       
       // Close dialog and reset states
       setRejectionDialogOpen(false)
@@ -204,28 +258,58 @@ const StudentApproval = () => {
       setSelectedStudents([])
       setSelectAll(false)
     } catch (error) {
-      console.error("Error rejecting students:", error)
+      console.error("❌ Error in bulk rejection:", error)
     }
-  }
+  }, [selectedStudents, rejectionReason, updateProfile, refreshCurrentFilter])
+
+  // Handle single student approval
+  const handleSingleApprove = useCallback(async (studentId: string) => {
+    console.log("✅ Starting single approval for student:", studentId)
+    
+    try {
+      await updateProfile(
+        { id: studentId },
+        { verificationStatus: VerificationStatus.APPROVED }
+      )
+      console.log("✅ Single approval completed successfully")
+      
+      // Refresh the current filter data
+      await refreshCurrentFilter()
+    } catch (error) {
+      console.error("❌ Error in single approval:", error)
+    }
+  }, [updateProfile, refreshCurrentFilter])
 
   // Calculate the number of columns based on the current filter
-  const getColumnCount = () => {
+  const getColumnCount = useCallback(() => {
     // Base columns: checkbox, name, roll no, email, mobile, branch, course, year, actions
     const baseColumnCount = 9
     // Add one more column for rejection reason when viewing rejected profiles
     return filterStatus === "REJECTED" ? baseColumnCount + 1 : baseColumnCount
-  }
+  }, [filterStatus])
 
   // Debug function to help troubleshoot
-  const debugStateInfo = () => {
-    console.log({
+  const debugStateInfo = useCallback(() => {
+    const debugInfo = {
       collegeId,
       filterStatus,
-      profilesFromStore: profiles.length,
-      currentProfilesState: currentProfiles.length,
-      filteredProfilesCount: filteredProfiles.length
-    })
-  }
+      currentProfilesCount: currentProfiles.length,
+      filteredProfilesCount: filteredProfiles.length,
+      selectedStudentsCount: selectedStudents.length,
+      isLoading,
+      searchQuery,
+      selectAll,
+      timestamp: new Date().toISOString()
+    }
+    
+    console.log("🐞 === DEBUG STATE INFO ===")
+    console.table(debugInfo)
+    console.log("📊 Current Profiles Full Data:", currentProfiles)
+    console.log("🔍 Filtered Profiles:", filteredProfiles)
+    console.log("☑️ Selected Students:", selectedStudents)
+    console.log("🏪 Store Profiles:", profiles)
+    console.log("🐞 === END DEBUG INFO ===")
+  }, [collegeId, filterStatus, currentProfiles, filteredProfiles, selectedStudents, isLoading, searchQuery, selectAll, profiles])
 
   return (
     <div className="container mx-auto p-6">
@@ -246,11 +330,7 @@ const StudentApproval = () => {
         <div className="flex items-center space-x-2">
           <Select
             value={filterStatus}
-            onValueChange={(value) => {
-              setFilterStatus(value)
-              setSelectedStudents([])
-              setSelectAll(false)
-            }}
+            onValueChange={handleFilterChange}
           >
             <SelectTrigger className="w-[180px]">
               <SelectValue placeholder="Filter by status" />
@@ -351,30 +431,7 @@ const StudentApproval = () => {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={async () => {
-                            try {
-                              await updateProfile(
-                                { id: student.id },
-                                { verificationStatus: VerificationStatus.APPROVED }
-                              )
-                              
-                              if (collegeId) {
-                                setIsLoading(true)
-                                try {
-                                  await fetchProfile({
-                                    collegeId: collegeId,
-                                    verificationStatus: filterStatus.toUpperCase()
-                                  })
-                                } catch (error) {
-                                  console.error("Error refreshing profiles:", error)
-                                } finally {
-                                  setIsLoading(false)
-                                }
-                              }
-                            } catch (error) {
-                              console.error("Error approving student:", error)
-                            }
-                          }}
+                          onClick={() => handleSingleApprove(student.id)}
                           className="text-green-600 hover:text-green-700 hover:bg-green-50"
                         >
                           Approve

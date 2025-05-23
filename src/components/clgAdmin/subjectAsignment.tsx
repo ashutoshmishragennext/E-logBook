@@ -62,7 +62,9 @@ const SubjectAssignment: React.FC<SubjectAssignmentProps> = ({
     null
   );
   const [subjectSearchQuery, setSubjectSearchQuery] = useState("");
+  const [fetchIsLoading, setFetchIsLoading] = useState(false);
   console.log("years", years);
+ 
 
   // Form handling
   const form = useForm<AssignmentFormValues>({
@@ -83,11 +85,13 @@ const SubjectAssignment: React.FC<SubjectAssignmentProps> = ({
   const courseId = watch("courseId");
   const selectedSubjectIds = watch("subjectIds");
 
+
   // Inside useEffect: Fetch academic years and assigned subjects
   useEffect(() => {
     const fetchData = async () => {
       await fetchYears(); // wait for the years to be fetched
       setAcademicYears(useAcademicYearStore.getState().years); // fetch from latest state
+
       fetchAssignedSubjects(); // fetch assigned subjects
     };
 
@@ -123,12 +127,12 @@ const SubjectAssignment: React.FC<SubjectAssignmentProps> = ({
 
   // Fetch courses when branch is selected
   useEffect(() => {
-    if (!branchId) return;
 
     const fetchCourses = async () => {
       try {
         const res = await fetch(`/api/course`);
         const data = await res.json();
+        console.log("courses", data);
         setCourses(data);
       } catch (err) {
         console.error("Error fetching courses:", err);
@@ -190,7 +194,9 @@ const SubjectAssignment: React.FC<SubjectAssignmentProps> = ({
     try {
       const res = await fetch(`/api/subject?SubjectId=${subjectId}`);
       if (!res.ok) {
-        console.error(`Error fetching subject with ID ${subjectId}: ${res.statusText}`);
+        console.error(
+          `Error fetching subject with ID ${subjectId}: ${res.statusText}`
+        );
         return null;
       }
       const data = await res.json();
@@ -203,12 +209,14 @@ const SubjectAssignment: React.FC<SubjectAssignmentProps> = ({
 
   // Fetch teacher's assigned subjects with related data
   const fetchAssignedSubjects = async () => {
+    setFetchIsLoading(true);
+    setStatus("Fetching assigned subjects...");
     try {
       const res = await fetch(`/api/teacher-subjects?teacherId=${teacherId}`);
       if (!res.ok) {
         throw new Error(`Failed to fetch assigned subjects: ${res.statusText}`);
       }
-      
+
       const data = await res.json();
       console.log("Raw assigned subjects data:", data);
 
@@ -290,15 +298,20 @@ const SubjectAssignment: React.FC<SubjectAssignmentProps> = ({
             branch,
             course,
           };
-          
+
           console.log("Enriched assignment:", enrichedAssignment);
           return enrichedAssignment;
         })
       );
 
       setAssignedSubjects(enrichedData);
+      setStatus("Assigned subjects fetched successfully");
+      setFetchIsLoading(false);
     } catch (err) {
       console.error("Error fetching assigned subjects:", err);
+      setError("Failed to fetch assigned subjects");
+      setStatus("❌ Error occurred");
+      setFetchIsLoading(false);
     }
   };
 
@@ -394,16 +407,29 @@ const SubjectAssignment: React.FC<SubjectAssignmentProps> = ({
     }
   };
 
-  // Helper function to safely render subject name 
+  // Helper function to safely render subject name
   const renderSubjectName = (assignment: any) => {
     if (!assignment) return "N/A";
-    
-    if (assignment.subject && assignment.subject.name && assignment.subject.code) {
+
+    if (
+      assignment.subject &&
+      assignment.subject.name &&
+      assignment.subject.code
+    ) {
       return `${assignment.subject.name} (${assignment.subject.code})`;
     }
-    
+
     return `Subject ID: ${assignment.subjectId || "N/A"}`;
   };
+
+
+  if (fetchIsLoading) {
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -497,9 +523,12 @@ const SubjectAssignment: React.FC<SubjectAssignmentProps> = ({
                             {renderSubjectName(assignment)}
                           </td>
                           <td className="px-4 py-3 text-sm text-gray-900 border-b">
-                            {assignment.academicYear && assignment.academicYear.name
+                            {assignment.academicYear &&
+                            assignment.academicYear.name
                               ? assignment.academicYear.name
-                              : `Academic Year ID: ${assignment.academicYearId || "N/A"}`}
+                              : `Academic Year ID: ${
+                                  assignment.academicYearId || "N/A"
+                                }`}
                           </td>
                           <td className="px-4 py-3 text-sm text-gray-900 border-b">
                             {assignment.phase && assignment.phase.name
@@ -565,7 +594,52 @@ const SubjectAssignment: React.FC<SubjectAssignmentProps> = ({
               onSubmit={form.handleSubmit(handleFormSubmit)}
               className="space-y-4"
             >
-              {/* Academic Year */}
+              {/* Branch */}
+              <div>
+                <label className="block text-sm font-medium mb-1 text-gray-700">
+                  Branch *
+                </label>
+                <select
+                  {...form.register("branchId")}
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="">Select Branch</option>
+                  {branches.map((branch) => (
+                    <option key={branch.id} value={branch.id}>
+                      {branch.name} ({branch.code})
+                    </option>
+                  ))}
+                </select>
+                {form.formState.errors.branchId && (
+                  <p className="text-red-500 text-xs mt-1">
+                    {form.formState.errors.branchId.message}
+                  </p>
+                )}
+              </div>
+
+              {/* Course */}
+              <div>
+                <label className="block text-sm font-medium mb-1 text-gray-700">
+                  Course *
+                </label>
+                <select
+                  {...form.register("courseId")}
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="">Select Course</option>
+                  {courses.map((course) => (
+                    <option key={course.id} value={course.id}>
+                      {course.name}
+                    </option>
+                  ))}
+                </select>
+                {form.formState.errors.courseId && (
+                  <p className="text-red-500 text-xs mt-1">
+                    {form.formState.errors.courseId.message}
+                  </p>
+                )}
+              </div>
+
               <div>
                 <label className="block text-sm font-medium mb-1 text-gray-700">
                   Academic Year *
@@ -608,53 +682,6 @@ const SubjectAssignment: React.FC<SubjectAssignmentProps> = ({
                 {form.formState.errors.phaseId && (
                   <p className="text-red-500 text-xs mt-1">
                     {form.formState.errors.phaseId.message}
-                  </p>
-                )}
-              </div>
-
-              {/* Branch */}
-              <div>
-                <label className="block text-sm font-medium mb-1 text-gray-700">
-                  Branch *
-                </label>
-                <select
-                  {...form.register("branchId")}
-                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                >
-                  <option value="">Select Branch</option>
-                  {branches.map((branch) => (
-                    <option key={branch.id} value={branch.id}>
-                      {branch.name} ({branch.code})
-                    </option>
-                  ))}
-                </select>
-                {form.formState.errors.branchId && (
-                  <p className="text-red-500 text-xs mt-1">
-                    {form.formState.errors.branchId.message}
-                  </p>
-                )}
-              </div>
-
-              {/* Course */}
-              <div>
-                <label className="block text-sm font-medium mb-1 text-gray-700">
-                  Course *
-                </label>
-                <select
-                  {...form.register("courseId")}
-                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  disabled={!branchId}
-                >
-                  <option value="">Select Course</option>
-                  {courses.map((course) => (
-                    <option key={course.id} value={course.id}>
-                      {course.name}
-                    </option>
-                  ))}
-                </select>
-                {form.formState.errors.courseId && (
-                  <p className="text-red-500 text-xs mt-1">
-                    {form.formState.errors.courseId.message}
                   </p>
                 )}
               </div>

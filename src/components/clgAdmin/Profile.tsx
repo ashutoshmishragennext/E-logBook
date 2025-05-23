@@ -7,7 +7,8 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { toast } from 'sonner';
+import { toast } from "sonner";
+import { UploadButton } from "@/utils/uploadthing";
 
 const Profile = () => {
   const user = useCurrentUser();
@@ -28,11 +29,13 @@ const Profile = () => {
     }
   }, [college]);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
     const { name, value } = e.target;
-    setEditedCollege(prev => ({
+    setEditedCollege((prev) => ({
       ...prev,
-      [name]: value
+      [name]: value,
     }));
   };
 
@@ -41,25 +44,25 @@ const Profile = () => {
       if (!college?.id) return;
 
       console.log("Saving college data:", editedCollege);
-      
+
       const response = await fetch(`/api/college?id=${college.id}`, {
-        method: 'PUT',
+        method: "PUT",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify(editedCollege),
       });
 
-      if (!response.ok) throw new Error('Failed to update college');
+      if (!response.ok) throw new Error("Failed to update college");
 
       const updatedCollege = await response.json();
       updateCollege(updatedCollege);
       setIsEditing(false);
-      
-      toast( "College details updated successfully");
+
+      toast("College details updated successfully");
     } catch (error) {
       console.error("Error updating college:", error);
-      toast( "Failed to update college details");
+      toast("Failed to update college details");
     }
   };
 
@@ -72,20 +75,45 @@ const Profile = () => {
               <Image
                 width={48}
                 height={48}
-                src={college.logo}
+                src={
+                  isEditing && editedCollege.logo
+                    ? editedCollege.logo
+                    : college.logo
+                }
                 alt={college.name}
                 className="w-12 h-12 rounded-full object-cover"
               />
+
+              {isEditing && (
+                <UploadButton
+                  endpoint="imageUploader"
+                  className="h-16 text-xs mt-2"
+                  appearance={{ button: "h-9 text-md p-3" }}
+                  onClientUploadComplete={(res) => {
+                    if (res.length > 0) {
+                      setEditedCollege((prev) => ({
+                        ...prev,
+                        logo: res[0].serverData.fileUrl,
+                      }));
+                    }
+                  }}
+                  onUploadError={(error) => {
+                    console.error("Upload Error:", error);
+                    toast.error("Logo upload failed: " + error.message);
+                  }}
+                />
+              )}
+
               {isEditing ? (
                 <div className="flex flex-col gap-2">
                   <Input
                     name="name"
-                    value={editedCollege.name || ''}
+                    value={editedCollege.name || ""}
                     onChange={handleInputChange}
                   />
                   <Input
                     name="code"
-                    value={editedCollege.code || ''}
+                    value={editedCollege.code || ""}
                     onChange={handleInputChange}
                   />
                 </div>
@@ -113,25 +141,25 @@ const Profile = () => {
                 <div className="grid grid-cols-2 gap-2 mt-1">
                   <Input
                     name="address"
-                    value={editedCollege.address || ''}
+                    value={editedCollege.address || ""}
                     onChange={handleInputChange}
                     placeholder="Street address"
                   />
                   <Input
                     name="city"
-                    value={editedCollege.city || ''}
+                    value={editedCollege.city || ""}
                     onChange={handleInputChange}
                     placeholder="City"
                   />
                   <Input
                     name="state"
-                    value={editedCollege.state || ''}
+                    value={editedCollege.state || ""}
                     onChange={handleInputChange}
                     placeholder="State"
                   />
                   <Input
                     name="country"
-                    value={editedCollege.country || ''}
+                    value={editedCollege.country || ""}
                     onChange={handleInputChange}
                     placeholder="Country"
                   />
@@ -146,7 +174,7 @@ const Profile = () => {
               {isEditing ? (
                 <Input
                   name="phone"
-                  value={editedCollege.phone || ''}
+                  value={editedCollege.phone || ""}
                   onChange={handleInputChange}
                   className="mt-1"
                 />
@@ -160,7 +188,7 @@ const Profile = () => {
               {isEditing ? (
                 <Input
                   name="email"
-                  value={editedCollege.email || ''}
+                  value={editedCollege.email || ""}
                   onChange={handleInputChange}
                   className="mt-1"
                 />
@@ -174,7 +202,7 @@ const Profile = () => {
               {isEditing ? (
                 <Input
                   name="website"
-                  value={editedCollege.website || ''}
+                  value={editedCollege.website || ""}
                   onChange={handleInputChange}
                   className="mt-1"
                 />
@@ -195,7 +223,7 @@ const Profile = () => {
               {isEditing ? (
                 <Textarea
                   name="description"
-                  value={editedCollege.description || ''}
+                  value={editedCollege.description || ""}
                   onChange={handleInputChange}
                   className="mt-1"
                   rows={4}

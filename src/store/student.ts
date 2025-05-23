@@ -61,9 +61,12 @@ export const useStudentProfileStore = create<StudentProfileStore>((set) => ({
   fetchProfile: async (query) => {
     set({ loading: true, error: null });
     const searchParams = new URLSearchParams(query as any).toString();
+    console.log('Fetching student profile with query:', searchParams);
     try {
       const res = await fetch(`/api/student-profile?${searchParams}`);
       const data = await res.json();
+
+      console.log('Fetched student profile: in store', data);
       
       if (!res.ok) throw new Error(data.message || 'Failed to fetch profile');
       

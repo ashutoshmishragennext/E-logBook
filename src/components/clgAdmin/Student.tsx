@@ -166,10 +166,13 @@ const Students = () => {
     try {
       // Validate and format the parsed data
       const formattedData = parsedData.map((item) => ({
-        name: item.name || item.Name || "",
-        email: item.email || item.Email || "",
+        name: item.name || item.Name || "" ,
+        email: item.email || item.Email || item["Email Id"]|| "" ,
         role: "STUDENT",
         phone:
+          item["Mobile Number"] ||
+          item["Phone Number"] ||
+
           item.mobile ||
           item.Mobile ||
           item.mobileNo ||
@@ -182,7 +185,7 @@ const Students = () => {
           branchId: item.branchId || item.BranchId || "",
           courseId: item.courseId || item.CourseId || "",
           academicYearId: item.academicYearId || item.AcademicYearId || "",
-          rollNo: item.rollNo || item.RollNo || "",
+          rollNo: item.rollNo || item.RollNo ||item["Roll Number"]||item["ROLL NUMBER"] ||item["Roll No"] || "",
           mobileNo:
             item.mobile ||
             item.Mobile ||
@@ -256,6 +259,32 @@ const Students = () => {
       );
     }
   );
+
+
+  const handleDeleteStudent = (student:any) => {
+    const confirmDelete = window.confirm(
+      `Are you sure you want to delete ${student.name}?`
+    );
+    console.log("Student to delete:", student);
+    if (confirmDelete) {
+      fetch(`/api/student-profile?id=${student.id}`, {
+        method: "DELETE",
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.success) {
+            setStatus(`✅ Student ${student.name} deleted successfully!`);
+          } else {
+            setError(data.error || "Failed to delete student");
+          }
+        })
+        .catch((err) => {
+          console.error("Error deleting student:", err);
+          setError("❌ Error occurred while deleting student");
+        });
+    }
+
+  }
 
   return (
     <div className="p-6 bg-white rounded-lg shadow-md">
@@ -416,7 +445,7 @@ const Students = () => {
                           <button className="text-blue-600 hover:underline mr-3">
                             Edit
                           </button>
-                          <button className="text-red-600 hover:underline">
+                          <button className="text-red-600 hover:underline" onClick={() => handleDeleteStudent(student)}> 
                             Delete
                           </button>
                         </td>

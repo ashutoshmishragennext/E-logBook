@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 import { signOut, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import {  useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 
 const sidebarItems = [
   {
@@ -50,7 +50,7 @@ const sidebarItems = [
     label: "Student Approval",
     icon: <User size={20} />,
     component: <StudentApproval />,
-  },
+  }
 ];
 
 const Sidebar = () => {
@@ -66,22 +66,28 @@ const Sidebar = () => {
 
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
-  const handleLogout = async (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
+  const handleLogout = async (
+    e: React.MouseEvent<HTMLButtonElement, MouseEvent>
+  ) => {
     // Ensure we have the event parameter and prevent default behavior
     if (e) {
       e.preventDefault();
       e.stopPropagation();
     }
-    
+
     setIsLoggingOut(true);
     try {
-      await signOut({ callbackUrl: "/auth/login"});
+      await signOut({ callbackUrl: "/auth/login" });
     } catch (error) {
       console.error("Logout error:", error);
       setIsLoggingOut(false);
     }
   };
-
+  useEffect(() => {
+    if (session?.user?.role !== "COLLEGE_ADMIN") {
+      router.push("/auth/login");
+    }
+  }, [session, router]);
   useEffect(() => {
     if (status === "unauthenticated") {
       router.push("/auth/login");
@@ -198,9 +204,7 @@ const Sidebar = () => {
 
             {/* Dropdown menu - fixed with proper event handling */}
             {profileDropdownOpen && (
-              <div
-                className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 border border-gray-200 z-10 profile-dropdown"
-              >
+              <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 border border-gray-200 z-10 profile-dropdown">
                 <button
                   onClick={(e) => handleLogout(e)}
                   disabled={isLoggingOut}
@@ -230,7 +234,9 @@ type SidebarContentProps = {
   sidebarOpen: boolean;
   setSidebarOpen: React.Dispatch<React.SetStateAction<boolean>>;
   activeComponent: string;
-  setActiveComponent: React.Dispatch<React.SetStateAction<string>> | ((id: string) => void);
+  setActiveComponent:
+    | React.Dispatch<React.SetStateAction<string>>
+    | ((id: string) => void);
   session: any;
   handleLogout: (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => void;
 };

@@ -9,6 +9,11 @@ export async function GET(req: NextRequest) {
   const branchId = req.nextUrl.searchParams.get('branchId');
   const id = req.nextUrl.searchParams.get('id');
 
+  if(!id && !branchId) {
+    const data = await db.select().from(CourseTable);
+    return NextResponse.json(data);
+  }
+
   try {
     if (id) {
       const course = await db.select().from(CourseTable).where(eq(CourseTable.id, id));

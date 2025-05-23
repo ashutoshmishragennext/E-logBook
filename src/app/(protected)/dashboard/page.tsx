@@ -30,7 +30,7 @@ export default function Dashboard() {
 
     switch (role) {
       case "COLLEGE_ADMIN":
-        router.push("/dashboard/clg-admin/");
+        router.push("/dashboard/clg-admin");
         break;
 
       case "STUDENT":

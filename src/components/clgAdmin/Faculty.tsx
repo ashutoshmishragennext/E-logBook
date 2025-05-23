@@ -38,13 +38,13 @@ const Faculty = () => {
   const [activeTab, setActiveTab] = useState("list");
   const [showAssignSubjects, setShowAssignSubjects] = useState(false);
   const [selectedTeacher, setSelectedTeacher] = useState<any>(null);
-  
+
   const exportHeaders = {
     name: "Name",
     email: "Email",
     designation: "Designation",
     employeeId: "Employee ID",
-    mobileNo: "Mobile Number"
+    mobileNo: "Mobile Number",
   };
 
   const form = useForm<FormValues>({
@@ -126,6 +126,7 @@ const Faculty = () => {
         email: item.email || item.Email || "",
         role: "TEACHER",
         phone:
+          item["Mobile Number"] ||
           item.mobile ||
           item.Mobile ||
           item.mobileNo ||
@@ -137,8 +138,13 @@ const Faculty = () => {
           collegeId: collegeId,
           designation: item.designation || item.Designation || "",
           employeeId:
-            item.employeeId || item.EmployeeId || item["Employee ID"] || "",
+            item["Employee Id"] ||
+            item["Employee ID"] ||
+            item.employeeId ||
+            item.EmployeeId ||
+            "",
           mobileNo:
+            item["Mobile Number"] ||
             item.mobile ||
             item.Mobile ||
             item.mobileNo ||
@@ -290,16 +296,18 @@ const Faculty = () => {
 
             <div className="flex gap-3">
               {/* Using the reusable FileImporter component */}
-              <FileImporter 
+              <FileImporter
                 onImport={handleImportComplete}
                 acceptedFileTypes=".xlsx,.xls,.csv"
                 buttonText="Import"
               />
 
               {/* Using the reusable FileExporter component */}
-              <FileExporter 
+              <FileExporter
                 data={filteredTeachers}
-                fileName={`teachers_${new Date().toISOString().split("T")[0]}.xlsx`}
+                fileName={`teachers_${
+                  new Date().toISOString().split("T")[0]
+                }.xlsx`}
                 headers={exportHeaders}
                 buttonText="Export"
                 disabled={filteredTeachers.length === 0}
@@ -337,7 +345,7 @@ const Faculty = () => {
                       Mobile Number
                     </th>
                     <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 border-b">
-                      Actions 
+                      Actions
                     </th>
                   </tr>
                 </thead>
@@ -363,8 +371,8 @@ const Faculty = () => {
                         {teacher.mobileNo}
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-900 border-b">
-                        <button 
-                          onClick={() => handleAssignSubject(teacher)} 
+                        <button
+                          onClick={() => handleAssignSubject(teacher)}
                           className="text-blue-600 hover:underline"
                         >
                           Assign Subject

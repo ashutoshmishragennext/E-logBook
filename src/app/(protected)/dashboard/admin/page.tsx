@@ -129,6 +129,12 @@ const Sidebar = () => {
     }
   }, [status, router]);
 
+  useEffect(() => {
+    if(session?.user?.role !== "ADMIN") {
+      router.push("/auth/login");
+    }
+  },[session, router]);
+
   // Close profile dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
