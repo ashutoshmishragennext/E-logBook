@@ -1,0 +1,2 @@
+ALTER TABLE "log_book_templates" ADD COLUMN "college_id" uuid;--> statement-breakpoint
+ALTER TABLE "log_book_templates" ADD CONSTRAINT "log_book_templates_college_id_colleges_id_fk" FOREIGN KEY ("college_id") REFERENCES "public"."colleges"("id") ON DELETE no action ON UPDATE no action;

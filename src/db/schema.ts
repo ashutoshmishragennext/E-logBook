@@ -378,6 +378,7 @@ export const LogBookTemplateTable = pgTable(
     // Template Configuration
     name: text("name").notNull(), // e.g., "Lab Experiments", "Project Work"
     description: text("description"),
+    collegeId: uuid("college_id").references(() => CollegeTable.id),
     
     // Dynamic Schema Configuration
     dynamicSchema: jsonb("dynamic_schema").default({

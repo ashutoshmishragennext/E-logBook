@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any*/
 "use client";
 
+import { SubjectTemplateForm } from "@/components/adminComponent/SubjectTemplate";
 import Batch from "@/components/clgAdmin/Batch";
 import Faculty from "@/components/clgAdmin/Faculty";
 import Profile from "@/components/clgAdmin/Profile";
@@ -50,6 +51,12 @@ const sidebarItems = [
     label: "Student Approval",
     icon: <User size={20} />,
     component: <StudentApproval />,
+  },
+  {
+    id:"Templates",
+    label:"Subject Templates",
+    icon:<User size={20} />,
+    component: <SubjectTemplateForm/>,
   }
 ];
 

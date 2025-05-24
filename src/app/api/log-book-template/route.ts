@@ -5,6 +5,7 @@ import { LogBookTemplateTable } from "@/db/schema";
 import { and, eq } from "drizzle-orm";
 
 import { z } from "zod";
+import { collectMeta } from "next/dist/build/utils";
 
 // Define validation schemas for templates
 const fieldSchema = z.object({
@@ -32,6 +33,7 @@ const baseTemplateSchema = z.object({
   description: z.string().optional(),
   dynamicSchema: dynamicSchemaValidation,
   createdBy: z.string().uuid(),
+  collegeId: z.string().uuid().optional(),
 
 });
 

@@ -1,10 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Form,
   FormControl,
@@ -26,7 +23,7 @@ import { useCurrentUser } from "@/hooks/auth";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Save } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { use, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { FieldBuilder } from "./FieldBuilder";
@@ -37,7 +34,8 @@ import {
   TemplateFormValues,
 } from "./types";
 
-import { toast } from 'sonner';
+import { toast } from "sonner";
+import { useCollegeStore } from "@/store/college";
 
 // Simplified form validation schema
 const subjectTemplateSchema = z.object({
@@ -46,6 +44,7 @@ const subjectTemplateSchema = z.object({
   templateType: z.literal("subject"),
   subjectId: z.string().min(1, "Subject is required"),
   createdBy: z.string(),
+  collegeId: z.string().optional(),
 });
 
 interface SubjectTemplateFormProps {
@@ -62,6 +61,24 @@ export function SubjectTemplateForm({
   const router = useRouter();
   const isEditing = !!initialData;
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const [collegeId, setCollegeId] = useState<string | null>(null);
+
+  const { college, fetchCollegeDetail } = useCollegeStore();
+
+  useEffect(() => {
+    if (userId) {
+      fetchCollegeDetail(userId);
+    }
+  }, [userId, fetchCollegeDetail]);
+  console.log("College:", college);
+  useEffect(() => {
+    if (college) {
+      setCollegeId(college.id);
+    }
+  }, [college]);
+
+  console.log("College ID:", collegeId);
 
   // State for dynamic form building
   const [templateSchema, setTemplateSchema] = useState<LogBookTemplateSchema>(
@@ -81,6 +98,7 @@ export function SubjectTemplateForm({
       templateType: "subject",
       subjectId: initialData?.subjectId || "",
       createdBy: userId,
+      collegeId: collegeId ?? undefined,
     },
   });
 
@@ -93,7 +111,11 @@ export function SubjectTemplateForm({
         const data = await response.json();
         setSubjects(data);
       } catch (error) {
-        toast(`Error fetching subjects: ${error instanceof Error ? error.message : String(error)}`);
+        toast(
+          `Error fetching subjects: ${
+            error instanceof Error ? error.message : String(error)
+          }`
+        );
       }
     };
 
@@ -104,7 +126,7 @@ export function SubjectTemplateForm({
   const onSubmit = async (data: z.infer<typeof subjectTemplateSchema>) => {
     try {
       setIsSubmitting(true);
-      
+
       // Validate that there are fields in the template
       if (templateSchema.groups.every((group) => group.fields.length === 0)) {
         toast("Please add at least one field to your template");
@@ -134,13 +156,12 @@ export function SubjectTemplateForm({
       }
 
       // Show success toast
-      toast(`Template ${isEditing ? "updated" : "created"} successfully!`,);
-
+      toast(`Template ${isEditing ? "updated" : "created"} successfully!`);
 
       // Execute success callback or navigate to templates list
       if (onSuccess) {
         onSuccess();
-        toast("Template saved successfully!");  
+        toast("Template saved successfully!");
       } else {
         // If no callback provided, you might want to redirect
         toast("Template saved successfully!");
@@ -233,7 +254,7 @@ export function SubjectTemplateForm({
               Cancel
             </Button>
             <Button type="submit" disabled={isSubmitting}>
-              <Save className="h-4 w-4 mr-1" /> 
+              <Save className="h-4 w-4 mr-1" />
               {isSubmitting ? "Saving..." : "Save Template"}
             </Button>
           </div>
