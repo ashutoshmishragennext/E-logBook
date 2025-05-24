@@ -421,6 +421,7 @@ export default function StudentSubjectSelection({
     setSelectedPhaseId(value);
   };
 
+// Update the handleSubjectSelect function in your component
 const handleSubjectSelect = (subjectId: string) => {
   setCurrentSubjectId(subjectId);
   setLoadingTeachers(true);
@@ -434,8 +435,8 @@ const handleSubjectSelect = (subjectId: string) => {
     batchFetchSubjects([subjectId]);
   }
 
-  // Fetch teachers for this subject
-  fetchTeacherSubjectsBySubjectId(subjectId).then(() => {
+  // Fetch teachers for this subject with college ID filter
+  fetchTeacherSubjectsBySubjectId(subjectId, selectedCollegeId).then(() => {
     setLoadingTeachers(false);
 
     // Check if there are no teachers for this subject
@@ -602,39 +603,40 @@ const handleSubjectSelect = (subjectId: string) => {
     );
   };
 
-  // Submit all selected subject-teacher pairs
-  const handleSubmit = async () => {
-    setSubmitLoading(true);
-    setSubmitSuccess(false);
+ // Update the handleSubmit function in your component
+const handleSubmit = async () => {
+  setSubmitLoading(true);
+  setSubmitSuccess(false);
 
-    try {
-      // Create allocation for each selected subject-teacher pair
-      for (const item of selectedSubjects) {
-        await createAllocation({
-          studentId,
-          subjectId: item.subjectId,
-          teacherSubjectId: item.teacherSubjectId,
-          teacherId: item.teacherId,
-          academicYearId: selectedAcademicYearId,
-          phaseId: selectedPhaseId,
-        });
-      }
-
-      // Reset selections and show success
-      setSelectedSubjects([]);
-      setSubmitSuccess(true);
-      fetchStudentAllocations(studentId);
-
-      // Clear success message after 3 seconds
-      setTimeout(() => {
-        setSubmitSuccess(false);
-      }, 3000);
-    } catch (err) {
-      console.error("Error submitting allocations:", err);
-    } finally {
-      setSubmitLoading(false);
+  try {
+    // Create allocation for each selected subject-teacher pair
+    for (const item of selectedSubjects) {
+      await createAllocation({
+        studentId,
+        subjectId: item.subjectId,
+        teacherSubjectId: item.teacherSubjectId,
+        teacherId: item.teacherId,
+        academicYearId: selectedAcademicYearId,
+        phaseId: selectedPhaseId,
+        collegeId: selectedCollegeId, // Add collegeId here
+      });
     }
-  };
+
+    // Reset selections and show success
+    setSelectedSubjects([]);
+    setSubmitSuccess(true);
+    fetchStudentAllocations(studentId);
+
+    // Clear success message after 3 seconds
+    setTimeout(() => {
+      setSubmitSuccess(false);
+    }, 3000);
+  } catch (err) {
+    console.error("Error submitting allocations:", err);
+  } finally {
+    setSubmitLoading(false);
+  }
+};
 
   // Check if a subject is already allocated to student
   const isSubjectAllocated = (subjectId: string): boolean => {

@@ -169,6 +169,20 @@
       "when": 1747387617830,
       "tag": "0023_messy_frightful_four",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1748067370763,
+      "tag": "0024_moaning_brother_voodoo",
+      "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1748071532477,
+      "tag": "0025_closed_moondragon",
+      "breakpoints": true
     }
   ]
 }

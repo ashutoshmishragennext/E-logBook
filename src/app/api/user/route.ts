@@ -32,15 +32,15 @@ export async function GET(request: NextRequest) {
   }
 }
 
-function generateTempPassword(length = 10) {
-  const charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*";
-  let password = "";
-  for (let i = 0; i < length; i++) {
-    const randomIndex = Math.floor(Math.random() * charset.length);
-    password += charset[randomIndex];
-  }
-  return password;
-}
+// function generateTempPassword(length = 10) {
+//   const charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*";
+//   let password = "";
+//   for (let i = 0; i < length; i++) {
+//     const randomIndex = Math.floor(Math.random() * charset.length);
+//     password += charset[randomIndex];
+//   }
+//   return password;
+// }
 
 export async function POST(req: NextRequest) {
   try {
@@ -86,7 +86,7 @@ async function handleSingleUserCreation(userData: any) {
 
   // Default to USER role if not specified
   const role = userData.role || "USER";
-  const password = userData.password || generateTempPassword();
+  const password = userData.password || userData.email;
   console.log("Generated password:", password);
 
   // Create user
@@ -213,7 +213,8 @@ async function handleBulkUserCreation(usersData: any[]) {
       }
 
       // Generate password if not provided
-      const password = userData.password || generateTempPassword();
+      const password = userData.password || userData.email;
+      console.log("Generated password:", password);
       
       // Default to USER role if not specified
       const role = userData.role || "USER";

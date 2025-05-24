@@ -35,7 +35,12 @@ const Sidebar = () => {
   const activeItem = sidebarItems.find(item => item.id === activeComponent);
 
   const handleLogout = async () => {
-    await signOut({ redirectTo: "/auth/login" });
+    try {
+      setProfileDropdownOpen(false); // Close dropdown first
+      await signOut({ redirectTo: "/auth/login" });
+    } catch (error) {
+      console.error("Logout failed:", error);
+    }
   };
 
   useEffect(() => {
@@ -142,7 +147,7 @@ const Sidebar = () => {
           </div>
 
           {/* Profile dropdown - enhanced */}
-          <div className="relative">
+          <div className="relative profile-dropdown">
             <button
               onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
               className="flex items-center space-x-2 text-gray-700 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-full p-1"
@@ -161,19 +166,16 @@ const Sidebar = () => {
               />
             </button>
 
-            {/* Dropdown menu - polished */}
+            {/* Dropdown menu - fixed logout functionality */}
             {profileDropdownOpen && (
-              <div
-                className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 border border-gray-200 z-10"
-                onMouseLeave={() => setProfileDropdownOpen(false)}
-              >
-                <a
-                  href="#"
-                  className="block px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-100 transition-colors flex items-center space-x-3"
+              <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 border border-gray-200 z-50">
+                <button
+                  onClick={() => setActiveComponent("Profile")}
+                  className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-100 transition-colors flex items-center space-x-3"
                 >
                   <User size={16} className="text-gray-500" />
                   <span>My Profile</span>
-                </a>
+                </button>
                 <hr className="my-1 border-gray-200" />
                 <button
                   onClick={handleLogout}

@@ -1,4 +1,4 @@
-/* eslint-disable react-hooks/exhaustive-deps*/
+
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -10,13 +10,13 @@ import { useCollegeStore } from '@/store/college'
 import { useStudentProfileStore, VerificationStatus } from '@/store/student'
 import { useStudentSubjectStore } from '@/store/studentSubjectStore'
 import { Search } from 'lucide-react'
-import { useEffect, useState, useCallback, useMemo } from 'react'
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react'
 
 const StudentApproval = () => {
   const user = useCurrentUser()
   const userId = user?.id
   const { college, fetchCollegeDetail } = useCollegeStore()
-  const { fetchProfile, updateProfile, profiles } = useStudentProfileStore() // Add profiles from store
+  const { fetchProfile, updateProfile, profiles } = useStudentProfileStore()
   const { branches, fetchBranches, course, fetchCourses, academicYears, fetchAcademicYears } = useStudentSubjectStore()
   
   // States for managing table functionality
@@ -27,74 +27,79 @@ const StudentApproval = () => {
   const [rejectionReason, setRejectionReason] = useState("")
   const [searchQuery, setSearchQuery] = useState("")
   const [isLoading, setIsLoading] = useState(false)
-  const [collegeFetched, setCollegeFetched] = useState(false)
   
-  // Memoize collegeId to prevent unnecessary re-renders
+  // Use refs to track initialization states
+  const initializationRef = useRef({
+    college: false,
+    staticData: false,
+    profiles: false
+  })
+  
+  // Stable collegeId reference
   const collegeId = useMemo(() => college?.id || null, [college?.id])
 
-  // Fetch college details when component mounts - only once
+  // Initialize college data only once
   useEffect(() => {
-    const fetchData = async () => {
-      if (userId && !collegeFetched) {
-        console.log("🏫 Fetching college details for userId:", userId)
-        setCollegeFetched(true)
-        await fetchCollegeDetail(userId)
+    const initializeCollege = async () => {
+      if (userId && !initializationRef.current.college) {
+        console.log("🏫 Initializing college details for userId:", userId)
+        initializationRef.current.college = true
+        try {
+          await fetchCollegeDetail(userId)
+        } catch (error) {
+          console.error("❌ Error fetching college:", error)
+          initializationRef.current.college = false // Reset on error
+        }
       }
     }
-    fetchData()
-  }, [userId, collegeFetched, fetchCollegeDetail])
+    initializeCollege()
+  }, [userId, fetchCollegeDetail])
 
-  // Fetch initial data (branches, courses, academic years) - only once
+  // Initialize static data only once
   useEffect(() => {
-    const fetchInitialData = async () => {
-      console.log("📚 Fetching initial data (branches, courses, academic years)")
-      try {
-        await Promise.all([
-          fetchBranches(),
-          fetchCourses(),
-          fetchAcademicYears()
-        ])
-        console.log("📚 Initial data fetched successfully")
-      } catch (error) {
-        console.error("❌ Error fetching initial data:", error)
+    const initializeStaticData = async () => {
+      if (!initializationRef.current.staticData) {
+        console.log("📚 Initializing static data (branches, courses, academic years)")
+        initializationRef.current.staticData = true
+        try {
+          await Promise.all([
+            fetchBranches(),
+            fetchCourses(),
+            fetchAcademicYears()
+          ])
+          console.log("📚 Static data initialized successfully")
+        } catch (error) {
+          console.error("❌ Error fetching static data:", error)
+          initializationRef.current.staticData = false // Reset on error
+        }
       }
     }
-    fetchInitialData()
-  }, []) // Empty dependency array - only run once
+    initializeStaticData()
+  }, [fetchBranches, fetchCourses, fetchAcademicYears])
 
-  // Memoized function to fetch profiles
-  const fetchProfilesForStatus = useCallback(async (status: string, logPrefix: string = "") => {
+  // Memoized function to fetch profiles - with proper caching
+  const fetchProfilesForStatus = useCallback(async (status: string, forceRefresh: boolean = false) => {
     if (!collegeId) {
-      console.log(`${logPrefix}⚠️ No collegeId available, skipping fetch`)
+      console.log("⚠️ No collegeId available, skipping fetch")
       return []
     }
 
-    console.log(`${logPrefix}🔄 Starting fetch for status: ${status}, collegeId: ${collegeId}`)
+    // Create a unique key for this fetch operation
+    // const fetchKey = `${collegeId}_${status.toUpperCase()}`
+    
+    console.log(`🔄 Fetching profiles for status: ${status}, collegeId: ${collegeId}, forceRefresh: ${forceRefresh}`)
     setIsLoading(true)
     
     try {
-      const startTime = Date.now()
-      
-      // Fetch profiles and ensure we get the return value
       await fetchProfile({ 
         collegeId: collegeId, 
         verificationStatus: status.toUpperCase() 
       });
       
-      // Get profiles from store after fetch
-      const fetchedProfiles = profiles || [];
-      
-      const endTime = Date.now()
-      const duration = endTime - startTime
-      
-      console.log(`${logPrefix}✅ Fetch completed for status: ${status}`)
-      console.log(`${logPrefix}⏱️ Fetch duration: ${duration}ms`)
-      console.log(`${logPrefix}📊 Number of profiles fetched: ${fetchedProfiles.length}`)
-      console.log(`${logPrefix}📋 Fetched profiles data:`, fetchedProfiles)
-      
-      return fetchedProfiles
+      console.log(`✅ Profiles fetched successfully for status: ${status}`)
+      return profiles || []
     } catch (error) {
-      console.error(`${logPrefix}❌ Error fetching profiles for status ${status}:`, error)
+      console.error(`❌ Error fetching profiles for status ${status}:`, error)
       return []
     } finally {
       setIsLoading(false)
@@ -110,46 +115,40 @@ const StudentApproval = () => {
     )
   }, [profiles, filterStatus])
 
-  // Main effect to fetch profiles when collegeId or filterStatus changes
+  // Fetch profiles when collegeId becomes available or filter changes
   useEffect(() => {
-    const fetchData = async () => {
-      if (!collegeId) {
-        console.log("⚠️ CollegeId not available, skipping profile fetch")
+    const fetchInitialProfiles = async () => {
+      if (!collegeId || initializationRef.current.profiles) {
         return
       }
 
-      console.log("🚀 === STARTING PROFILE FETCH ===")
-      console.log("📊 Current state:", {
-        collegeId,
-        filterStatus,
-        timestamp: new Date().toISOString()
-      })
-
-      // Clear selections
+      console.log("🚀 Fetching initial profiles")
+      initializationRef.current.profiles = true
+      
+      // Clear selections when changing filters
       setSelectedStudents([])
       setSelectAll(false)
 
-      await fetchProfilesForStatus(filterStatus, "[MAIN_FETCH] ")
-      
-      console.log("✅ === PROFILE FETCH COMPLETED ===")
+      await fetchProfilesForStatus(filterStatus)
     }
 
-    fetchData()
-  }, [collegeId, filterStatus, fetchProfilesForStatus])
+    fetchInitialProfiles()
+  }, [collegeId, fetchProfilesForStatus, filterStatus])
 
-  // Handle select all checkbox
+  // Reset profiles initialization flag when filter changes
   useEffect(() => {
-    if (selectAll && currentProfiles.length > 0) {
-      console.log("☑️ Selecting all students:", currentProfiles.length)
+    initializationRef.current.profiles = false
+  }, [filterStatus])
+
+  // Handle select all checkbox with proper dependency management
+  const handleSelectAllChange = useCallback((checked: boolean) => {
+    setSelectAll(checked)
+    if (checked && currentProfiles.length > 0) {
       setSelectedStudents(currentProfiles.map(profile => profile.id))
-    } else if (!selectAll) {
-      // Only clear if we're explicitly unsetting selectAll, not on initial load
-      if (selectedStudents.length > 0) {
-        console.log("☐ Clearing all selections")
-        setSelectedStudents([])
-      }
+    } else {
+      setSelectedStudents([])
     }
-  }, [selectAll, currentProfiles.length])
+  }, [currentProfiles])
 
   // Filter profiles based on search query
   const filteredProfiles = useMemo(() => 
@@ -160,10 +159,10 @@ const StudentApproval = () => {
     ), [currentProfiles, searchQuery]
   )
 
-  // Helper functions to get names from IDs
+  // Helper functions to get names from IDs - memoized
   const getCourseName = useCallback((courseId: string) => {
-    const courseName = course.find(b => b.id === courseId)
-    return courseName ? courseName.name : 'Unknown Course'
+    const foundCourse = course.find(c => c.id === courseId)
+    return foundCourse ? foundCourse.name : 'Unknown Course'
   }, [course])
   
   const getBranchName = useCallback((branchId: string) => {
@@ -172,18 +171,23 @@ const StudentApproval = () => {
   }, [branches])
 
   const getAcademicYearName = useCallback((academicYearId: string) => {
-    const academicYear = academicYears.find(b => b.id === academicYearId)
+    const academicYear = academicYears.find(ay => ay.id === academicYearId)
     return academicYear ? academicYear.name : 'Unknown Academic Year'
   }, [academicYears])
 
   // Toggle single student selection
   const toggleStudentSelection = useCallback((id: string) => {
-    setSelectedStudents(prev => 
-      prev.includes(id) 
+    setSelectedStudents(prev => {
+      const newSelection = prev.includes(id) 
         ? prev.filter(studentId => studentId !== id)
         : [...prev, id]
-    )
-  }, [])
+      
+      // Update selectAll state based on new selection
+      setSelectAll(newSelection.length === currentProfiles.length && currentProfiles.length > 0)
+      
+      return newSelection
+    })
+  }, [currentProfiles.length])
 
   // Handle filter status change
   const handleFilterChange = useCallback((newStatus: string) => {
@@ -191,13 +195,15 @@ const StudentApproval = () => {
     setFilterStatus(newStatus)
     setSelectedStudents([])
     setSelectAll(false)
-    setSearchQuery("") // Clear search when changing filters
+    setSearchQuery("")
+    // Reset the profiles initialization flag to allow new fetch
+    initializationRef.current.profiles = false
   }, [filterStatus])
 
   // Helper function to refresh current filter data
   const refreshCurrentFilter = useCallback(async () => {
     console.log("🔄 Refreshing current filter data for status:", filterStatus)
-    await fetchProfilesForStatus(filterStatus, "[REFRESH] ")
+    await fetchProfilesForStatus(filterStatus, true) // Force refresh
     console.log("✅ Refresh completed")
   }, [filterStatus, fetchProfilesForStatus])
 
@@ -206,6 +212,7 @@ const StudentApproval = () => {
     if (selectedStudents.length === 0) return
     
     console.log("✅ Starting bulk approval for students:", selectedStudents)
+    setIsLoading(true)
     
     try {
       const updatePromises = selectedStudents.map(studentId => 
@@ -226,6 +233,8 @@ const StudentApproval = () => {
       setSelectAll(false)
     } catch (error) {
       console.error("❌ Error in bulk approval:", error)
+    } finally {
+      setIsLoading(false)
     }
   }, [selectedStudents, updateProfile, refreshCurrentFilter])
 
@@ -234,6 +243,7 @@ const StudentApproval = () => {
     if (selectedStudents.length === 0) return
     
     console.log("❌ Starting bulk rejection for students:", selectedStudents, "with reason:", rejectionReason)
+    setIsLoading(true)
     
     try {
       const updatePromises = selectedStudents.map(studentId => 
@@ -259,12 +269,15 @@ const StudentApproval = () => {
       setSelectAll(false)
     } catch (error) {
       console.error("❌ Error in bulk rejection:", error)
+    } finally {
+      setIsLoading(false)
     }
   }, [selectedStudents, rejectionReason, updateProfile, refreshCurrentFilter])
 
   // Handle single student approval
   const handleSingleApprove = useCallback(async (studentId: string) => {
     console.log("✅ Starting single approval for student:", studentId)
+    setIsLoading(true)
     
     try {
       await updateProfile(
@@ -277,53 +290,20 @@ const StudentApproval = () => {
       await refreshCurrentFilter()
     } catch (error) {
       console.error("❌ Error in single approval:", error)
+    } finally {
+      setIsLoading(false)
     }
   }, [updateProfile, refreshCurrentFilter])
 
   // Calculate the number of columns based on the current filter
   const getColumnCount = useCallback(() => {
-    // Base columns: checkbox, name, roll no, email, mobile, branch, course, year, actions
     const baseColumnCount = 9
-    // Add one more column for rejection reason when viewing rejected profiles
     return filterStatus === "REJECTED" ? baseColumnCount + 1 : baseColumnCount
   }, [filterStatus])
-
-  // Debug function to help troubleshoot
-  const debugStateInfo = useCallback(() => {
-    const debugInfo = {
-      collegeId,
-      filterStatus,
-      currentProfilesCount: currentProfiles.length,
-      filteredProfilesCount: filteredProfiles.length,
-      selectedStudentsCount: selectedStudents.length,
-      isLoading,
-      searchQuery,
-      selectAll,
-      timestamp: new Date().toISOString()
-    }
-    
-    console.log("🐞 === DEBUG STATE INFO ===")
-    console.table(debugInfo)
-    console.log("📊 Current Profiles Full Data:", currentProfiles)
-    console.log("🔍 Filtered Profiles:", filteredProfiles)
-    console.log("☑️ Selected Students:", selectedStudents)
-    console.log("🏪 Store Profiles:", profiles)
-    console.log("🐞 === END DEBUG INFO ===")
-  }, [collegeId, filterStatus, currentProfiles, filteredProfiles, selectedStudents, isLoading, searchQuery, selectAll, profiles])
 
   return (
     <div className="container mx-auto p-6">
       <h1 className="text-2xl font-bold mb-6">Student Verification</h1>
-      
-      {/* Debug button - remove in production */}
-      <Button 
-        onClick={debugStateInfo} 
-        variant="outline" 
-        className="mb-2"
-        size="sm"
-      >
-        Debug State
-      </Button>
       
       {/* Filters and Actions */}
       <div className="flex flex-wrap justify-between items-center mb-6 gap-4">
@@ -357,7 +337,7 @@ const StudentApproval = () => {
           <Button
             variant="outline"
             onClick={() => setRejectionDialogOpen(true)}
-            disabled={selectedStudents.length === 0 || filterStatus !== "PENDING"}
+            disabled={selectedStudents.length === 0 || filterStatus !== "PENDING" || isLoading}
             className="bg-red-50 text-red-600 border-red-200 hover:bg-red-100"
           >
             Reject Selected ({selectedStudents.length})
@@ -365,7 +345,7 @@ const StudentApproval = () => {
           
           <Button
             onClick={handleBulkApprove}
-            disabled={selectedStudents.length === 0 || filterStatus !== "PENDING"}
+            disabled={selectedStudents.length === 0 || filterStatus !== "PENDING" || isLoading}
             className="bg-green-600 hover:bg-green-700"
           >
             Approve Selected ({selectedStudents.length})
@@ -381,8 +361,8 @@ const StudentApproval = () => {
               <th className="p-4 text-left">
                 <Checkbox
                   checked={selectAll}
-                  onCheckedChange={() => setSelectAll(!selectAll)}
-                  disabled={filterStatus !== "PENDING" || currentProfiles.length === 0}
+                  onCheckedChange={handleSelectAllChange}
+                  disabled={filterStatus !== "PENDING" || currentProfiles.length === 0 || isLoading}
                 />
               </th>
               <th className="p-4 text-left font-medium">Name</th>
@@ -412,7 +392,7 @@ const StudentApproval = () => {
                     <Checkbox
                       checked={selectedStudents.includes(student.id)}
                       onCheckedChange={() => toggleStudentSelection(student.id)}
-                      disabled={filterStatus !== "PENDING"}
+                      disabled={filterStatus !== "PENDING" || isLoading}
                     />
                   </td>
                   <td className="p-4">{student.name || 'N/A'}</td>
@@ -432,6 +412,7 @@ const StudentApproval = () => {
                           variant="ghost"
                           size="sm"
                           onClick={() => handleSingleApprove(student.id)}
+                          disabled={isLoading}
                           className="text-green-600 hover:text-green-700 hover:bg-green-50"
                         >
                           Approve
@@ -443,6 +424,7 @@ const StudentApproval = () => {
                             setSelectedStudents([student.id])
                             setRejectionDialogOpen(true)
                           }}
+                          disabled={isLoading}
                           className="text-red-600 hover:text-red-700 hover:bg-red-50"
                         >
                           Reject
@@ -497,10 +479,10 @@ const StudentApproval = () => {
             </Button>
             <Button 
               onClick={handleBulkReject}
-              disabled={!rejectionReason.trim()}
+              disabled={!rejectionReason.trim() || isLoading}
               className="bg-red-600 hover:bg-red-700 text-white"
             >
-              Confirm Rejection
+              {isLoading ? "Processing..." : "Confirm Rejection"}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -1,17 +1,19 @@
+
 // File: /app/api/teacher-subjects/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { TeacherSubjectTable } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const teacherId = searchParams.get("teacherId");
     const subjectId = searchParams.get("subjectId");
+    const CollegeId = searchParams.get("collegeId");
     const id = searchParams.get("id");
 
-    if (!teacherId && !subjectId && !id) {
+    if (!teacherId && !subjectId && !id && !CollegeId) {
       return NextResponse.json(
         { error: "Missing teacherId or subjectId" },
         { status: 400 }
@@ -27,7 +29,17 @@ export async function GET(req: NextRequest) {
         .where(eq(TeacherSubjectTable.id, id));
       return NextResponse.json(teacherSubject);
     }
-    if (subjectId) {
+    if (subjectId && CollegeId) {
+      const teacherSubjects = await db
+        .select()
+        .from(TeacherSubjectTable)
+        .where(and(
+          eq(TeacherSubjectTable.collegeId, CollegeId),
+            eq(TeacherSubjectTable.subjectId, subjectId))
+        );
+      return NextResponse.json(teacherSubjects);
+    }
+     if (subjectId) {
       const teacherSubjects = await db
         .select()
         .from(TeacherSubjectTable)
@@ -36,6 +48,7 @@ export async function GET(req: NextRequest) {
         );
       return NextResponse.json(teacherSubjects);
     }
+
     
     const teacherSubjects = await db
       .select()
@@ -64,9 +77,9 @@ export async function POST(req: NextRequest) {
     
     // Validate only the required fields from the first assignment
     const firstAssignment = assignments[0];
-    const { teacherId, academicYearId, phaseId } = firstAssignment;
+    const { teacherId, academicYearId, phaseId , collegeId} = firstAssignment;
 
-    if (!teacherId || !academicYearId || !phaseId) {
+    if (!teacherId || !academicYearId || !phaseId || !collegeId) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 

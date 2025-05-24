@@ -287,7 +287,7 @@ const useLogbookStore = create<LogbookState>((set, get) => ({
           ),
         },
         studentRemarks: formData.studentRemarks || "",
-        status: "DRAFT"
+        status: "SUBMITTED"
       };
       
       if (selectedType === "subject") {

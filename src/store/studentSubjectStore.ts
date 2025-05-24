@@ -47,6 +47,7 @@ export interface StudentSubjectAllocation {
   subject: Subject;
   teacherSubject: TeacherSubject;
   teacherId: string;
+  collegeId: string;
 }
 
 interface teacher{
@@ -84,7 +85,7 @@ interface StudentSubjectStore {
   fetchCourses: () => Promise<void>;
   fetchcolleges: () => Promise<void>;
   fetchSubjects: () => Promise<void>;
-  fetchTeacherSubjectsBySubjectId: (subjectId: string) => Promise<void>;
+  fetchTeacherSubjectsBySubjectId: (subjectId: string, collegeId?: string) => Promise<void>;
   fetchAcademicYears: () => Promise<void>;
   fetchPhases: (query: { id?: string; academicYears?: string; collegeId?: string }) => Promise<void>;
   fetchStudentAllocations: (studentId: string) => Promise<void>;
@@ -103,6 +104,7 @@ interface StudentSubjectStore {
     academicYearId: string;
     phaseId: string;
     teacherId: string;
+    collegeId: string;
   }) => Promise<void>;
 
   updateAllocation: (id: string, data: Partial<StudentSubjectAllocation>) => Promise<void>;
@@ -213,18 +215,25 @@ export const useStudentSubjectStore = create<StudentSubjectStore>((set, get) => 
     }
   },
 
-  fetchTeacherSubjectsBySubjectId: async (subjectId: string) => {
-    set({ loading: true, error: null, selectedTeacherSubjectId: null });
-    try {
-      const res = await fetch(`/api/teacher-subjects?subjectId=${subjectId}`);
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || 'Failed to fetch teacher subjects');
-      set({ teacherSubjects: data, loading: false });
-    } catch (err: any) {
-      console.error('Error fetching teacher subjects:', err);
-      set({ error: err.message, loading: false, teacherSubjects: [] });
+// Update the fetchTeacherSubjectsBySubjectId function in your store
+fetchTeacherSubjectsBySubjectId: async (subjectId: string, collegeId?: string) => {
+  set({ loading: true, error: null, selectedTeacherSubjectId: null });
+  try {
+    // Build the URL with both subjectId and collegeId if provided
+    const params = new URLSearchParams({ subjectId });
+    if (collegeId) {
+      params.append('collegeId', collegeId);
     }
-  },
+    
+    const res = await fetch(`/api/teacher-subjects?${params.toString()}`);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || 'Failed to fetch teacher subjects');
+    set({ teacherSubjects: data, loading: false });
+  } catch (err: any) {
+    console.error('Error fetching teacher subjects:', err);
+    set({ error: err.message, loading: false, teacherSubjects: [] });
+  }
+},
 
   fetchAcademicYears: async () => {
     set({ loading: true, error: null });
@@ -267,40 +276,49 @@ export const useStudentSubjectStore = create<StudentSubjectStore>((set, get) => 
     }
   },
 
-  setSelectedSubjectId: (id: string | null) => {
-    set({ selectedSubjectId: id });
-    if (id) {
-      get().fetchTeacherSubjectsBySubjectId(id);
-    } else {
-      set({ teacherSubjects: [], selectedTeacherSubjectId: null });
-    }
-  },
+  setSelectedSubjectId: (id: string | null, collegeId?: string) => {
+  set({ selectedSubjectId: id });
+  if (id) {
+    get().fetchTeacherSubjectsBySubjectId(id, collegeId);
+  } else {
+    set({ teacherSubjects: [], selectedTeacherSubjectId: null });
+  }
+},
 
   setSelectedTeacherSubjectId: (id: string | null) => set({ selectedTeacherSubjectId: id }),
   setSelectedAcademicYearId: (id: string | null) => set({ selectedAcademicYearId: id }),
   setSelectedPhaseId: (id: string | null) => set({ selectedPhaseId: id }),
 
-  createAllocation: async (data) => {
-    set({ loading: true, error: null });
-    try {
-      const res = await fetch('/api/student-subject', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      });
-      const result = await res.json();
-      if (!res.ok) throw new Error(result.message || 'Failed to create allocation');
+ // Update the createAllocation function in your store
+createAllocation: async (data: {
+  studentId: string;
+  subjectId: string;
+  teacherSubjectId: string;
+  academicYearId: string;
+  phaseId: string;
+  teacherId: string;
+  collegeId: string; // Add collegeId to the interface
+}) => {
+  set({ loading: true, error: null });
+  try {
+    const res = await fetch('/api/student-subject', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data), // This will now include collegeId
+    });
+    const result = await res.json();
+    if (!res.ok) throw new Error(result.message || 'Failed to create allocation');
 
-      set((state) => ({
-        studentAllocations: [...state.studentAllocations, result],
-        loading: false,
-      }));
-      get().resetSelections();
-    } catch (err: any) {
-      console.error('Error creating allocation:', err);
-      set({ error: err.message, loading: false });
-    }
-  },
+    set((state) => ({
+      studentAllocations: [...state.studentAllocations, result],
+      loading: false,
+    }));
+    get().resetSelections();
+  } catch (err: any) {
+    console.error('Error creating allocation:', err);
+    set({ error: err.message, loading: false });
+  }
+},
 
   updateAllocation: async (id, data) => {
     set({ loading: true, error: null });

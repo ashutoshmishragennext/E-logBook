@@ -67,7 +67,12 @@ const formSchema = z.object({
   country: z.string().optional(),
   state: z.string().optional(),
   city: z.string().optional(),
-  adharNo: z.string().optional(),
+  adharNo: z
+    .string()
+    .regex(
+      /^\d{12}$/,
+      "Aadhar number must be exactly 12 digits and contain no letters."
+    ),
   maritalStatus: z.string().optional(),
   rollNo: z.string().optional(),
   collegeId: z.string().optional(),
@@ -628,7 +633,6 @@ const StudentProfileCompact = () => {
 
             {/* MODIFIED LAYOUT: Using a 4-column grid on desktop */}
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-
               {/* Personal details inputs - 4 per row on desktop */}
               <FormField
                 control={form.control}
@@ -730,6 +734,13 @@ const StudentProfileCompact = () => {
                       <Input
                         placeholder="1234 5678 9012"
                         {...field}
+                        onChange={(e) => {
+                          const value = e.target.value
+                            .replace(/\D/g, "")
+                            .slice(0, 12); // Remove non-digits and limit to 12
+                          field.onChange(value);
+                        }}
+                        value={field.value}
                         disabled={
                           !isEditing || (isProfileVerified && isEditing)
                         }
@@ -744,7 +755,6 @@ const StudentProfileCompact = () => {
                   </FormItem>
                 )}
               />
-        
 
               {/* Location details inputs - 4 per row on desktop */}
               <FormField
@@ -822,7 +832,6 @@ const StudentProfileCompact = () => {
                   </FormItem>
                 )}
               />
-
 
               {/* Academic details inputs - 4 per row on desktop */}
               <FormField

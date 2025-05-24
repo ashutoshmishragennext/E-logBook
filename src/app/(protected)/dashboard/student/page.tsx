@@ -1,3 +1,4 @@
+/*eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import LogBookEntriesPage from "@/components/studentComponent/LogBookEntries";
@@ -15,6 +16,7 @@ import {
   School,
   User,
   X,
+  Lock,
 } from "lucide-react";
 import { signOut, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
@@ -36,6 +38,11 @@ const Sidebar = () => {
     }
   }, [session?.user?.id, fetchProfile]);
 
+  console.log("Profile data:", profile);
+
+  // Check if profile is approved
+  const isProfileApproved = profile?.verificationStatus === "APPROVED";
+
   // Dynamically create sidebarItems with session data
   const sidebarItems = [
     {
@@ -43,18 +50,21 @@ const Sidebar = () => {
       label: "Profile",
       icon: <School size={20} />,
       component: <StudentProfileCompact />,
+      isLocked: false, // Profile is always accessible
     },
     {
       id: "SubjectSelection",
       label: "Subject",
       icon: <Building2 size={20} />,
       component: <StudentSubjectSelection studentId={profile?.id || ""} />,
+      isLocked: !isProfileApproved,
     },
     {
       id: "logBookentries",
       label: "Log Book Entries",
       icon: <School size={20} />,
       component: <LogBookEntriesPage />,
+      isLocked: !isProfileApproved,
     },
   ];
 
@@ -62,7 +72,23 @@ const Sidebar = () => {
   const activeItem = sidebarItems.find((item) => item.id === activeComponent);
 
   const handleLogout = async () => {
-    await signOut({ redirectTo: "/auth/login" });
+    try {
+      await signOut({ redirectTo: "/auth/login" });
+    } catch (error) {
+      console.error("Logout error:", error);
+      // Fallback: redirect manually if signOut fails
+      router.push("/auth/login");
+    }
+  };
+
+  // Handle navigation item click
+  const handleNavItemClick = (itemId: string, isLocked: boolean) => {
+    if (isLocked) {
+      // Show a message or prevent navigation for locked items
+      alert("Please wait for your profile to be approved to access this feature.");
+      return;
+    }
+    setActiveComponent(itemId);
   };
 
   useEffect(() => {
@@ -113,6 +139,8 @@ const Sidebar = () => {
           session={session}
           handleLogout={handleLogout}
           sidebarItems={sidebarItems}
+          handleNavItemClick={handleNavItemClick}
+          profile={profile}
         />
       </div>
 
@@ -145,12 +173,21 @@ const Sidebar = () => {
               setSidebarOpen={() => {}}
               activeComponent={activeComponent}
               setActiveComponent={(id: SetStateAction<string>) => {
-                setActiveComponent(id);
-                setMobileMenuOpen(false);
+                if (typeof id === 'string') {
+                  const item = sidebarItems.find(item => item.id === id);
+                  if (item && !item.isLocked) {
+                    setActiveComponent(id);
+                    setMobileMenuOpen(false);
+                  } else if (item?.isLocked) {
+                    alert("Please wait for your profile to be approved to access this feature.");
+                  }
+                }
               }}
               session={session}
               handleLogout={handleLogout}
               sidebarItems={sidebarItems}
+              handleNavItemClick={handleNavItemClick}
+              profile={profile}
             />
           </div>
         </div>
@@ -165,11 +202,26 @@ const Sidebar = () => {
         {/* Top navigation bar - improved styling */}
         <header className="bg-white shadow-sm border-b border-gray-200 h-16 flex items-center justify-between px-4 lg:px-6">
           <div className="flex items-center">
-            {/* Optional header content can go here */}
+            {/* Profile status indicator */}
+            {profile && (
+              <div className="flex items-center space-x-2">
+                <div
+                  className={`px-2 py-1 rounded-full text-xs font-medium ${
+                    profile.verificationStatus === "APPROVED"
+                      ? "bg-green-100 text-green-800"
+                      : profile.verificationStatus === "PENDING"
+                      ? "bg-yellow-100 text-yellow-800"
+                      : "bg-red-100 text-red-800"
+                  }`}
+                >
+                  {profile.verificationStatus}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Profile dropdown - enhanced */}
-          <div className="relative">
+          <div className="relative profile-dropdown">
             <button
               onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
               className="flex items-center space-x-2 text-gray-700 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-full p-1"
@@ -178,7 +230,7 @@ const Sidebar = () => {
                 <User size={20} className="text-blue-600" />
               </div>
               <span className="hidden md:inline-block font-medium text-sm">
-                {session?.user?.name || "Admin"}
+                {session?.user?.name || "Student"}
               </span>
               <ChevronDown
                 size={16}
@@ -190,20 +242,23 @@ const Sidebar = () => {
 
             {/* Dropdown menu - polished */}
             {profileDropdownOpen && (
-              <div
-                className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 border border-gray-200 z-10"
-                onMouseLeave={() => setProfileDropdownOpen(false)}
-              >
-                <a
-                  href="#"
-                  className="block px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-100 transition-colors flex items-center space-x-3"
+              <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 border border-gray-200 z-10">
+                <button
+                  onClick={() => {
+                    setActiveComponent("Profile");
+                    setProfileDropdownOpen(false);
+                  }}
+                  className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-100 transition-colors flex items-center space-x-3"
                 >
                   <User size={16} className="text-gray-500" />
                   <span>My Profile</span>
-                </a>
+                </button>
                 <hr className="my-1 border-gray-200" />
                 <button
-                  onClick={handleLogout}
+                  onClick={() => {
+                    setProfileDropdownOpen(false);
+                    handleLogout();
+                  }}
                   className="w-full text-left px-4 py-2.5 text-sm text-red-600 hover:bg-gray-100 transition-colors flex items-center space-x-3"
                 >
                   <LogOut size={16} className="text-red-500" />
@@ -240,17 +295,22 @@ interface SidebarContentProps {
     label: string;
     icon: React.ReactElement;
     component: React.ReactElement;
+    isLocked: boolean;
   }[];
+  handleNavItemClick: (itemId: string, isLocked: boolean) => void;
+  profile: any;
 }
 
 const SidebarContent = ({
   sidebarOpen,
   setSidebarOpen,
   activeComponent,
-  setActiveComponent,
+  // setActiveComponent,
   session,
   handleLogout,
   sidebarItems,
+  handleNavItemClick,
+  profile,
 }: SidebarContentProps) => {
   return (
     <>
@@ -264,7 +324,7 @@ const SidebarContent = ({
             </span>
           )}
           {!sidebarOpen && (
-            <span className="text-lg font-bold text-blue-600">AP</span>
+            <span className="text-lg font-bold text-blue-600">SP</span>
           )}
         </div>
         <button
@@ -282,13 +342,26 @@ const SidebarContent = ({
             <User size={20} className="text-blue-600" />
           </div>
           {sidebarOpen && (
-            <div>
+            <div className="flex-1">
               <p className="font-medium text-gray-800">
-                {session?.user?.name || "Admin"}
+                {session?.user?.name || "Student"}
               </p>
               <p className="text-xs text-gray-500">
-                {session?.user?.email || "admin@example.com"}
+                {session?.user?.email || "student@example.com"}
               </p>
+              {profile && (
+                <div
+                  className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium mt-1 ${
+                    profile.verificationStatus === "APPROVED"
+                      ? "bg-green-100 text-green-800"
+                      : profile.verificationStatus === "PENDING"
+                      ? "bg-yellow-100 text-yellow-800"
+                      : "bg-red-100 text-red-800"
+                  }`}
+                >
+                  {profile.verificationStatus}
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -300,20 +373,37 @@ const SidebarContent = ({
           {sidebarItems.map((item) => (
             <button
               key={item.id}
-              onClick={() => setActiveComponent(item.id)}
-              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
+              onClick={() => handleNavItemClick(item.id, item.isLocked)}
+              disabled={item.isLocked}
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors relative ${
                 activeComponent === item.id
                   ? "bg-blue-50 text-blue-600 font-medium"
+                  : item.isLocked
+                  ? "text-gray-400 bg-gray-50 cursor-not-allowed"
                   : "text-gray-700 hover:bg-gray-100"
               }`}
             >
               <div className="flex items-center justify-center w-8 h-8">
-                {item.icon}
+                {item.isLocked ? <Lock size={16} /> : item.icon}
               </div>
-              {sidebarOpen && <span>{item.label}</span>}
+              {sidebarOpen && (
+                <span className="flex-1 text-left">{item.label}</span>
+              )}
+              {item.isLocked && sidebarOpen && (
+                <Lock size={14} className="text-gray-400" />
+              )}
             </button>
           ))}
         </nav>
+        
+        {/* Profile approval notice */}
+        {profile?.verificationStatus !== "APPROVED" && sidebarOpen && (
+          <div className="mx-3 mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+            <p className="text-xs text-yellow-800">
+              <strong>Profile Pending:</strong> Some features are locked until your profile is approved.
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Logout button */}

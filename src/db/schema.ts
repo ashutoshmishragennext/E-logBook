@@ -29,7 +29,6 @@ export const FieldType = pgEnum("field_type", [
 
 // New enum for log book entry status
 export const LogBookEntryStatus = pgEnum("logbook_entry_status", [
-  "DRAFT",
   "SUBMITTED",
   "REVIEWED",
   "APPROVED",
@@ -308,6 +307,7 @@ export const TeacherSubjectTable = pgTable(
     courseId: uuid("course_id").references(() => CourseTable.id),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
+    collegeId: uuid("college_id").references(() => CollegeTable.id).notNull(),
   },
   (table) => [
     // Ensure unique teacher-subject combination per course, academic year and phase
@@ -330,6 +330,7 @@ export const StudentSubjectTable = pgTable(
     studentId: uuid("student_id").references(() => StudentProfileTable.id).notNull(),
     subjectId: uuid("subject_id").references(() => SubjectTable.id).notNull(),
     teacherSubjectId: uuid("teacher_subject_id").references(() => TeacherSubjectTable.id).notNull(), // Reference to the teacher-subject assignment
+    collegeId: uuid("college_id").references(() => CollegeTable.id).notNull(),
     teacherId: uuid("teacher_id").references(() => TeacherProfileTable.id),
     academicYearId: uuid("academic_year_id").references(() => AcademicYearTable.id).notNull(),
     phaseId: uuid("phase_id").references(() => PhaseTable.id).notNull(),
@@ -413,7 +414,7 @@ export const LogBookEntryTable = pgTable(
     // Tracking and Feedback
     studentRemarks: text("student_remarks"),
     teacherRemarks: text("teacher_remarks"),
-    status: text("status").default("DRAFT"), // Changed to use the proper enum
+    status: text("status").default("SUBMITTED"), // Changed to use the proper enum
     
     // Metadata
     createdAt: timestamp("created_at").defaultNow().notNull(),

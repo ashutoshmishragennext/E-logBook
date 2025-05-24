@@ -323,6 +323,7 @@ const SubjectAssignment: React.FC<SubjectAssignmentProps> = ({
           assignment.academicYearId === data.academicYearId &&
           assignment.phaseId === data.phaseId &&
           assignment.courseId === data.courseId
+
       )
     );
 
@@ -348,7 +349,10 @@ const SubjectAssignment: React.FC<SubjectAssignmentProps> = ({
         phaseId: data.phaseId,
         courseId: data.courseId,
         branchId: data.branchId,
+        collegeId,
       }));
+
+      console.log("Assignments to be submitted:", assignments);
 
       const res = await fetch("/api/teacher-subjects", {
         method: "POST",
@@ -357,6 +361,9 @@ const SubjectAssignment: React.FC<SubjectAssignmentProps> = ({
         },
         body: JSON.stringify(assignments),
       });
+
+
+      
 
       const result = await res.json();
 
