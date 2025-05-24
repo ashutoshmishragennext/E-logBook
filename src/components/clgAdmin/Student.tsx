@@ -29,21 +29,20 @@ type BranchNameProps = {
 
 const BranchName = ({ branchId }: BranchNameProps) => {
   const [branchName, setBranchName] = useState("Loading...");
-  
+
   useEffect(() => {
     const fetchBranchName = async () => {
       if (!branchId) {
         setBranchName("-");
         return;
       }
-      
+
       try {
         const response = await fetch(`/api/branches?id=${branchId}`);
         const data = await response.json();
         console.log("Branch data:", data);
-        if (data ) {
+        if (data) {
           setBranchName(data.name);
-         
         } else {
           setBranchName("Unknown");
         }
@@ -52,10 +51,10 @@ const BranchName = ({ branchId }: BranchNameProps) => {
         setBranchName("Error");
       }
     };
-    
+
     fetchBranchName();
   }, [branchId]);
-  
+
   return <>{branchName}</>;
 };
 
@@ -95,7 +94,6 @@ const Students = () => {
       rollNo: "",
     },
   });
-  
 
   useEffect(() => {
     if (userId) {
@@ -166,13 +164,12 @@ const Students = () => {
     try {
       // Validate and format the parsed data
       const formattedData = parsedData.map((item) => ({
-        name: item.name || item.Name || "" ,
-        email: item.email || item.Email || item["Email Id"]|| "" ,
+        name: item.name || item.Name || "",
+        email: item.email || item.Email || item["Email Id"] || "",
         role: "STUDENT",
         phone:
           item["Mobile Number"] ||
           item["Phone Number"] ||
-
           item.mobile ||
           item.Mobile ||
           item.mobileNo ||
@@ -185,7 +182,13 @@ const Students = () => {
           branchId: item.branchId || item.BranchId || "",
           courseId: item.courseId || item.CourseId || "",
           academicYearId: item.academicYearId || item.AcademicYearId || "",
-          rollNo: item.rollNo || item.RollNo ||item["Roll Number"]||item["ROLL NUMBER"] ||item["Roll No"] || "",
+          rollNo:
+            item.rollNo ||
+            item.RollNo ||
+            item["Roll Number"] ||
+            item["ROLL NUMBER"] ||
+            item["Roll No"] ||
+            "",
           mobileNo:
             item.mobile ||
             item.Mobile ||
@@ -260,8 +263,7 @@ const Students = () => {
     }
   );
 
-
-  const handleDeleteStudent = (student:any) => {
+  const handleDeleteStudent = (student: any) => {
     const confirmDelete = window.confirm(
       `Are you sure you want to delete ${student.name}?`
     );
@@ -283,8 +285,7 @@ const Students = () => {
           setError("❌ Error occurred while deleting student");
         });
     }
-
-  }
+  };
 
   return (
     <div className="p-6 bg-white rounded-lg shadow-md">
@@ -445,7 +446,10 @@ const Students = () => {
                           <button className="text-blue-600 hover:underline mr-3">
                             Edit
                           </button>
-                          <button className="text-red-600 hover:underline" onClick={() => handleDeleteStudent(student)}> 
+                          <button
+                            className="text-red-600 hover:underline"
+                            onClick={() => handleDeleteStudent(student)}
+                          >
                             Delete
                           </button>
                         </td>
@@ -486,7 +490,13 @@ const Students = () => {
               <div>
                 <label className="block text-sm font-medium mb-1">Email</label>
                 <input
-                  {...form.register("email")}
+                  {...form.register("email", {
+                    required: "Email is required",
+                    pattern: {
+                      value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+                      message: "Enter a valid email",
+                    },
+                  })}
                   type="email"
                   className="w-full px-4 py-2 border rounded-lg"
                 />
@@ -504,9 +514,19 @@ const Students = () => {
                   Roll No.
                 </label>
                 <input
-                  {...form.register("rollNo")}
+                  {...form.register("rollNo", {
+                    required: "Roll number is required",
+                    validate: (value) =>
+                      !/\s/.test(value ?? "") ||
+                      "Roll number must not contain spaces",
+                  })}
                   className="w-full px-4 py-2 border rounded-lg"
+                  onInput={(e) => {
+                    const input = e.target as HTMLInputElement;
+                    input.value = input.value.replace(/\s/g, ""); // Remove all spaces
+                  }}
                 />
+
                 {form.formState.errors.rollNo && (
                   <p className="text-red-500 text-xs mt-1">
                     {form.formState.errors.rollNo.message}
@@ -519,8 +539,21 @@ const Students = () => {
                   Mobile No.
                 </label>
                 <input
-                  {...form.register("mobileNo")}
+                  {...form.register("mobileNo", {
+                    required: "Mobile number is required",
+                    pattern: {
+                      value: /^[0-9]{10}$/,
+                      message: "Mobile number must be exactly 10 digits",
+                    },
+                  })}
                   className="w-full px-4 py-2 border rounded-lg"
+                  maxLength={10}
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  onInput={(e) => {
+                    const input = e.target as HTMLInputElement;
+                    input.value = input.value.replace(/[^0-9]/g, "");
+                  }}
                 />
                 {form.formState.errors.mobileNo && (
                   <p className="text-red-500 text-xs mt-1">
@@ -530,7 +563,7 @@ const Students = () => {
               </div>
             </div>
 
-            {/* You can add dropdowns for Branch, Course, Academic Year here */}
+            {/* Add additional dropdowns here if needed */}
 
             <input
               type="hidden"

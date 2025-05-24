@@ -404,7 +404,7 @@ const StudentProfileCompact = () => {
             <div className="flex flex-wrap md:flex-nowrap gap-6 mb-6">
               {/* Left side: Profile photo with name and email */}
               <div className="w-full md:w-1/2 flex gap-4">
-                <div className="relative">
+                <div className="relative px-4">
                   <Avatar className="h-20 w-20 border-2 border-muted">
                     <AvatarImage src={profilePhotoUrl} />
                     <AvatarFallback className="bg-primary text-white text-xl">
@@ -414,7 +414,7 @@ const StudentProfileCompact = () => {
                     </AvatarFallback>
                   </Avatar>
                   {isEditing && (
-                    <div className="absolute -bottom-2 -right-2">
+                    <div className="absolute ">
                       <UploadButton
                         endpoint="imageUploader"
                         onClientUploadComplete={(res) => {
@@ -427,10 +427,15 @@ const StudentProfileCompact = () => {
                           button: {
                             background: "hsl(var(--primary))",
                             color: "white",
-                            padding: "0.25rem",
-                            borderRadius: "50%",
-                            width: "28px",
+                            padding: "0", // no extra padding to keep it circular
+                            margin: "3px 4px",
+                            width: "100px",
                             height: "28px",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            fontSize: "16px", // adjust based on your icon/text size
+                            cursor: "pointer",
                           },
                         }}
                       />
@@ -625,7 +630,7 @@ const StudentProfileCompact = () => {
               <Alert className="mb-4 bg-red-50 border-red-200">
                 <AlertCircle className="h-4 w-4 text-red-800" />
                 <AlertDescription className="text-sm text-red-800">
-                  Your profile verification was rejected. Reason -
+                  Your profile verification was rejected. Reason - {""}
                   {profile?.rejectionReason}
                 </AlertDescription>
               </Alert>

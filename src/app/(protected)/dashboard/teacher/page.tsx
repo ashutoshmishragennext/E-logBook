@@ -169,14 +169,14 @@ const Sidebar = () => {
             {/* Dropdown menu - fixed logout functionality */}
             {profileDropdownOpen && (
               <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 border border-gray-200 z-50">
-                <button
+                {/* <button
                   onClick={() => setActiveComponent("Profile")}
                   className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-100 transition-colors flex items-center space-x-3"
                 >
                   <User size={16} className="text-gray-500" />
                   <span>My Profile</span>
                 </button>
-                <hr className="my-1 border-gray-200" />
+                <hr className="my-1 border-gray-200" /> */}
                 <button
                   onClick={handleLogout}
                   className="w-full text-left px-4 py-2.5 text-sm text-red-600 hover:bg-gray-100 transition-colors flex items-center space-x-3"

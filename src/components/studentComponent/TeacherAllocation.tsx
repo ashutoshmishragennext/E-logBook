@@ -1,3 +1,4 @@
+/*eslint-disable @typescript-eslint/no-unused-vars */
 "use client";
 
 import SubjectSelector from "@/components/clgAdmin/SubjectComponent";
@@ -30,14 +31,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+// import {
+//   Dialog,
+//   DialogContent,
+//   DialogDescription,
+//   DialogFooter,
+//   DialogHeader,
+//   DialogTitle,
+// } from "@/components/ui/dialog";
 import { useStudentProfileStore } from "@/store/student";
 import { useStudentSubjectStore } from "@/store/studentSubjectStore";
 import {
@@ -716,7 +717,7 @@ const handleSubmit = async () => {
 
   return (
     <div className="w-full space-y-6">
-      {/* No Teachers Dialog */}
+      {/* No Teachers Dialog
       <Dialog
         open={noTeachersDialog.isOpen}
         onOpenChange={(open) => {
@@ -748,7 +749,7 @@ const handleSubmit = async () => {
             </Button>
           </DialogFooter>
         </DialogContent>
-      </Dialog>
+      </Dialog> */}
 
       {/* Existing Allocations - Moved to top */}
       <Card className="w-full">

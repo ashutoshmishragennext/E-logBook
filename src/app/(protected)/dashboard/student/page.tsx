@@ -243,7 +243,7 @@ const Sidebar = () => {
             {/* Dropdown menu - polished */}
             {profileDropdownOpen && (
               <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 border border-gray-200 z-10">
-                <button
+                {/* <button
                   onClick={() => {
                     setActiveComponent("Profile");
                     setProfileDropdownOpen(false);
@@ -253,7 +253,7 @@ const Sidebar = () => {
                   <User size={16} className="text-gray-500" />
                   <span>My Profile</span>
                 </button>
-                <hr className="my-1 border-gray-200" />
+                <hr className="my-1 border-gray-200" /> */}
                 <button
                   onClick={() => {
                     setProfileDropdownOpen(false);

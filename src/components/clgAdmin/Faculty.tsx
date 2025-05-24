@@ -403,7 +403,9 @@ const Faculty = () => {
                   Full Name
                 </label>
                 <input
-                  {...form.register("name")}
+                  {...form.register("name", {
+                    required: "Full Name is required",
+                  })}
                   className="w-full px-4 py-2 border rounded-lg"
                 />
                 {form.formState.errors.name && (
@@ -416,7 +418,13 @@ const Faculty = () => {
               <div>
                 <label className="block text-sm font-medium mb-1">Email</label>
                 <input
-                  {...form.register("email")}
+                  {...form.register("email", {
+                    required: "Email is required",
+                    pattern: {
+                      value: /^[\w-.]+@([\w-]+\.)+[\w-]{2,4}$/,
+                      message: "Enter a valid email address",
+                    },
+                  })}
                   type="email"
                   className="w-full px-4 py-2 border rounded-lg"
                 />
@@ -434,8 +442,21 @@ const Faculty = () => {
                   Mobile No.
                 </label>
                 <input
-                  {...form.register("mobileNo")}
+                  {...form.register("mobileNo", {
+                    required: "Mobile number is required",
+                    pattern: {
+                      value: /^[0-9]{10}$/,
+                      message: "Mobile number must be exactly 10 digits",
+                    },
+                  })}
                   className="w-full px-4 py-2 border rounded-lg"
+                  maxLength={10}
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  onInput={(e) => {
+                    const input = e.target as HTMLInputElement;
+                    input.value = input.value.replace(/[^0-9]/g, "");
+                  }}
                 />
                 {form.formState.errors.mobileNo && (
                   <p className="text-red-500 text-xs mt-1">
@@ -449,7 +470,9 @@ const Faculty = () => {
                   Designation
                 </label>
                 <input
-                  {...form.register("designation")}
+                  {...form.register("designation", {
+                    required: "Designation is required",
+                  })}
                   className="w-full px-4 py-2 border rounded-lg"
                   placeholder="e.g., Professor, Assistant Professor"
                 />
@@ -466,7 +489,11 @@ const Faculty = () => {
                 Employee ID
               </label>
               <input
-                {...form.register("employeeId")}
+                {...form.register("employeeId", {
+                  required: "Employee ID is required",
+                  validate: (value) =>
+                    !/\s/.test(value) || "Employee ID must not contain spaces",
+                })}
                 className="w-full px-4 py-2 border rounded-lg"
               />
               {form.formState.errors.employeeId && (

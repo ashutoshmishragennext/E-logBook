@@ -344,7 +344,7 @@ const Department = () => {
         <div className="flex flex-col h-full">
           <div className="flex items-center justify-between p-4 border-b">
             <h3 className="text-lg font-medium">
-              {currentBranch ? "Edit Branch" : "Add New Branch"}
+              {currentBranch ? "Edit Department" : "Add New Department"}
             </h3>
             <Button
               variant="ghost"
