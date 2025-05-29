@@ -33,15 +33,16 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// function generateTempPassword(length = 10) {
-//   const charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*";
-//   let password = "";
-//   for (let i = 0; i < length; i++) {
-//     const randomIndex = Math.floor(Math.random() * charset.length);
-//     password += charset[randomIndex];
-//   }
-//   return password;
-// }
+// Generate a random default password (4-5 characters)
+function generateDefaultPassword(length = 5) {
+  const charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+  let password = "";
+  for (let i = 0; i < length; i++) {
+    const randomIndex = Math.floor(Math.random() * charset.length);
+    password += charset[randomIndex];
+  }
+  return password;
+}
 
 async function sendWelcomeEmail(name: string, email: string, password: string, role: string) {
   try {
@@ -50,20 +51,59 @@ async function sendWelcomeEmail(name: string, email: string, password: string, r
     await sendEmail(
       "Elog Book",
       email,
-      "Welcome to Elog Book - Your Account Details",
-      `<p>Hello <strong>${name}</strong>,</p>
-      <p>Welcome to <strong>Elog Book</strong>!</p>
-      <p>Your account has been successfully created. Here are your login credentials:</p>
-      <div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin: 15px 0;">
-        <p><strong>Email:</strong> ${email}</p>
-        <p><strong>Password:</strong> ${password}</p>
-        <p><strong>Role:</strong> ${role}</p>
-      </div>
-      <p>You can login to your account using the button below:</p>
-      <p><a href="${loginUrl}" style="display: inline-block; padding: 10px 20px; background-color: #4f46e5; color: white; text-decoration: none; border-radius: 5px;">Login to Elog Book</a></p>
-      <p><strong>Important:</strong> For security reasons, please change your password after your first login.</p>
-      <p>If you have any questions or need assistance, please don't hesitate to contact our support team.</p>
-      <p>Best regards,<br>The Elog Book Team</p>`
+      "Welcome to Elog Book - Account Created",
+      `<!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Welcome to Elog Book</title>
+      </head>
+      <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+          <h1 style="color: white; margin: 0; font-size: 28px;">Welcome to Elog Book!</h1>
+          <p style="color: #f0f0f0; margin: 10px 0 0 0; font-size: 16px;">Your digital learning companion</p>
+        </div>
+        
+        <div style="background: white; padding: 30px; border: 1px solid #e0e0e0; border-top: none;">
+          <p style="font-size: 18px; margin-bottom: 20px;">Hello <strong>${name}</strong>,</p>
+          
+          <p style="margin-bottom: 20px;">Your account has been successfully created! Here are your login credentials:</p>
+          
+          <div style="background: #f8f9fa; border-left: 4px solid #4f46e5; padding: 20px; margin: 25px 0; border-radius: 0 8px 8px 0;">
+            <h3 style="color: #4f46e5; margin: 0 0 15px 0; font-size: 18px;">📧 Login Details</h3>
+            <p style="margin: 8px 0;"><strong>Email:</strong> <code style="background: #e9ecef; padding: 2px 6px; border-radius: 4px; font-size: 14px;">${email}</code></p>
+            <p style="margin: 8px 0;"><strong>Password:</strong> <code style="background: #e9ecef; padding: 2px 6px; border-radius: 4px; font-size: 16px; font-weight: bold; color: #d63384;">${password}</code></p>
+            <p style="margin: 8px 0;"><strong>Role:</strong> <span style="background: #198754; color: white; padding: 2px 8px; border-radius: 12px; font-size: 12px; text-transform: uppercase;">${role}</span></p>
+          </div>
+          
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${loginUrl}" style="display: inline-block; background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); color: white; text-decoration: none; padding: 15px 30px; border-radius: 8px; font-weight: bold; font-size: 16px; transition: transform 0.2s;">
+              🚀 Login to Elog Book
+            </a>
+          </div>
+          
+          <div style="background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 8px; padding: 20px; margin: 25px 0;">
+            <h4 style="color: #856404; margin: 0 0 10px 0; display: flex; align-items: center;">
+              <span style="font-size: 20px; margin-right: 8px;">⚠️</span>
+              Important Security Notice
+            </h4>
+            <p style="color: #856404; margin: 0; font-weight: 500;">
+              Please <strong>change your password immediately</strong> after your first login for security purposes.
+            </p>
+          </div>
+          
+          <div style="border-top: 1px solid #e0e0e0; padding-top: 20px; margin-top: 30px; text-align: center; color: #666;">
+            <p style="margin: 0;">Need help? Contact our support team</p>
+            <p style="margin: 5px 0 0 0; font-size: 14px;">Best regards, <strong>The Elog Book Team</strong></p>
+          </div>
+        </div>
+        
+        <div style="background: #f8f9fa; padding: 20px; text-align: center; border-radius: 0 0 10px 10px; font-size: 12px; color: #666;">
+          <p style="margin: 0;">This is an automated message. Please do not reply to this email.</p>
+        </div>
+      </body>
+      </html>`
     );
     
     console.log(`Welcome email sent successfully to ${email}`);
@@ -118,8 +158,19 @@ async function handleSingleUserCreation(userData: any) {
 
   // Default to USER role if not specified
   const role = userData.role || "USER";
-  const password = userData.password || userData.email;
-  const isTemporaryPassword = !userData.password; // Track if password was auto-generated
+  
+  // Generate default password for TEACHER and STUDENT roles, use provided password otherwise
+  let password: string;
+  let isTemporaryPassword = false;
+  
+  if (!userData.password && (role === "TEACHER" || role === "STUDENT")) {
+    password = generateDefaultPassword(5); // Generate 5-character default password
+    isTemporaryPassword = true;
+  } else {
+    password = userData.password || userData.email; // Fallback to email if no password provided
+    isTemporaryPassword = !userData.password;
+  }
+  
   console.log("Generated password:", password);
 
   // Create user
@@ -129,7 +180,8 @@ async function handleSingleUserCreation(userData: any) {
       email: userData.email,
       password: await hash(password, 10),
       role: role,
-      phone: userData.phone || null
+      phone: userData.phone || null,
+      defaultpassword: isTemporaryPassword ? password : null // Store default password if generated
     })
     .returning({ 
       id: UsersTable.id,
@@ -252,13 +304,22 @@ async function handleBulkUserCreation(usersData: any[]) {
         continue;
       }
 
-      // Generate password if not provided
-      const password = userData.password || userData.email;
-      const isTemporaryPassword = !userData.password;
-      console.log("Generated password:", password);
-      
       // Default to USER role if not specified
       const role = userData.role || "USER";
+      
+      // Generate default password for TEACHER and STUDENT roles, use provided password otherwise
+      let password: string;
+      let isTemporaryPassword = false;
+      
+      if (!userData.password && (role === "TEACHER" || role === "STUDENT")) {
+        password = generateDefaultPassword(5); // Generate 5-character default password
+        isTemporaryPassword = true;
+      } else {
+        password = userData.password || userData.email; // Fallback to email if no password provided
+        isTemporaryPassword = !userData.password;
+      }
+      
+      console.log("Generated password:", password);
 
       // Create user
       const [user] = await db.insert(UsersTable)
@@ -267,7 +328,8 @@ async function handleBulkUserCreation(usersData: any[]) {
           email: userData.email,
           password: await hash(password, 10),
           role: role,
-          phone: userData.phone || null
+          phone: userData.phone || null,
+          defaultpassword: isTemporaryPassword ? password : null // Store default password if generated
         })
         .returning({ 
           id: UsersTable.id,

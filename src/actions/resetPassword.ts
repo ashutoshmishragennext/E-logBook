@@ -38,10 +38,13 @@ export async function resetPassword(
 
   const { password } = validation.data;
   const hashedPassword = await bcrypt.hash(password, 10);
+  
+  // Update password and clear default password if it exists
   await db
     .update(UsersTable)
     .set({
       password: hashedPassword,
+      defaultpassword: null, // Clear default password
       updatedAt: new Date(),
     })
     .where(eq(UsersTable.id, existingUser.id));
@@ -54,3 +57,4 @@ export async function resetPassword(
 function isTokenExpired(expiryDate: Date): boolean {
   return expiryDate < new Date();
 }
+

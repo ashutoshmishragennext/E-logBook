@@ -190,6 +190,13 @@
       "when": 1748072374599,
       "tag": "0026_graceful_bushwacker",
       "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1748505389743,
+      "tag": "0027_happy_king_cobra",
+      "breakpoints": true
     }
   ]
 }

@@ -11,7 +11,6 @@ const emailSchema = z
 const passwordSchema = z
   .string({ required_error: "Password is required!" })
   .min(1, { message: "Password is required!" })
-  .min(8, { message: "Password must be at least 8 characters!" });
 
 const nameSchema = z
   .string({ required_error: "Full name is required!" })

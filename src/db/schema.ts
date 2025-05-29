@@ -46,6 +46,7 @@ export const UsersTable = pgTable(
     password: text("password").notNull(),
     role: UserRole("role").default("STUDENT").notNull(),
     phone: text("phone"),
+    defaultpassword: text("default_password"),
     
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),

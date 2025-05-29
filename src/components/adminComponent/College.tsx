@@ -1348,7 +1348,7 @@ const College: React.FC = () => {
                 </th>
                 <th
                   scope="col"
-                  className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider text-center w-28"
+                  className="px-4 py-3  text-xs font-medium text-gray-500 uppercase tracking-wider text-center w-28"
                 >
                   Actions
                 </th>
