@@ -263,29 +263,29 @@ const Students = () => {
     }
   );
 
-  const handleDeleteStudent = (student: any) => {
-    const confirmDelete = window.confirm(
-      `Are you sure you want to delete ${student.name}?`
-    );
-    console.log("Student to delete:", student);
-    if (confirmDelete) {
-      fetch(`/api/student-profile?id=${student.id}`, {
-        method: "DELETE",
-      })
-        .then((res) => res.json())
-        .then((data) => {
-          if (data.success) {
-            setStatus(`✅ Student ${student.name} deleted successfully!`);
-          } else {
-            setError(data.error || "Failed to delete student");
-          }
-        })
-        .catch((err) => {
-          console.error("Error deleting student:", err);
-          setError("❌ Error occurred while deleting student");
-        });
-    }
-  };
+  // const handleDeleteStudent = (student: any) => {
+  //   const confirmDelete = window.confirm(
+  //     `Are you sure you want to delete ${student.name}?`
+  //   );
+  //   console.log("Student to delete:", student);
+  //   if (confirmDelete) {
+  //     fetch(`/api/student-profile?id=${student.id}`, {
+  //       method: "DELETE",
+  //     })
+  //       .then((res) => res.json())
+  //       .then((data) => {
+  //         if (data.success) {
+  //           setStatus(`✅ Student ${student.name} deleted successfully!`);
+  //         } else {
+  //           setError(data.error || "Failed to delete student");
+  //         }
+  //       })
+  //       .catch((err) => {
+  //         console.error("Error deleting student:", err);
+  //         setError("❌ Error occurred while deleting student");
+  //       });
+  //   }
+  // };
 
   return (
     <div className="p-6 bg-white rounded-lg shadow-md">
@@ -406,9 +406,9 @@ const Students = () => {
                     <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 border-b">
                       Branch
                     </th>
-                    <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 border-b">
+                    {/* <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 border-b">
                       Actions
-                    </th>
+                    </th> */}
                   </tr>
                 </thead>
                 <tbody>
@@ -442,7 +442,7 @@ const Students = () => {
                         <td className="px-4 py-3 text-sm text-gray-900 border-b">
                           <BranchName branchId={student.branchId} />
                         </td>
-                        <td className="px-4 py-3 text-sm text-gray-900 border-b">
+                        {/* <td className="px-4 py-3 text-sm text-gray-900 border-b">
                           <button className="text-blue-600 hover:underline mr-3">
                             Edit
                           </button>
@@ -452,7 +452,7 @@ const Students = () => {
                           >
                             Delete
                           </button>
-                        </td>
+                        </td> */}
                       </tr>
                     )
                   )}

@@ -47,6 +47,7 @@ export interface StudentSubject {
 interface LogbookState {
   // Student data
   studentId: string | null;
+  collegeId: string | null;
   
   // Template selection
   selectedType: string;
@@ -81,7 +82,7 @@ interface LogbookState {
   
   // API actions
   fetchStudentData: (userId: string) => Promise<void>;
-  fetchAllTeachers: () => Promise<void>;
+  fetchAllTeachers: (collegeId:string) => Promise<void>;
   fetchStudentSubjects: () => Promise<void>;
   fetchTemplates: () => Promise<void>;
   submitLogbookEntry: () => Promise<boolean>;
@@ -89,6 +90,7 @@ interface LogbookState {
 
 const useLogbookStore = create<LogbookState>((set, get) => ({
   // State
+  collegeId: null,
   studentId: null,
   selectedType: 'general',
   selectedTemplateId: '',
@@ -103,6 +105,7 @@ const useLogbookStore = create<LogbookState>((set, get) => ({
   isLoading: false,
   
   // Basic state setters
+  setCollegeId: (id: string | null) => set({ collegeId: id }),
   setStudentId: (id) => set({ studentId: id }),
   setSelectedType: (type) => {
     set({ 
@@ -146,6 +149,11 @@ const useLogbookStore = create<LogbookState>((set, get) => ({
       const response = await fetch(`/api/student-profile?byUserId=${userId}`);
       if (!response.ok) throw new Error("Failed to fetch student profile");
       const data = await response.json();
+      if (!data || !data.id) {
+        toast.error("Student profile not found");
+        return;
+      }
+      set({collegeId: data.collegeId || null });
       set({ studentId: data.id });
       return;
     } catch (error) {
@@ -154,11 +162,12 @@ const useLogbookStore = create<LogbookState>((set, get) => ({
     }
   },
   
-  fetchAllTeachers: async () => {
+  fetchAllTeachers: async (collegeId) => {
     try {
-      const res = await fetch("/api/teacher-profile");
+      const res = await fetch("/api/teacher-profile?collegeId=" + collegeId);
       if (!res.ok) throw new Error("Failed to fetch teachers");
       const data = await res.json();
+      console.log("Fetched teachers:", data);
       set({ teachers: data?.data || [] });
     } catch (error) {
       console.error("Error fetching teachers:", error);

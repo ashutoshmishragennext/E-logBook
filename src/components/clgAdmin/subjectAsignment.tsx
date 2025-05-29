@@ -210,7 +210,7 @@ const SubjectAssignment: React.FC<SubjectAssignmentProps> = ({
   // Fetch teacher's assigned subjects with related data
   const fetchAssignedSubjects = async () => {
     setFetchIsLoading(true);
-    setStatus("Fetching assigned subjects...");
+    setStatus("Fetching assigned subjects... ✅");
     try {
       const res = await fetch(`/api/teacher-subjects?teacherId=${teacherId}`);
       if (!res.ok) {
@@ -305,7 +305,7 @@ const SubjectAssignment: React.FC<SubjectAssignmentProps> = ({
       );
 
       setAssignedSubjects(enrichedData);
-      setStatus("Assigned subjects fetched successfully");
+      setStatus("Assigned subjects fetched successfully ✅");
       setFetchIsLoading(false);
     } catch (err) {
       console.error("Error fetching assigned subjects:", err);
@@ -581,6 +581,8 @@ const SubjectAssignment: React.FC<SubjectAssignmentProps> = ({
               </div>
             )}
             {status && (
+
+              console.log("status", status),
               <div
                 className={`${
                   status.includes("✅")

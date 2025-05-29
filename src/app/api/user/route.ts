@@ -4,6 +4,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { TeacherProfileTable, UsersTable, StudentProfileTable } from "@/db/schema";
 import { hash } from "bcryptjs";
+import { sendEmail } from "@/lib/mailer";
 
 export async function GET(request: NextRequest) {
   try {
@@ -41,6 +42,37 @@ export async function GET(request: NextRequest) {
 //   }
 //   return password;
 // }
+
+async function sendWelcomeEmail(name: string, email: string, password: string, role: string) {
+  try {
+    const loginUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/auth/login`;
+    
+    await sendEmail(
+      "Elog Book",
+      email,
+      "Welcome to Elog Book - Your Account Details",
+      `<p>Hello <strong>${name}</strong>,</p>
+      <p>Welcome to <strong>Elog Book</strong>!</p>
+      <p>Your account has been successfully created. Here are your login credentials:</p>
+      <div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin: 15px 0;">
+        <p><strong>Email:</strong> ${email}</p>
+        <p><strong>Password:</strong> ${password}</p>
+        <p><strong>Role:</strong> ${role}</p>
+      </div>
+      <p>You can login to your account using the button below:</p>
+      <p><a href="${loginUrl}" style="display: inline-block; padding: 10px 20px; background-color: #4f46e5; color: white; text-decoration: none; border-radius: 5px;">Login to Elog Book</a></p>
+      <p><strong>Important:</strong> For security reasons, please change your password after your first login.</p>
+      <p>If you have any questions or need assistance, please don't hesitate to contact our support team.</p>
+      <p>Best regards,<br>The Elog Book Team</p>`
+    );
+    
+    console.log(`Welcome email sent successfully to ${email}`);
+    return true;
+  } catch (error) {
+    console.error(`Failed to send welcome email to ${email}:`, error);
+    return false;
+  }
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -87,6 +119,7 @@ async function handleSingleUserCreation(userData: any) {
   // Default to USER role if not specified
   const role = userData.role || "USER";
   const password = userData.password || userData.email;
+  const isTemporaryPassword = !userData.password; // Track if password was auto-generated
   console.log("Generated password:", password);
 
   // Create user
@@ -148,7 +181,6 @@ async function handleSingleUserCreation(userData: any) {
         userId: user.id,
         name: userData.name,
         email: userData.email,
-
         collegeId: userData.studentData.collegeId,
         rollNo: userData.studentData.rollNo || null,
         branchId: userData.studentData.branchId || null,
@@ -163,6 +195,9 @@ async function handleSingleUserCreation(userData: any) {
     console.log("Student profile created with ID:", studentId);
   }
 
+  // Send welcome email with login credentials
+  const emailSent = await sendWelcomeEmail(userData.name, userData.email, password, role);
+
   return NextResponse.json({
     teacherId: teacherId,
     studentId: studentId,
@@ -170,6 +205,7 @@ async function handleSingleUserCreation(userData: any) {
     name: userData.name,
     email: userData.email,
     role: user.role,
+    emailSent: emailSent,
     ...(userData.teacherData && { 
       collegeId: userData.teacherData.collegeId,
       designation: userData.teacherData.designation || "Lecturer",
@@ -183,7 +219,7 @@ async function handleSingleUserCreation(userData: any) {
       courseId: userData.studentData.courseId,
       academicYearId: userData.studentData.academicYearId
     }),
-    ...(!userData.password && { tempPassword: password })
+    ...(isTemporaryPassword && { tempPassword: password })
   });
 }
 
@@ -199,7 +235,11 @@ async function handleBulkUserCreation(usersData: any[]) {
     successful: 0,
     failed: 0,
     errors: [] as string[],
-    users: [] as any[]
+    users: [] as any[],
+    emailResults: {
+      sent: 0,
+      failed: 0
+    }
   };
 
   // Process each user sequentially
@@ -214,6 +254,7 @@ async function handleBulkUserCreation(usersData: any[]) {
 
       // Generate password if not provided
       const password = userData.password || userData.email;
+      const isTemporaryPassword = !userData.password;
       console.log("Generated password:", password);
       
       // Default to USER role if not specified
@@ -293,15 +334,25 @@ async function handleBulkUserCreation(usersData: any[]) {
         studentId = student.id;
       }
 
+      // Send welcome email with login credentials
+      const emailSent = await sendWelcomeEmail(userData.name, userData.email, password, role);
+      
+      if (emailSent) {
+        results.emailResults.sent++;
+      } else {
+        results.emailResults.failed++;
+      }
+
       // Add successful user to results
       results.successful++;
       results.users.push({
         userId: user.id,
         email: userData.email,
         role: role,
+        emailSent: emailSent,
         ...(teacherId && { teacherId }),
         ...(studentId && { studentId }),
-        tempPassword: !userData.password ? password : undefined
+        ...(isTemporaryPassword && { tempPassword: password })
       });
 
     } catch (error) {
@@ -315,11 +366,7 @@ async function handleBulkUserCreation(usersData: any[]) {
   }
 
   return NextResponse.json({
-    message: `Processed ${usersData.length} users. Created: ${results.successful}, Failed: ${results.failed}`,
+    message: `Processed ${usersData.length} users. Created: ${results.successful}, Failed: ${results.failed}. Emails sent: ${results.emailResults.sent}, Email failures: ${results.emailResults.failed}`,
     results
   });
 }
-
-// async function sendWelcomeEmail(email: string, tempPassword: string) {
-//   // Implement your email logic
-// }

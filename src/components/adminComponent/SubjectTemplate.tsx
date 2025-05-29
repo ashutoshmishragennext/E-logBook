@@ -11,19 +11,11 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useCurrentUser } from "@/hooks/auth";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Save } from "lucide-react";
 import { useRouter } from "next/navigation";
-import {  useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { FieldBuilder } from "./FieldBuilder";
@@ -36,6 +28,9 @@ import {
 
 import { toast } from "sonner";
 import { useCollegeStore } from "@/store/college";
+import { Alert, AlertDescription } from "../ui/alert";
+import SearchableSubjectSelect from "./SubjectSerachSelect";
+import { Save } from "lucide-react";
 
 // Simplified form validation schema
 const subjectTemplateSchema = z.object({
@@ -176,6 +171,47 @@ export function SubjectTemplateForm({
   return (
     <div className="p-1">
       <h2 className="text-2xl font-bold mb-1">Subject-Specific Templates</h2>
+      <Alert className="bg-blue-50 border-blue-200 mb-4">
+        <AlertDescription className="text-blue-700">
+          <div className="space-y-2">
+            <p>
+              <strong>Subject Templates</strong> are structured log book formats
+              designed specifically for individual academic subjects. These
+              templates ensure consistency in how data is collected for
+              subject-specific activities like lab work, assignments, or
+              practicals.
+            </p>
+            <ul className="list-disc pl-5 space-y-1">
+              <li>
+                Assign the template to a specific subject (e.g., Physics,
+                Chemistry, Math)
+              </li>
+              <li>
+                Provide a meaningful name and description for the template
+              </li>
+              <li>
+                Create dynamic fields to capture important academic details
+              </li>
+              <li>
+                Organize fields into logical groups (e.g., Experiment Info,
+                Observations)
+              </li>
+              <li>
+                Choose from a variety of input types (text, number, date,
+                textarea, etc.)
+              </li>
+              <li>
+                Mark fields as required or optional depending on importance
+              </li>
+            </ul>
+            <p>
+              Once created, these templates can be reused whenever log books
+              need to be maintained for the assigned subject, saving time and
+              improving data standardization.
+            </p>
+          </div>
+        </AlertDescription>
+      </Alert>
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
           <Card className="p-2">
@@ -212,27 +248,23 @@ export function SubjectTemplateForm({
                 )}
               />
 
-              {/* Subject field */}
               <FormField
                 control={form.control}
                 name="subjectId"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Subject</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select Subject" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {subjects.map((subject) => (
-                          <SelectItem key={subject.id} value={subject.id}>
-                            {subject.name} ({subject.code})
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <FormControl>
+                      <SearchableSubjectSelect
+                        options={subjects.map((subject) => ({
+                          label: `${subject.name} (${subject.code})`, // This will be displayed
+                          value: subject.id, // This will be the actual form value
+                        }))}
+                        value={field.value}
+                        onChange={field.onChange}
+                        placeholder="Subject"
+                      />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}

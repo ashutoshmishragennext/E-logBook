@@ -1,4 +1,4 @@
-
+/*eslint-disable  @typescript-eslint/no-explicit-any */
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -9,7 +9,7 @@ import { useCurrentUser } from '@/hooks/auth'
 import { useCollegeStore } from '@/store/college'
 import { useStudentProfileStore, VerificationStatus } from '@/store/student'
 import { useStudentSubjectStore } from '@/store/studentSubjectStore'
-import { Search } from 'lucide-react'
+import { Search, AlertTriangle } from 'lucide-react'
 import { useEffect, useState, useCallback, useMemo, useRef } from 'react'
 
 const StudentApproval = () => {
@@ -27,6 +27,8 @@ const StudentApproval = () => {
   const [rejectionReason, setRejectionReason] = useState("")
   const [searchQuery, setSearchQuery] = useState("")
   const [isLoading, setIsLoading] = useState(false)
+  const [validationDialogOpen, setValidationDialogOpen] = useState(false)
+  const [invalidStudents, setInvalidStudents] = useState<any[]>([])
   
   // Use refs to track initialization states
   const initializationRef = useRef({
@@ -84,9 +86,6 @@ const StudentApproval = () => {
       return []
     }
 
-    // Create a unique key for this fetch operation
-    // const fetchKey = `${collegeId}_${status.toUpperCase()}`
-    
     console.log(`🔄 Fetching profiles for status: ${status}, collegeId: ${collegeId}, forceRefresh: ${forceRefresh}`)
     setIsLoading(true)
     
@@ -140,6 +139,43 @@ const StudentApproval = () => {
     initializationRef.current.profiles = false
   }, [filterStatus])
 
+  // Helper functions to get names from IDs - memoized
+  const getCourseName = useCallback((courseId: string) => {
+    const foundCourse = course.find(c => c.id === courseId)
+    return foundCourse ? foundCourse.name : 'Unknown Course'
+  }, [course])
+  
+  const getBranchName = useCallback((branchId: string) => {
+    const branch = branches.find(b => b.id === branchId)
+    return branch ? branch.name : 'Unknown Branch'
+  }, [branches])
+
+  const getAcademicYearName = useCallback((academicYearId: string) => {
+    const academicYear = academicYears.find(ay => ay.id === academicYearId)
+    return academicYear ? academicYear.name : 'Unknown Academic Year'
+  }, [academicYears])
+
+  // Check if a student has complete profile information
+  const isStudentProfileComplete = useCallback((student: any) => {
+    const courseName = student.courseId ? getCourseName(student.courseId) : 'N/A'
+    const branchName = student.branchId ? getBranchName(student.branchId) : 'N/A'
+    const yearName = student.academicYearId ? getAcademicYearName(student.academicYearId) : 'N/A'
+    
+    return courseName !== 'N/A' && 
+           courseName !== 'Unknown Course' &&
+           branchName !== 'N/A' && 
+           branchName !== 'Unknown Branch' &&
+           yearName !== 'N/A' && 
+           yearName !== 'Unknown Academic Year'
+  }, [getCourseName, getBranchName, getAcademicYearName])
+
+  // Get students with incomplete profiles from selected students
+  const getIncompleteProfileStudents = useCallback((studentIds: string[]) => {
+    return currentProfiles.filter(student => 
+      studentIds.includes(student.id) && !isStudentProfileComplete(student)
+    )
+  }, [currentProfiles, isStudentProfileComplete])
+
   // Handle select all checkbox with proper dependency management
   const handleSelectAllChange = useCallback((checked: boolean) => {
     setSelectAll(checked)
@@ -158,22 +194,6 @@ const StudentApproval = () => {
       profile.email?.toLowerCase().includes(searchQuery.toLowerCase())
     ), [currentProfiles, searchQuery]
   )
-
-  // Helper functions to get names from IDs - memoized
-  const getCourseName = useCallback((courseId: string) => {
-    const foundCourse = course.find(c => c.id === courseId)
-    return foundCourse ? foundCourse.name : 'Unknown Course'
-  }, [course])
-  
-  const getBranchName = useCallback((branchId: string) => {
-    const branch = branches.find(b => b.id === branchId)
-    return branch ? branch.name : 'Unknown Branch'
-  }, [branches])
-
-  const getAcademicYearName = useCallback((academicYearId: string) => {
-    const academicYear = academicYears.find(ay => ay.id === academicYearId)
-    return academicYear ? academicYear.name : 'Unknown Academic Year'
-  }, [academicYears])
 
   // Toggle single student selection
   const toggleStudentSelection = useCallback((id: string) => {
@@ -207,9 +227,18 @@ const StudentApproval = () => {
     console.log("✅ Refresh completed")
   }, [filterStatus, fetchProfilesForStatus])
 
-  // Handle bulk approval
+  // Handle bulk approval with validation
   const handleBulkApprove = useCallback(async () => {
     if (selectedStudents.length === 0) return
+    
+    // Check for incomplete profiles
+    const incompleteStudents = getIncompleteProfileStudents(selectedStudents)
+    
+    if (incompleteStudents.length > 0) {
+      setInvalidStudents(incompleteStudents)
+      setValidationDialogOpen(true)
+      return
+    }
     
     console.log("✅ Starting bulk approval for students:", selectedStudents)
     setIsLoading(true)
@@ -236,7 +265,7 @@ const StudentApproval = () => {
     } finally {
       setIsLoading(false)
     }
-  }, [selectedStudents, updateProfile, refreshCurrentFilter])
+  }, [selectedStudents, updateProfile, refreshCurrentFilter, getIncompleteProfileStudents])
 
   // Handle bulk rejection
   const handleBulkReject = useCallback(async () => {
@@ -274,8 +303,16 @@ const StudentApproval = () => {
     }
   }, [selectedStudents, rejectionReason, updateProfile, refreshCurrentFilter])
 
-  // Handle single student approval
+  // Handle single student approval with validation
   const handleSingleApprove = useCallback(async (studentId: string) => {
+    const student = currentProfiles.find(p => p.id === studentId)
+    
+    if (student && !isStudentProfileComplete(student)) {
+      setInvalidStudents([student])
+      setValidationDialogOpen(true)
+      return
+    }
+    
     console.log("✅ Starting single approval for student:", studentId)
     setIsLoading(true)
     
@@ -293,7 +330,7 @@ const StudentApproval = () => {
     } finally {
       setIsLoading(false)
     }
-  }, [updateProfile, refreshCurrentFilter])
+  }, [updateProfile, refreshCurrentFilter, currentProfiles, isStudentProfileComplete])
 
   // Calculate the number of columns based on the current filter
   const getColumnCount = useCallback(() => {
@@ -386,60 +423,80 @@ const StudentApproval = () => {
                 </td>
               </tr>
             ) : filteredProfiles && filteredProfiles.length > 0 ? (
-              filteredProfiles.map((student) => (
-                <tr key={student.id} className="hover:bg-gray-50">
-                  <td className="p-4">
-                    <Checkbox
-                      checked={selectedStudents.includes(student.id)}
-                      onCheckedChange={() => toggleStudentSelection(student.id)}
-                      disabled={filterStatus !== "PENDING" || isLoading}
-                    />
-                  </td>
-                  <td className="p-4">{student.name || 'N/A'}</td>
-                  <td className="p-4">{student.rollNo || 'N/A'}</td>
-                  <td className="p-4">{student.email || 'N/A'}</td>
-                  <td className="p-4">{student.mobileNo || 'N/A'}</td>
-                  <td className="p-4">{student.branchId ? getBranchName(student.branchId) : 'N/A'}</td>
-                  <td className="p-4">{student.courseId ? getCourseName(student.courseId) : 'N/A'}</td>
-                  <td className="p-4">{student.academicYearId ? getAcademicYearName(student.academicYearId) : 'N/A'}</td>
-                  {filterStatus === "REJECTED" && (
-                    <td className="p-4 text-red-600">{student.rejectionReason || "No reason provided"}</td>
-                  )}
-                  <td className="p-4">
-                    {filterStatus === "PENDING" && (
-                      <div className="flex space-x-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleSingleApprove(student.id)}
-                          disabled={isLoading}
-                          className="text-green-600 hover:text-green-700 hover:bg-green-50"
-                        >
-                          Approve
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            setSelectedStudents([student.id])
-                            setRejectionDialogOpen(true)
-                          }}
-                          disabled={isLoading}
-                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                        >
-                          Reject
-                        </Button>
+              filteredProfiles.map((student) => {
+                const isComplete = isStudentProfileComplete(student)
+                const courseName = student.courseId ? getCourseName(student.courseId) : 'N/A'
+                const branchName = student.branchId ? getBranchName(student.branchId) : 'N/A'
+                const yearName = student.academicYearId ? getAcademicYearName(student.academicYearId) : 'N/A'
+                
+                return (
+                  <tr key={student.id} className={`hover:bg-gray-50 ${!isComplete && filterStatus === "PENDING" ? 'bg-yellow-50' : ''}`}>
+                    <td className="p-4">
+                      <Checkbox
+                        checked={selectedStudents.includes(student.id)}
+                        onCheckedChange={() => toggleStudentSelection(student.id)}
+                        disabled={filterStatus !== "PENDING" || isLoading}
+                      />
+                    </td>
+                    <td className="p-4">
+                      <div className="flex items-center gap-2">
+                        {student.name || 'N/A'}
+                        {!isComplete && filterStatus === "PENDING" && (
+                          <AlertTriangle className="w-4 h-4 text-yellow-600" aria-label="Incomplete profile information" />
+                        )}
                       </div>
-                    )}
-                    {filterStatus === "APPROVED" && (
-                      <span className="text-green-600 font-medium">Approved</span>
-                    )}
+                    </td>
+                    <td className="p-4">{student.rollNo || 'N/A'}</td>
+                    <td className="p-4">{student.email || 'N/A'}</td>
+                    <td className="p-4">{student.mobileNo || 'N/A'}</td>
+                    <td className={`p-4 ${branchName === 'N/A' || branchName.includes('Unknown') ? 'text-red-600 font-medium' : ''}`}>
+                      {branchName}
+                    </td>
+                    <td className={`p-4 ${courseName === 'N/A' || courseName.includes('Unknown') ? 'text-red-600 font-medium' : ''}`}>
+                      {courseName}
+                    </td>
+                    <td className={`p-4 ${yearName === 'N/A' || yearName.includes('Unknown') ? 'text-red-600 font-medium' : ''}`}>
+                      {yearName}
+                    </td>
                     {filterStatus === "REJECTED" && (
-                      <span className="text-red-600 font-medium">Rejected</span>
+                      <td className="p-4 text-red-600">{student.rejectionReason || "No reason provided"}</td>
                     )}
-                  </td>
-                </tr>
-              ))
+                    <td className="p-4">
+                      {filterStatus === "PENDING" && (
+                        <div className="flex space-x-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleSingleApprove(student.id)}
+                            disabled={isLoading}
+                            className={`${!isComplete ? 'text-gray-400 cursor-not-allowed' : 'text-green-600 hover:text-green-700 hover:bg-green-50'}`}
+                          >
+                            Approve
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setSelectedStudents([student.id])
+                              setRejectionDialogOpen(true)
+                            }}
+                            disabled={isLoading}
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                          >
+                            Reject
+                          </Button>
+                        </div>
+                      )}
+                      {filterStatus === "APPROVED" && (
+                        <span className="text-green-600 font-medium">Approved</span>
+                      )}
+                      {filterStatus === "REJECTED" && (
+                        <span className="text-red-600 font-medium">Rejected</span>
+                      )}
+                    </td>
+                  </tr>
+                )
+              })
             ) : (
               <tr>
                 <td colSpan={getColumnCount()} className="p-4 text-center text-gray-500">
@@ -452,6 +509,55 @@ const StudentApproval = () => {
           </tbody>
         </table>
       </div>
+      
+      {/* Validation Dialog */}
+      <Dialog open={validationDialogOpen} onOpenChange={setValidationDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-yellow-600" />
+              Cannot Approve - Incomplete Profile Information
+            </DialogTitle>
+            <DialogDescription>
+              The following student{invalidStudents.length > 1 ? 's have' : ' has'} incomplete profile information and cannot be approved:
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4 max-h-96 overflow-y-auto">
+            <div className="space-y-3">
+              {invalidStudents.map((student) => {
+                const courseName = student.courseId ? getCourseName(student.courseId) : 'N/A'
+                const branchName = student.branchId ? getBranchName(student.branchId) : 'N/A'
+                const yearName = student.academicYearId ? getAcademicYearName(student.academicYearId) : 'N/A'
+                
+                return (
+                  <div key={student.id} className="p-3 border rounded-lg bg-yellow-50">
+                    <div className="font-medium text-gray-900">{student.name || 'N/A'} ({student.rollNo || 'No Roll No'})</div>
+                    <div className="text-sm text-gray-600 mt-1">
+                      Missing information:
+                      <ul className="list-disc list-inside mt-1">
+                        {(courseName === 'N/A' || courseName.includes('Unknown')) && (
+                          <li className="text-red-600">Course information</li>
+                        )}
+                        {(branchName === 'N/A' || branchName.includes('Unknown')) && (
+                          <li className="text-red-600">Branch information</li>
+                        )}
+                        {(yearName === 'N/A' || yearName.includes('Unknown')) && (
+                          <li className="text-red-600">Academic year information</li>
+                        )}
+                      </ul>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setValidationDialogOpen(false)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       
       {/* Rejection Dialog */}
       <Dialog open={rejectionDialogOpen} onOpenChange={setRejectionDialogOpen}>

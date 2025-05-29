@@ -1,3 +1,4 @@
+/*eslint-disable @typescript-eslint/no-unused-vars */
 import { useCurrentUser } from "@/hooks/auth";
 import { useStudentProfileStore, VerificationStatus } from "@/store/student";
 import { useStudentSubjectStore } from "@/store/studentSubjectStore";
@@ -6,8 +7,14 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
-import DatePicker from "react-datepicker";
-import "react-datepicker/dist/react-datepicker.css";
+import {
+  ICountry,
+  IState,
+  ICity,
+  Country,
+  State,
+  City,
+} from "country-state-city";
 
 // UI Components
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -22,13 +29,8 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { Separator } from "@/components/ui/separator";
 import {
   AlertCircle,
   Eye,
@@ -49,6 +51,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import SearchableSubjectSelect from "@/components/adminComponent/SubjectSerachSelect";
 
 // Form validation schema
 const formSchema = z.object({
@@ -74,12 +77,12 @@ const formSchema = z.object({
       "Aadhar number must be exactly 12 digits and contain no letters."
     ),
   maritalStatus: z.string().optional(),
+  yearOfPassing: z.string().optional(),
+  academicYearId: z.string().optional(),
+  courseId: z.string().optional(),
+  branchId: z.string().optional(),
   rollNo: z.string().optional(),
   collegeId: z.string().optional(),
-  branchId: z.string().optional(),
-  courseId: z.string().optional(),
-  academicYearId: z.string().optional(),
-  yearOfPassing: z.string().optional(),
   teacherId: z.string().optional(),
 });
 
@@ -112,6 +115,15 @@ const StudentProfileCompact = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
+  // const [isLoading, setIsLoading] = useState(false);
+
+  // Country, State, City selection
+  const [selectedCountry, setSelectedCountry] = useState<ICountry | null>(null);
+  const [selectedState, setSelectedState] = useState<IState | null>(null);
+  const [selectedCity, setSelectedCity] = useState<ICity | null>(null);
+  const [allCountries, setAllCountries] = useState<ICountry[]>([]);
+  const [states, setStates] = useState<IState[]>([]);
+  const [cities, setCities] = useState<ICity[]>([]);
 
   // Display name mappings
   const [collegeDisplayName, setCollegeDisplayName] = useState("");
@@ -136,15 +148,70 @@ const StudentProfileCompact = () => {
       city: "",
       adharNo: "",
       maritalStatus: "",
+      yearOfPassing: "",
+      academicYearId: "",
+      courseId: "",
+      branchId: "",
       rollNo: "",
       collegeId: "",
-      branchId: "",
-      courseId: "",
-      academicYearId: "",
-      yearOfPassing: "",
       teacherId: "",
     },
   });
+
+  // Initialize countries on component mount
+  useEffect(() => {
+    try {
+      const countries = Country.getAllCountries();
+      setAllCountries(countries || []);
+    } catch (error) {
+      console.error("Error loading countries:", error);
+      setAllCountries([]);
+    }
+  }, []);
+
+  // Get states for selected country
+  useEffect(() => {
+    if (selectedCountry) {
+      try {
+        const stateList = State.getStatesOfCountry(selectedCountry.isoCode);
+        setStates(stateList || []);
+        setSelectedState(null);
+        setSelectedCity(null);
+        setCities([]);
+        form.setValue("state", "");
+        form.setValue("city", "");
+      } catch (error) {
+        console.error("Error loading states:", error);
+        setStates([]);
+      }
+    } else {
+      setStates([]);
+      setSelectedState(null);
+      setSelectedCity(null);
+      setCities([]);
+    }
+  }, [selectedCountry, form]);
+
+  // Get cities for selected state
+  useEffect(() => {
+    if (selectedState && selectedCountry) {
+      try {
+        const cityList = City.getCitiesOfState(
+          selectedState.countryCode,
+          selectedState.isoCode
+        );
+        setCities(cityList || []);
+        setSelectedCity(null);
+        form.setValue("city", "");
+      } catch (error) {
+        console.error("Error loading cities:", error);
+        setCities([]);
+      }
+    } else {
+      setCities([]);
+      setSelectedCity(null);
+    }
+  }, [selectedState, selectedCountry, form]);
 
   // Fetch profile when userId is available
   useEffect(() => {
@@ -197,25 +264,43 @@ const StudentProfileCompact = () => {
         city: profile.city || "",
         adharNo: profile.adharNo || "",
         maritalStatus: profile.maritalStatus || "",
+        yearOfPassing: profile.yearOfPassing || "",
+        academicYearId: profile.academicYearId || "",
+        courseId: profile.courseId || "",
+        branchId: profile.branchId || "",
         rollNo: profile.rollNo || "",
         collegeId: profile.collegeId || "",
-        branchId: profile.branchId || "",
-        courseId: profile.courseId || "",
-        academicYearId: profile.academicYearId || "",
-        yearOfPassing: profile.yearOfPassing || "",
         teacherId: profile.teacherId || "",
       });
 
       setProfilePhotoUrl(profile.profilePhoto || "");
       setCollegeIdProofUrl(profile.collegeIdProof || "");
+
+      // Set location selections
+      if (profile.country) {
+        const country = allCountries.find(c => c.name === profile.country);
+        if (country) {
+          setSelectedCountry(country);
+        }
+      }
+      if (profile.state) {
+        const state = states.find(s => s.name === profile.state);
+        if (state) {
+          setSelectedState(state);
+        }
+      }
+      if (profile.city) {
+        const city = cities.find(c => c.name === profile.city);
+        if (city) {
+          setSelectedCity(city);
+        }
+      }
     }
-  }, [profile, form, user]);
+  }, [profile, form, user, allCountries, states, cities]);
 
   // Update display names for select fields when data is loaded
   useEffect(() => {
-    // Map IDs to display names when the data is loaded
     if (profile && colleges && branches && course && academicYears) {
-      // Find the display names by ID
       const selectedCollege = colleges.find((c) => c.id === profile.collegeId);
       const selectedBranch = branches.find((b) => b.id === profile.branchId);
       const selectedCourse = course.find((c) => c.id === profile.courseId);
@@ -223,13 +308,30 @@ const StudentProfileCompact = () => {
         (y) => y.id === profile.academicYearId
       );
 
-      // Set display names
       setCollegeDisplayName(selectedCollege?.name || "");
       setBranchDisplayName(selectedBranch?.name || "");
       setCourseDisplayName(selectedCourse?.name || "");
       setAcademicYearDisplayName(selectedYear?.name || "");
     }
   }, [profile, colleges, branches, course, academicYears]);
+
+  const handleCountrySelect = (countryName: string) => {
+    const country = allCountries.find(c => c.name === countryName);
+    setSelectedCountry(country || null);
+    form.setValue("country", countryName);
+  };
+
+  const handleStateSelect = (stateName: string) => {
+    const state = states.find(s => s.name === stateName);
+    setSelectedState(state || null);
+    form.setValue("state", stateName);
+  };
+
+  const handleCitySelect = (cityName: string) => {
+    const city = cities.find(c => c.name === cityName);
+    setSelectedCity(city || null);
+    form.setValue("city", cityName);
+  };
 
   const handleCollegeChange = async (collegeId: string) => {
     if (!collegeId) {
@@ -257,7 +359,6 @@ const StudentProfileCompact = () => {
   };
 
   const handleSaveClick = () => {
-    // Check if verified and show dialog
     if (isProfileVerified) {
       setDialogOpen(true);
     } else {
@@ -270,7 +371,6 @@ const StudentProfileCompact = () => {
       setIsSubmitting(true);
       setDialogOpen(false);
 
-      // If profile is verified, preserve the locked fields from the original profile
       let profileData;
 
       if (isProfileVerified && profile) {
@@ -279,7 +379,6 @@ const StudentProfileCompact = () => {
           userId: userId as string,
           profilePhoto: profilePhotoUrl,
           collegeIdProof: collegeIdProofUrl,
-          // Preserve locked fields if verified
           adharNo: profile.adharNo,
           dateOfBirth: profile.dateOfBirth,
           rollNo: profile.rollNo,
@@ -296,7 +395,6 @@ const StudentProfileCompact = () => {
           userId: userId as string,
           profilePhoto: profilePhotoUrl,
           collegeIdProof: collegeIdProofUrl,
-          // Set verification status to PENDING when submitting changes
           verificationStatus:
             profile?.verificationStatus === VerificationStatus.APPROVED
               ? VerificationStatus.APPROVED
@@ -333,7 +431,6 @@ const StudentProfileCompact = () => {
     }
   };
 
-  // Request verification from college admin
   const requestVerification = async () => {
     try {
       if (profile && college?.collegeAdminId) {
@@ -360,7 +457,7 @@ const StudentProfileCompact = () => {
   }
 
   return (
-    <Card className="w-full  shadow-md bg-white">
+    <Card className="w-full shadow-md bg-white">
       <CardHeader className="bg-primary/90 text-white py-4 flex flex-row justify-between items-center">
         <CardTitle className="text-xl font-bold">Student Profile</CardTitle>
         {!isEditing ? (
@@ -374,26 +471,15 @@ const StudentProfileCompact = () => {
             Edit
           </Button>
         ) : (
-          <div className="flex gap-2">
-            <Button
-              variant="ghost"
-              onClick={() => setIsEditing(false)}
-              className="gap-1 text-white hover:bg-primary-foreground/10"
-              size="sm"
-            >
-              <X className="h-3.5 w-3.5" />
-              Cancel
-            </Button>
-            <Button
-              onClick={handleSaveClick}
-              className="gap-1 bg-white text-primary hover:bg-gray-100"
-              size="sm"
-              disabled={isSubmitting}
-            >
-              <Save className="h-3.5 w-3.5" />
-              {isSubmitting ? "Saving..." : "Save"}
-            </Button>
-          </div>
+          <Button
+            variant="ghost"
+            onClick={() => setIsEditing(false)}
+            className="gap-1 text-white hover:bg-primary-foreground/10"
+            size="sm"
+          >
+            <X className="h-3.5 w-3.5" />
+            Cancel
+          </Button>
         )}
       </CardHeader>
 
@@ -427,14 +513,14 @@ const StudentProfileCompact = () => {
                           button: {
                             background: "hsl(var(--primary))",
                             color: "white",
-                            padding: "0", // no extra padding to keep it circular
+                            padding: "0",
                             margin: "3px 4px",
                             width: "100px",
                             height: "28px",
                             display: "flex",
                             alignItems: "center",
                             justifyContent: "center",
-                            fontSize: "16px", // adjust based on your icon/text size
+                            fontSize: "16px",
                             cursor: "pointer",
                           },
                         }}
@@ -530,7 +616,7 @@ const StudentProfileCompact = () => {
                 <FormLabel className="text-xs block mb-1">
                   College ID Proof
                 </FormLabel>
-                <div className="border rounded-md p-3 bg-muted/10  flex items-center">
+                <div className="border rounded-md p-3 bg-muted/10 flex items-center">
                   {collegeIdProofUrl ? (
                     <div className="flex flex-wrap items-center justify-between gap-3 w-full">
                       <div className="flex items-center gap-2">
@@ -636,9 +722,30 @@ const StudentProfileCompact = () => {
               </Alert>
             )}
 
-            {/* MODIFIED LAYOUT: Using a 4-column grid on desktop */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-              {/* Personal details inputs - 4 per row on desktop */}
+            {/* Personal Information Section */}
+            <Separator className="my-4" />
+            <h3 className="font-medium text-sm mb-3">Personal Information</h3>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+              <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-xs">Full Name</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="Your full name"
+                        {...field}
+                        disabled={!isEditing}
+                        className={!isEditing ? "bg-muted/30" : ""}
+                      />
+                    </FormControl>
+                    <FormMessage className="text-xs" />
+                  </FormItem>
+                )}
+              />
+
               <FormField
                 control={form.control}
                 name="mobileNo"
@@ -673,18 +780,33 @@ const StudentProfileCompact = () => {
                         </span>
                       )}
                     </FormLabel>
-                    <DatePicker
-                      selected={field.value}
-                      onChange={field.onChange}
-                      dateFormat="dd/MM/yyyy"
-                      placeholderText="Select date"
-                      className={`flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm ${
-                        !isEditing || (isProfileVerified && isEditing)
-                          ? "bg-muted/30"
-                          : ""
-                      }`}
-                      disabled={!isEditing || (isProfileVerified && isEditing)}
-                    />
+                    <FormControl>
+                      <Input
+                        type="date"
+                        {...field}
+                        value={
+                          field.value
+                            ? typeof field.value === "string"
+                              ? field.value
+                              : field.value instanceof Date
+                              ? field.value.toISOString().slice(0, 10)
+                              : ""
+                            : ""
+                        }
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          field.onChange(value ? new Date(value) : undefined);
+                        }}
+                        className={`h-9 ${
+                          !isEditing || (isProfileVerified && isEditing)
+                            ? "bg-muted/30"
+                            : ""
+                        }`}
+                        disabled={
+                          !isEditing || (isProfileVerified && isEditing)
+                        }
+                      />
+                    </FormControl>
                     <FormMessage className="text-xs" />
                   </FormItem>
                 )}
@@ -696,25 +818,20 @@ const StudentProfileCompact = () => {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="text-xs">Marital Status</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      value={field.value || ""}
-                      disabled={!isEditing}
-                    >
-                      <FormControl>
-                        <SelectTrigger
-                          className={!isEditing ? "bg-muted/30" : ""}
-                        >
-                          <SelectValue placeholder="Select" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="single">Single</SelectItem>
-                        <SelectItem value="married">Married</SelectItem>
-                        <SelectItem value="divorced">Divorced</SelectItem>
-                        <SelectItem value="widowed">Widowed</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <FormControl>
+                      <SearchableSubjectSelect
+                        options={[
+                          { label: "Single", value: "single" },
+                          { label: "Married", value: "married" },
+                          { label: "Divorced", value: "divorced" },
+                          { label: "Widowed", value: "widowed" },
+                        ]}
+                        value={field.value || ""}
+                        onChange={field.onChange}
+                        placeholder="Select status"
+                        disabled={!isEditing}
+                      />
+                    </FormControl>
                     <FormMessage className="text-xs" />
                   </FormItem>
                 )}
@@ -742,7 +859,7 @@ const StudentProfileCompact = () => {
                         onChange={(e) => {
                           const value = e.target.value
                             .replace(/\D/g, "")
-                            .slice(0, 12); // Remove non-digits and limit to 12
+                            .slice(0, 12);
                           field.onChange(value);
                         }}
                         value={field.value}
@@ -760,39 +877,32 @@ const StudentProfileCompact = () => {
                   </FormItem>
                 )}
               />
+            </div>
 
-              {/* Location details inputs - 4 per row on desktop */}
+            {/* Address Information Section */}
+            <Separator className="my-4" />
+            <h3 className="font-medium text-sm mb-3">Address Information</h3>
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
               <FormField
                 control={form.control}
-                name="Address"
+                name="country"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-xs">Address</FormLabel>
+                    <FormLabel className="text-xs">Country</FormLabel>
                     <FormControl>
-                      <Input
-                        placeholder="Your address"
-                        {...field}
+                      <SearchableSubjectSelect
+                        options={allCountries.map((country) => ({
+                          label: country.name,
+                          value: country.name,
+                        }))}
+                        value={field.value || ""}
+                        onChange={(value) => {
+                          field.onChange(value);
+                          handleCountrySelect(value);
+                        }}
+                        placeholder="Select country"
                         disabled={!isEditing}
-                        className={!isEditing ? "bg-muted/30" : ""}
-                      />
-                    </FormControl>
-                    <FormMessage className="text-xs" />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="city"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-xs">City</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="City"
-                        {...field}
-                        disabled={!isEditing}
-                        className={!isEditing ? "bg-muted/30" : ""}
                       />
                     </FormControl>
                     <FormMessage className="text-xs" />
@@ -807,11 +917,18 @@ const StudentProfileCompact = () => {
                   <FormItem>
                     <FormLabel className="text-xs">State</FormLabel>
                     <FormControl>
-                      <Input
-                        placeholder="State"
-                        {...field}
-                        disabled={!isEditing}
-                        className={!isEditing ? "bg-muted/30" : ""}
+                      <SearchableSubjectSelect
+                        options={states.map((state) => ({
+                          label: state.name,
+                          value: state.name,
+                        }))}
+                        value={field.value || ""}
+                        onChange={(value) => {
+                          field.onChange(value);
+                          handleStateSelect(value);
+                        }}
+                        placeholder="Select state"
+                        disabled={!isEditing || !selectedCountry}
                       />
                     </FormControl>
                     <FormMessage className="text-xs" />
@@ -821,25 +938,62 @@ const StudentProfileCompact = () => {
 
               <FormField
                 control={form.control}
-                name="country"
+                name="city"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-xs">Country</FormLabel>
+                    <FormLabel className="text-xs">City</FormLabel>
                     <FormControl>
-                      <Input
-                        placeholder="Country"
-                        {...field}
-                        disabled={!isEditing}
-                        className={!isEditing ? "bg-muted/30" : ""}
+                      <SearchableSubjectSelect
+                        options={cities.map((city) => ({
+                          label: city.name,
+                          value: city.name,
+                        }))}
+                        value={field.value || ""}
+                        onChange={(value) => {
+                          field.onChange(value);
+                          handleCitySelect(value);
+                        }}
+                        placeholder="Select city"
+                        disabled={!isEditing || !selectedState}
                       />
                     </FormControl>
                     <FormMessage className="text-xs" />
                   </FormItem>
                 )}
               />
+            </div>
 
-              {/* Academic details inputs - 4 per row on desktop */}
-              <FormField
+            <FormField
+              control={form.control}
+              name="Address"
+              render={({ field }) => (
+                <FormItem className="mb-4">
+                  <FormLabel className="text-xs">Address</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      placeholder="Enter your full address"
+                      {...field}
+                      disabled={!isEditing}
+                      className={!isEditing ? "bg-muted/30" : ""}
+                      rows={2}
+                    />
+                  </FormControl>
+                  <FormMessage className="text-xs" />
+                </FormItem>
+              )}
+            />
+
+            {/* Academic Information Section */}
+            <Separator className="my-4" />
+            <h3 className="font-medium text-sm mb-3">Academic Information</h3>
+
+
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mb-4">
+
+
+
+               <FormField
                 control={form.control}
                 name="rollNo"
                 render={({ field }) => (
@@ -856,7 +1010,7 @@ const StudentProfileCompact = () => {
                     </FormLabel>
                     <FormControl>
                       <Input
-                        placeholder="Roll No"
+                        placeholder="Enter roll number"
                         {...field}
                         disabled={
                           !isEditing || (isProfileVerified && isEditing)
@@ -873,6 +1027,7 @@ const StudentProfileCompact = () => {
                 )}
               />
 
+              
               <FormField
                 control={form.control}
                 name="collegeId"
@@ -888,55 +1043,37 @@ const StudentProfileCompact = () => {
                         </span>
                       )}
                     </FormLabel>
-                    {isEditing && !isProfileVerified ? (
-                      <Select
-                        onValueChange={(value) => {
+                    <FormControl>
+                      <SearchableSubjectSelect
+                        options={
+                          colleges?.map((college) => ({
+                            label: college.name,
+                            value: college.id,
+                          })) || []
+                        }
+                        value={field.value || ""}
+                        onChange={(value) => {
                           field.onChange(value);
                           handleCollegeChange(value);
                         }}
-                        value={field.value || ""}
+                        placeholder="Select college"
                         disabled={
                           !isEditing || (isProfileVerified && isEditing)
                         }
-                      >
-                        <FormControl>
-                          <SelectTrigger
-                            className={
-                              !isEditing || (isProfileVerified && isEditing)
-                                ? "bg-muted/30"
-                                : ""
-                            }
-                          >
-                            <SelectValue placeholder="Select college" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {colleges?.map((college) => (
-                            <SelectItem key={college.id} value={college.id}>
-                              {college.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    ) : (
-                      <Input
-                        value={collegeDisplayName || "Not selected"}
-                        disabled={true}
-                        className="bg-muted/30"
                       />
-                    )}
+                    </FormControl>
                     <FormMessage className="text-xs" />
                   </FormItem>
                 )}
               />
 
-              <FormField
+                <FormField
                 control={form.control}
-                name="branchId"
+                name="yearOfPassing"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="text-xs flex items-center gap-1">
-                      Branch
+                      Year of Passing
                       {isProfileVerified && isEditing && (
                         <span className="text-xs text-amber-600">
                           <span title="Cannot be changed after verification">
@@ -945,40 +1082,61 @@ const StudentProfileCompact = () => {
                         </span>
                       )}
                     </FormLabel>
-                    {isEditing && !isProfileVerified ? (
-                      <Select
-                        onValueChange={field.onChange}
-                        value={field.value || ""}
+                    <FormControl>
+                      <Input
+                        type="number"
+                        placeholder="2024"
+                        {...field}
                         disabled={
                           !isEditing || (isProfileVerified && isEditing)
                         }
-                      >
-                        <FormControl>
-                          <SelectTrigger
-                            className={
-                              !isEditing || (isProfileVerified && isEditing)
-                                ? "bg-muted/30"
-                                : ""
-                            }
-                          >
-                            <SelectValue placeholder="Select branch" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {branches?.map((branch) => (
-                            <SelectItem key={branch.id} value={branch.id}>
-                              {branch.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    ) : (
-                      <Input
-                        value={branchDisplayName || "Not selected"}
-                        disabled={true}
-                        className="bg-muted/30"
+                        className={
+                          !isEditing || (isProfileVerified && isEditing)
+                            ? "bg-muted/30"
+                            : ""
+                        }
+                        min="1950"
+                        max="2030"
                       />
-                    )}
+                    </FormControl>
+                    <FormMessage className="text-xs" />
+                  </FormItem>
+                )}
+              />
+
+
+              
+              <FormField
+                control={form.control}
+                name="academicYearId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-xs flex items-center gap-1">
+                      Academic Year
+                      {isProfileVerified && isEditing && (
+                        <span className="text-xs text-amber-600">
+                          <span title="Cannot be changed after verification">
+                            <Info className="h-3 w-3" />
+                          </span>
+                        </span>
+                      )}
+                    </FormLabel>
+                    <FormControl>
+                      <SearchableSubjectSelect
+                        options={
+                          academicYears?.map((year) => ({
+                            label: year.name,
+                            value: year.id,
+                          })) || []
+                        }
+                        value={field.value || ""}
+                        onChange={field.onChange}
+                        placeholder="Select academic year"
+                        disabled={
+                          !isEditing || (isProfileVerified && isEditing)
+                        }
+                      />
+                    </FormControl>
                     <FormMessage className="text-xs" />
                   </FormItem>
                 )}
@@ -999,40 +1157,22 @@ const StudentProfileCompact = () => {
                         </span>
                       )}
                     </FormLabel>
-                    {isEditing && !isProfileVerified ? (
-                      <Select
-                        onValueChange={field.onChange}
+                    <FormControl>
+                      <SearchableSubjectSelect
+                        options={
+                          course?.map((c) => ({
+                            label: c.name,
+                            value: c.id,
+                          })) || []
+                        }
                         value={field.value || ""}
+                        onChange={field.onChange}
+                        placeholder="Select course"
                         disabled={
                           !isEditing || (isProfileVerified && isEditing)
                         }
-                      >
-                        <FormControl>
-                          <SelectTrigger
-                            className={
-                              !isEditing || (isProfileVerified && isEditing)
-                                ? "bg-muted/30"
-                                : ""
-                            }
-                          >
-                            <SelectValue placeholder="Select course" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {course?.map((c) => (
-                            <SelectItem key={c.id} value={c.id}>
-                              {c.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    ) : (
-                      <Input
-                        value={courseDisplayName || "Not selected"}
-                        disabled={true}
-                        className="bg-muted/30"
                       />
-                    )}
+                    </FormControl>
                     <FormMessage className="text-xs" />
                   </FormItem>
                 )}
@@ -1040,65 +1180,11 @@ const StudentProfileCompact = () => {
 
               <FormField
                 control={form.control}
-                name="academicYearId"
+                name="branchId"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="text-xs flex items-center gap-1">
-                      Academic Year
-                      {isProfileVerified && isEditing && (
-                        <span className="text-xs text-amber-600">
-                          <span title="Cannot be changed after verification">
-                            <Info className="h-3 w-3" />
-                          </span>
-                        </span>
-                      )}
-                    </FormLabel>
-                    {isEditing && !isProfileVerified ? (
-                      <Select
-                        onValueChange={field.onChange}
-                        value={field.value || ""}
-                        disabled={
-                          !isEditing || (isProfileVerified && isEditing)
-                        }
-                      >
-                        <FormControl>
-                          <SelectTrigger
-                            className={
-                              !isEditing || (isProfileVerified && isEditing)
-                                ? "bg-muted/30"
-                                : ""
-                            }
-                          >
-                            <SelectValue placeholder="Select academic year" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {academicYears?.map((year) => (
-                            <SelectItem key={year.id} value={year.id}>
-                              {year.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    ) : (
-                      <Input
-                        value={academicYearDisplayName || "Not selected"}
-                        disabled={true}
-                        className="bg-muted/30"
-                      />
-                    )}
-                    <FormMessage className="text-xs" />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="yearOfPassing"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-xs flex items-center gap-1">
-                      Year of Passing
+                      Branch
                       {isProfileVerified && isEditing && (
                         <span className="text-xs text-amber-600">
                           <span title="Cannot be changed after verification">
@@ -1108,16 +1194,18 @@ const StudentProfileCompact = () => {
                       )}
                     </FormLabel>
                     <FormControl>
-                      <Input
-                        placeholder="e.g. 2025"
-                        {...field}
+                      <SearchableSubjectSelect
+                        options={
+                          branches?.map((branch) => ({
+                            label: branch.name,
+                            value: branch.id,
+                          })) || []
+                        }
+                        value={field.value || ""}
+                        onChange={field.onChange}
+                        placeholder="Select branch"
                         disabled={
                           !isEditing || (isProfileVerified && isEditing)
-                        }
-                        className={
-                          !isEditing || (isProfileVerified && isEditing)
-                            ? "bg-muted/30"
-                            : ""
                         }
                       />
                     </FormControl>
@@ -1125,39 +1213,75 @@ const StudentProfileCompact = () => {
                   </FormItem>
                 )}
               />
+
+             
+
+            
             </div>
+
+            {/* Save Button */}
+            {isEditing && (
+              <div className="flex justify-end gap-2 mt-6">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIsEditing(false)}
+                  disabled={isSubmitting}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  onClick={handleSaveClick}
+                  disabled={isSubmitting}
+                  className="gap-2"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white"></div>
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="h-4 w-4" />
+                      Save Profile
+                    </>
+                  )}
+                </Button>
+              </div>
+            )}
           </form>
         </Form>
-      </CardContent>
 
-      {/* Confirmation Dialog for Verified Profiles */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Update Profile</DialogTitle>
-            <DialogDescription>
-              Some fields cannot be changed after verification. The following
-              fields will remain unchanged:
-              <ul className="list-disc list-inside mt-2 space-y-1">
-                <li>Aadhar Number</li>
-                <li>Date of Birth</li>
-                <li>Roll Number</li>
-                <li>College</li>
-                <li>Branch</li>
-                <li>Course</li>
-                <li>Academic Year</li>
-                <li>Year of Passing</li>
-              </ul>
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={form.handleSubmit(onSubmit)}>Continue</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        {/* Confirmation Dialog for Verified Profile Changes */}
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Profile Already Verified</DialogTitle>
+              <DialogDescription>
+                Your profile has already been verified by the college
+                administrator. Some fields cannot be modified after
+                verification. Are you sure you want to proceed with saving the
+                changes to the allowed fields?
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setDialogOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={() => form.handleSubmit(onSubmit)()}
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? "Saving..." : "Save Changes"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </CardContent>
     </Card>
   );
 };

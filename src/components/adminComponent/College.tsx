@@ -40,27 +40,65 @@ import {
   State,
   City,
 } from "country-state-city";
-import { ComboBox } from "../ui/combo-box";
+import SearchableSelect from "../common/SearchSelect";
 
 const College: React.FC = () => {
   const [selectedCountry, setSelectedCountry] = useState<ICountry | null>(null);
   const [selectedState, setSelectedState] = useState<IState | null>(null);
   const [selectedCity, setSelectedCity] = useState<ICity | null>(null);
 
-  // Get all countries
-  const allCountries = Country.getAllCountries();
+  // Get all countries with error handling
+  const [allCountries, setAllCountries] = useState<ICountry[]>([]);
 
-  // Get states for selected country
-  const states = selectedCountry
-    ? State.getStatesOfCountry(selectedCountry.isoCode)
-    : [];
+  // Initialize countries on component mount
+  useEffect(() => {
+    try {
+      const countries = Country.getAllCountries();
+      setAllCountries(countries || []);
+    } catch (error) {
+      console.error("Error loading countries:", error);
+      setAllCountries([]);
+    }
+  }, []);
 
-  // Get cities for selected state
-  const cities = selectedState
-    ? City.getCitiesOfState(selectedState.countryCode, selectedState.isoCode)
-    : [];
+  // Get states for selected country with error handling
+  const [states, setStates] = useState<IState[]>([]);
+  useEffect(() => {
+    if (selectedCountry) {
+      try {
+        const stateList = State.getStatesOfCountry(selectedCountry.isoCode);
+        setStates(stateList || []);
+      } catch (error) {
+        console.error("Error loading states:", error);
+        setStates([]);
+      }
+    } else {
+      setStates([]);
+    }
+  }, [selectedCountry]);
+
+  // Get cities for selected state with error handling
+  const [cities, setCities] = useState<ICity[]>([]);
+  useEffect(() => {
+    if (selectedState && selectedCountry) {
+      try {
+        const cityList = City.getCitiesOfState(
+          selectedState.countryCode,
+          selectedState.isoCode
+        );
+        setCities(cityList || []);
+      } catch (error) {
+        console.error("Error loading cities:", error);
+        setCities([]);
+      }
+    } else {
+      setCities([]);
+    }
+  }, [selectedState, selectedCountry]);
+
   const user = useCurrentUser();
   const userId = user?.id || null;
+
   interface College {
     id: string;
     name: string;
@@ -133,6 +171,91 @@ const College: React.FC = () => {
     Record<string, boolean>
   >({});
 
+  // Effect to handle country, state, city updates in form
+  useEffect(() => {
+    if (selectedCountry) {
+      setFormData((prev) => ({
+        ...prev,
+        country: selectedCountry.name,
+      }));
+    }
+  }, [selectedCountry]);
+
+  useEffect(() => {
+    if (selectedState) {
+      setFormData((prev) => ({
+        ...prev,
+        state: selectedState.name,
+      }));
+    } else {
+      setFormData((prev) => ({
+        ...prev,
+        state: "",
+      }));
+    }
+  }, [selectedState]);
+
+  useEffect(() => {
+    if (selectedCity) {
+      setFormData((prev) => ({
+        ...prev,
+        city: selectedCity.name,
+      }));
+    } else {
+      setFormData((prev) => ({
+        ...prev,
+        city: "",
+      }));
+    }
+  }, [selectedCity]);
+
+  // Function to initialize country/state/city when editing
+  const initializeLocationSelectors = (college: College) => {
+    // Find and set country
+    if (college.country) {
+      const country = allCountries.find((c) => c.name === college.country);
+      if (country) {
+        setSelectedCountry(country);
+
+        // Find and set state
+        if (college.state) {
+          try {
+            const statesList = State.getStatesOfCountry(country.isoCode);
+            const state = statesList?.find((s) => s.name === college.state);
+            if (state) {
+              setSelectedState(state);
+
+              // Find and set city
+              if (college.city) {
+                try {
+                  const citiesList = City.getCitiesOfState(
+                    state.countryCode,
+                    state.isoCode
+                  );
+                  const city = citiesList?.find((c) => c.name === college.city);
+                  if (city) {
+                    setSelectedCity(city);
+                  }
+                } catch (error) {
+                  console.error("Error loading cities for editing:", error);
+                }
+              }
+            }
+          } catch (error) {
+            console.error("Error loading states for editing:", error);
+          }
+        }
+      }
+    }
+  };
+
+  // Function to reset location selectors
+  const resetLocationSelectors = () => {
+    setSelectedCountry(null);
+    setSelectedState(null);
+    setSelectedCity(null);
+  };
+
   // Fix the fetchCollegeAdminData function to properly update the state
   const fetchCollegeAdminData = async (college: College) => {
     if (!college.collegeAdminId || failedAdminFetches[college.id]) return;
@@ -194,6 +317,7 @@ const College: React.FC = () => {
       setLoadingAdminIds((prev) => prev.filter((id) => id !== college.id));
     }
   };
+
   // Auto-fetch effect
   useEffect(() => {
     filteredColleges.forEach((college) => {
@@ -305,6 +429,7 @@ const College: React.FC = () => {
       logo: "",
     });
     setProfilePhotoFileName("");
+    resetLocationSelectors();
   };
 
   const resetAdminForm = () => {
@@ -362,6 +487,8 @@ const College: React.FC = () => {
         description: selectedCollege.description || "",
         logo: selectedCollege.logo || "",
       });
+      // Reset location selectors to match college data
+      initializeLocationSelectors(selectedCollege);
     } else {
       // Clear form for new college
       resetForm();
@@ -592,6 +719,8 @@ const College: React.FC = () => {
       description: college.description || "",
       logo: college.logo || "",
     });
+    // Initialize location selectors
+    initializeLocationSelectors(college);
     setIsEditing(true);
   };
 
@@ -628,7 +757,77 @@ const College: React.FC = () => {
     setIsCreatingAdmin(true);
   };
 
-  const renderCollegeForm = () => (
+  // Handle country selection with error handling
+  const handleCountrySelect = (value: string) => {
+    try {
+      const country = allCountries.find((c) => c.name === value);
+      setSelectedCountry(country || null);
+      setSelectedState(null); // Reset state when country changes
+      setSelectedCity(null); // Reset city when country changes
+    } catch (error) {
+      console.error("Error selecting country:", error);
+      setError("Error selecting country. Please try again.");
+    }
+  };
+
+  // Handle state selection with error handling
+  const handleStateSelect = (value: string) => {
+    try {
+      const state = states.find((s) => s.name === value);
+      setSelectedState(state || null);
+      setSelectedCity(null); // Reset city when state changes
+    } catch (error) {
+      console.error("Error selecting state:", error);
+      setError("Error selecting state. Please try again.");
+    }
+  };
+
+  // Handle city selection with error handling
+  const handleCitySelect = (value: string) => {
+    try {
+      const city = cities.find((c) => c.name === value);
+      setSelectedCity(city || null);
+    } catch (error) {
+      console.error("Error selecting city:", error);
+      setError("Error selecting city. Please try again.");
+    }
+  };
+
+  const renderCollegeForm = () => {
+  // Validation functions
+  const validatePhone = (value: string) => {
+    return value.length <= 10 && /^\d*$/.test(value);
+  };
+
+  const validateEmail = (email: string) => {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  };
+
+  // Handle input changes with validation
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    if (validatePhone(value)) {
+      handleInputChange(e);
+    }
+  };
+
+  const handleCodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value.toUpperCase();
+    handleInputChange({
+      target: {
+        name: e.target.name,
+        value: value
+      }
+    });
+  };
+
+  const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    handleInputChange(e);
+    // You can add email validation state here if needed
+  };
+
+  return (
     <div className="space-y-4 overflow-y-auto max-h-[80vh] p-4">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-1">
@@ -653,12 +852,13 @@ const College: React.FC = () => {
             id="code"
             name="code"
             value={formData.code}
-            onChange={handleInputChange}
+            onChange={handleCodeChange}
             placeholder="AIIMS2003"
             required
           />
         </div>
       </div>
+      
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-1 ">
           <label htmlFor="logo" className="text-sm font-medium text-gray-700">
@@ -687,7 +887,7 @@ const College: React.FC = () => {
             ) : (
               <UploadButton
                 endpoint="imageUploader"
-                className="h-16 text-xs  mt-2"
+                className="h-16 text-xs mt-2"
                 appearance={{
                   button: "h-9 text-md p-3",
                 }}
@@ -708,22 +908,105 @@ const College: React.FC = () => {
             )}
           </div>
         </div>
-            <div className="space-y-1">
-        <label
-          htmlFor="description"
-          className="text-sm font-medium text-gray-700"
-        >
-          Description
+        
+        <div className="space-y-1">
+          <label htmlFor="description" className="text-sm font-medium text-gray-700">
+            Description
+          </label>
+          <Textarea
+            id="description"
+            name="description"
+            value={formData.description}
+            onChange={handleInputChange}
+            placeholder="Enter college description"
+            rows={3}
+          />
+        </div>
+      </div>
+
+      <Separator className="my-3" />
+      <h3 className="font-medium text-sm">Address Information</h3>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="space-y-1">
+          <label htmlFor="country" className="text-sm font-medium text-gray-700">
+            Country
+          </label>
+          <SearchableSelect
+            options={
+              Array.isArray(allCountries)
+                ? allCountries.map((country) => ({
+                    label: country.name,
+                    value: country.name,
+                  }))
+                : []
+            }
+            value={selectedCountry?.name || ""}
+            onChange={(value) => {
+              handleCountrySelect(value);
+            }}
+            placeholder="Select country..."
+            disabled={isLoading}
+          />
+        </div>
+
+        <div className="space-y-1">
+          <label htmlFor="state" className="text-sm font-medium text-gray-700">
+            State/Province
+          </label>
+          <SearchableSelect
+            options={
+              Array.isArray(states)
+                ? states.map((state) => ({
+                    label: state.name,
+                    value: state.name,
+                  }))
+                : []
+            }
+            value={selectedState?.name || ""}
+            onChange={(value) => {
+              handleStateSelect(value);
+            }}
+            placeholder={selectedCountry ? "Select state..." : "Select country first"}
+            disabled={!selectedCountry || isLoading}
+          />
+        </div>
+
+        <div className="space-y-1">
+          <label htmlFor="city" className="text-sm font-medium text-gray-700">
+            City
+          </label>
+          <SearchableSelect
+            options={
+              Array.isArray(cities)
+                ? cities.map((city) => ({
+                    label: city.name,
+                    value: city.name,
+                  }))
+                : []
+            }
+            value={selectedCity?.name || ""}
+            onChange={(value) => {
+              handleCitySelect(value);
+            }}
+            placeholder={selectedState ? "Select city..." : "Select state first"}
+            disabled={!selectedState || isLoading}
+          />
+        </div>
+      </div>
+
+      <div className="space-y-1">
+        <label htmlFor="address" className="text-sm font-medium text-gray-700">
+          Street Address
         </label>
         <Textarea
-          id="description"
-          name="description"
-          value={formData.description}
+          id="address"
+          name="address"
+          value={formData.address}
           onChange={handleInputChange}
-          placeholder="Enter college description"
-          rows={3}
+          placeholder="Enter street address"
+          rows={2}
         />
-      </div>
       </div>
 
       <Separator className="my-3" />
@@ -739,9 +1022,12 @@ const College: React.FC = () => {
             name="email"
             type="email"
             value={formData.email}
-            onChange={handleInputChange}
+            onChange={handleEmailChange}
             placeholder="college@example.com"
           />
+          {formData.email && !validateEmail(formData.email) && (
+            <p className="text-sm text-red-500">Please enter a valid email address</p>
+          )}
         </div>
 
         <div className="space-y-1">
@@ -752,9 +1038,13 @@ const College: React.FC = () => {
             id="phone"
             name="phone"
             value={formData.phone}
-            onChange={handleInputChange}
+            onChange={handlePhoneChange}
             placeholder="Enter phone number"
+            maxLength={10}
           />
+          {formData.phone && formData.phone.length < 10 && (
+            <p className="text-sm text-red-500">Phone number must be 10 digits</p>
+          )}
         </div>
       </div>
 
@@ -771,86 +1061,33 @@ const College: React.FC = () => {
         />
       </div>
 
-      <Separator className="my-3" />
-      <h3 className="font-medium text-sm">Address Information</h3>
-
-      <div className="space-y-1">
-        <label htmlFor="address" className="text-sm font-medium text-gray-700">
-          Street Address
-        </label>
-        <Textarea
-          id="address"
-          name="address"
-          value={formData.address}
-          onChange={handleInputChange}
-          placeholder="Enter street address"
-          rows={2}
-        />
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="space-y-1">
-          <label htmlFor="city" className="text-sm font-medium text-gray-700">
-            City
-          </label>
-          <Input
-            id="city"
-            name="city"
-            value={formData.city}
-            onChange={handleInputChange}
-            placeholder="Enter city"
-          />
-        </div>
-
-        <div className="space-y-1">
-          <label htmlFor="state" className="text-sm font-medium text-gray-700">
-            State/Province
-          </label>
-          <Input
-            id="state"
-            name="state"
-            value={formData.state}
-            onChange={handleInputChange}
-            placeholder="Enter state"
-          />
-        </div>
-
-        <div className="space-y-1">
-          <label
-            htmlFor="country"
-            className="text-sm font-medium text-gray-700"
-          >
-            Country
-          </label>
-          <Input
-            id="country"
-            name="country"
-            value={formData.country}
-            onChange={handleInputChange}
-            placeholder="Enter country"
-          />
-        </div>
-      </div>
-
-      <div className="pt-4 flex justify-end gap-2">
+      <div className="flex justify-end gap-2 pt-4">
         <Button
+          type="button"
           variant="outline"
           onClick={handleCancelEdit}
           disabled={isLoading}
         >
           Cancel
         </Button>
-        <Button type="submit" disabled={isLoading} className="min-w-24">
-          {isLoading
-            ? "Saving..."
-            : selectedCollege
-            ? "Update College"
-            : "Add College"}
+        <Button type="submit" disabled={
+          !!isLoading ||
+          (!!formData.phone && formData.phone.length !== 10) ||
+          (!!formData.email && !validateEmail(formData.email))
+        }>
+          {isLoading ? (
+            <>
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              {selectedCollege ? "Updating..." : "Creating..."}
+            </>
+          ) : (
+            <>{selectedCollege ? "Update College" : "Create College"}</>
+          )}
         </Button>
       </div>
     </div>
   );
-
+};
   const renderAdminForm = () => (
     <div className="space-y-4 overflow-y-auto max-h-[80vh] p-4">
       {adminCreationSuccess && (

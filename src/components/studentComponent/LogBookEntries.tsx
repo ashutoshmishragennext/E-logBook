@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable react-hooks/exhaustive-deps*/
 import { FileExporter, FileImporter } from "@/components/common/FileHandler";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -9,14 +10,6 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -42,9 +35,10 @@ import {
   Loader2,
   PlusCircle,
   Save,
-  X
+  X,
 } from "lucide-react";
 import React, { useEffect, useState } from "react";
+import SearchableSubjectSelect from "../adminComponent/SubjectSerachSelect";
 
 const LogbookEntryPage: React.FC = () => {
   const user = useCurrentUser();
@@ -54,6 +48,7 @@ const LogbookEntryPage: React.FC = () => {
   const [existingEntries, setExistingEntries] = useState<any[]>([]);
   
   const {
+    collegeId,
     studentId,
     selectedType,
     selectedTemplateId,
@@ -101,8 +96,8 @@ const LogbookEntryPage: React.FC = () => {
   useEffect(() => {
     if (selectedType && ((selectedType === "general") || (selectedType === "subject" && studentSubjects.length > 0))) {
       fetchTemplates();
-      if (selectedType === "general") {
-        fetchAllTeachers();
+      if (selectedType === "general" && collegeId) {
+        fetchAllTeachers(collegeId);
       }
     }
   }, [selectedType, studentSubjects, fetchTemplates, fetchAllTeachers]);
@@ -153,10 +148,38 @@ const LogbookEntryPage: React.FC = () => {
   };
 
   const handleSubmit = async () => {
+    // Add the selected date to formData before submitting
+    if (date) {
+      updateFormData('entryDate', format(date, "yyyy-MM-dd"));
+    }
+    
     const success = await submitLogbookEntry();
     if (success) {
       setShowNewEntry(false);
+      setDate(new Date()); // Reset date to today
       resetForm();
+      
+      // Refresh existing entries
+      if (studentId && selectedTemplateId) {
+        const queryParams = new URLSearchParams({
+          studentId,
+          logBookTemplateId: selectedTemplateId,
+        });
+        
+        if (selectedStudentSubjectId) {
+          queryParams.append('studentSubjectId', selectedStudentSubjectId);
+        }
+        
+        try {
+          const response = await fetch(`/api/log-books?${queryParams.toString()}`);
+          if (response.ok) {
+            const data = await response.json();
+            setExistingEntries(data);
+          }
+        } catch (error) {
+          console.error("Failed to refresh entries:", error);
+        }
+      }
     }
   };
 
@@ -190,12 +213,33 @@ const LogbookEntryPage: React.FC = () => {
       )
     : [];
 
+  // Prepare options for searchable selectors
+  const templateTypeOptions = [
+    { label: "General", value: "general" },
+    { label: "Subject", value: "subject" }
+  ];
+
+  const teacherOptions = teachers.map(teacher => ({
+    label: teacher.name,
+    value: teacher.id
+  }));
+
+  const subjectOptions = studentSubjects.map(subject => ({
+    label: `${subjectNames[subject.subjectId] || `Subject ID: ${subject.subjectId}`}${subject.teacher ? ` (${subject.teacher.fullName})` : ''}`,
+    value: subject.id
+  }));
+
+  const templateOptions = templates.map(template => ({
+    label: template.name,
+    value: template.id
+  }));
+
   const renderFieldInput = (field: any) => {
     switch (field.fieldType) {
       case 'text':
         return (
           <Input
-            className="w-full"
+            className="w-full min-w-[120px]"
             value={formData[field.fieldName] || ''}
             onChange={(e) => updateFormData(field.fieldName, e.target.value)}
             placeholder={field.fieldLabel}
@@ -204,29 +248,29 @@ const LogbookEntryPage: React.FC = () => {
       case 'textarea':
         return (
           <Textarea
-            className="w-full h-24"
+            className="w-full min-w-[150px] h-20 resize-none"
             value={formData[field.fieldName] || ''}
             onChange={(e) => updateFormData(field.fieldName, e.target.value)}
             placeholder={field.fieldLabel}
           />
         );
       case 'select':
+        const selectOptions = field.options && field.options[0] 
+          ? field.options[0].split(',').map((option: string) => ({
+              label: option.trim(),
+              value: option.trim()
+            }))
+          : [];
+        
         return (
-          <Select
-            value={formData[field.fieldName] || ''}
-            onValueChange={(value) => updateFormData(field.fieldName, value)}
-          >
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder={`Select ${field.fieldLabel}`} />
-            </SelectTrigger>
-            <SelectContent>
-              {field.options && field.options[0].split(',').map((option: string, i: number) => (
-                <SelectItem key={i} value={option.trim()}>
-                  {option.trim()}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="min-w-[120px]">
+            <SearchableSubjectSelect
+              options={selectOptions}
+              value={formData[field.fieldName] || ''}
+              onChange={(value) => updateFormData(field.fieldName, value)}
+              placeholder={`Select ${field.fieldLabel}`}
+            />
+          </div>
         );
       case 'date':
         return (
@@ -234,13 +278,16 @@ const LogbookEntryPage: React.FC = () => {
             <PopoverTrigger asChild>
               <Button
                 variant="outline"
-                className="w-full justify-start text-left font-normal"
+                className="w-full min-w-[140px] justify-start text-left font-normal"
               >
                 <CalendarIcon className="mr-2 h-4 w-4" />
-                {formData[field.fieldName] ? format(new Date(formData[field.fieldName]), "PPP") : <span>Pick a date</span>}
+                {formData[field.fieldName] ? 
+                  format(new Date(formData[field.fieldName]), "MMM d, yyyy") : 
+                  <span className="text-muted-foreground">Pick date</span>
+                }
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-auto p-0">
+            <PopoverContent className="w-auto p-0" align="start">
               <Calendar
                 mode="single"
                 selected={formData[field.fieldName] ? new Date(formData[field.fieldName]) : undefined}
@@ -252,16 +299,19 @@ const LogbookEntryPage: React.FC = () => {
         );
       case 'file':
         return (
-          <div className="space-y-2">
+          <div className="space-y-2 min-w-[150px]">
             {fileUploads[field.fieldName] ? (
               <div className="flex items-center justify-between p-2 border rounded-md bg-gray-50">
-                <span className="truncate max-w-xs">{fileUploads[field.fieldName]?.name}</span>
+                <span className="truncate text-sm max-w-[100px]" title={fileUploads[field.fieldName]?.name}>
+                  {fileUploads[field.fieldName]?.name}
+                </span>
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => handleRemoveFile(field.fieldName)}
+                  className="h-6 w-6 p-0"
                 >
-                  <X className="h-4 w-4 text-red-500" />
+                  <X className="h-3 w-3 text-red-500" />
                 </Button>
               </div>
             ) : (
@@ -276,6 +326,8 @@ const LogbookEntryPage: React.FC = () => {
                     background: "bg-blue-600",
                     color: "text-white",
                     width: "w-full",
+                    fontSize: "12px",
+                    height: "32px"
                   },
                   allowedContent: "hidden",
                 }}
@@ -284,76 +336,62 @@ const LogbookEntryPage: React.FC = () => {
           </div>
         );
       default:
-        return <Input />;
+        return <Input className="min-w-[120px]" />;
     }
   };
 
   return (
-    <div className="container mx-auto p-4">
+    <div className="container mx-auto p-4 max-w-full">
       <div className="flex flex-col space-y-4">
-        {/* Top controls */}
-        <div className="flex justify-between items-center">
-          <div className="flex space-x-2 flex-grow">
+        {/* Top controls - Made responsive */}
+        <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center gap-4">
+          <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2 flex-grow">
             {/* Template Type Selection */}
-            <Select value={selectedType} onValueChange={handleTypeChange}>
-              <SelectTrigger className="w-[150px]">
-                <SelectValue placeholder="Template Type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="general">General</SelectItem>
-                <SelectItem value="subject">Subject</SelectItem>
-              </SelectContent>
-            </Select>
+            <div className="w-full sm:w-[150px]">
+              <SearchableSubjectSelect
+                options={templateTypeOptions}
+                value={selectedType}
+                onChange={handleTypeChange}
+                placeholder="Template Type"
+              />
+            </div>
 
             {/* Conditional Teacher/Subject Selection */}
             {selectedType === "general" && (
-              <Select value={selectedTeacherId} onValueChange={handleTeacherChange}>
-                <SelectTrigger className="w-[200px]">
-                  <SelectValue placeholder="Select Teacher" />
-                </SelectTrigger>
-                <SelectContent>
-                  {teachers.map((teacher) => (
-                    <SelectItem key={teacher.id} value={teacher.id}>
-                      {teacher.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="w-full sm:w-[200px]">
+                <SearchableSubjectSelect
+                  options={teacherOptions}
+                  value={selectedTeacherId}
+                  onChange={handleTeacherChange}
+                  placeholder="Select Teacher"
+                />
+              </div>
             )}
 
             {selectedType === "subject" && (
-              <Select value={selectedStudentSubjectId} onValueChange={handleSubjectChange}>
-                <SelectTrigger className="w-[200px]">
-                  <SelectValue placeholder="Select Subject" />
-                </SelectTrigger>
-                <SelectContent>
-                  {studentSubjects.map((subject) => (
-                    <SelectItem key={subject.id} value={subject.id}>
-                      {subjectNames[subject.subjectId] || `Subject ID: ${subject.subjectId}`}
-                      {subject.teacher && ` (${subject.teacher.fullName})`}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="w-full sm:w-[200px]">
+                <SearchableSubjectSelect
+                  options={subjectOptions}
+                  value={selectedStudentSubjectId}
+                  onChange={handleSubjectChange}
+                  placeholder="Select Subject"
+                />
+              </div>
             )}
 
             {/* Template Selection */}
-            <Select value={selectedTemplateId} onValueChange={handleTemplateChange}>
-              <SelectTrigger className="w-[250px]">
-                <SelectValue placeholder="Select Template" />
-              </SelectTrigger>
-              <SelectContent>
-                {templates.map((template) => (
-                  <SelectItem key={template.id} value={template.id}>
-                    {template.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="w-full sm:w-[250px]">
+              <SearchableSubjectSelect
+                options={templateOptions}
+                value={selectedTemplateId}
+                onChange={handleTemplateChange}
+                placeholder="Select Template"
+              />
+            </div>
           </div>
 
-          {/* Action Buttons */}
-          <div className="flex space-x-2">
+          {/* Action Buttons - Made responsive */}
+          <div className="flex flex-col sm:flex-row gap-2">
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -361,7 +399,7 @@ const LogbookEntryPage: React.FC = () => {
                     <FileImporter
                       onImport={handleImport}
                       buttonText="Import"
-                      className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition disabled:bg-green-400"
+                      className="flex items-center justify-center w-full sm:w-auto px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition disabled:bg-green-400"
                     />
                   </div>
                 </TooltipTrigger>
@@ -378,7 +416,7 @@ const LogbookEntryPage: React.FC = () => {
                     <FileExporter
                       data={existingEntries}
                       buttonText="Export"
-                      className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+                      className="flex items-center justify-center w-full sm:w-auto px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
                     />
                   </div>
                 </TooltipTrigger>
@@ -391,7 +429,7 @@ const LogbookEntryPage: React.FC = () => {
             <Button 
               onClick={() => setShowNewEntry(true)} 
               disabled={!selectedTemplateId}
-              className="bg-primary hover:bg-primary/90"
+              className="bg-primary hover:bg-primary/90 w-full sm:w-auto"
             >
               <PlusCircle className="mr-2 h-4 w-4" />
               New Entry
@@ -403,7 +441,7 @@ const LogbookEntryPage: React.FC = () => {
         {selectedTemplate && (
           <Card className="mb-4">
             <CardContent className="pt-4">
-              <div className="flex justify-between items-center mb-2">
+              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 mb-2">
                 <h2 className="text-xl font-semibold">{selectedTemplate.name}</h2>
                 <div className="text-sm text-muted-foreground">
                   Type: {selectedTemplate.templateType.charAt(0).toUpperCase() + selectedTemplate.templateType.slice(1)}
@@ -414,32 +452,32 @@ const LogbookEntryPage: React.FC = () => {
           </Card>
         )}
 
-        {/* Entries Table with Fixed Layout and Better Scrolling */}
+        {/* Entries Table with Improved Horizontal Scrolling */}
         {selectedTemplate && (
           <div className="border rounded-md overflow-hidden">
-            {/* This div controls the outer container with a fixed height */}
-            <div className="h-[500px] relative">
-              {/* This ScrollArea enables both horizontal and vertical scrolling */}
-              <ScrollArea className="h-full" type="always">
-                <div className="min-w-max">
+            <div className="overflow-x-auto">
+              <div style={{ minWidth: `${Math.max(800, (allFields.length + 3) * 150)}px` }}>
+                <div className="h-[500px] overflow-y-auto">
                   <Table>
-                    <TableHeader>
+                    <TableHeader className="sticky top-0 bg-white z-10">
                       <TableRow>
-                        <TableHead className="w-[100px] bg-white sticky left-0 z-20">
+                        <TableHead className="w-[120px] bg-white sticky left-0 z-20 border-r">
                           Date
                         </TableHead>
                         {allFields.map((field, index) => (
                           <TableHead 
                             key={index} 
-                            className="min-w-[150px]"
+                            className="min-w-[150px] px-2"
                             title={`${field.groupName}: ${field.fieldLabel}`}
                           >
-                            {field.fieldLabel}
-                            {field.isRequired && <span className="text-red-500 ml-1">*</span>}
+                            <div className="truncate">
+                              {field.fieldLabel}
+                              {field.isRequired && <span className="text-red-500 ml-1">*</span>}
+                            </div>
                           </TableHead>
                         ))}
-                        <TableHead className="min-w-[150px]">Remarks</TableHead>
-                        <TableHead className="w-[100px] text-right bg-white sticky right-0 z-20">
+                        <TableHead className="min-w-[150px] px-2">Remarks</TableHead>
+                        <TableHead className="w-[100px] text-right bg-white sticky right-0 z-20 border-l">
                           Actions
                         </TableHead>
                       </TableRow>
@@ -447,19 +485,21 @@ const LogbookEntryPage: React.FC = () => {
                     <TableBody>
                       {/* New Entry Row */}
                       {showNewEntry && (
-                        <TableRow>
-                          <TableCell className="bg-white sticky left-0 z-10">
+                        <TableRow className="bg-blue-50/50">
+                          <TableCell className="bg-white sticky left-0 z-10 border-r p-2">
                             <Popover>
                               <PopoverTrigger asChild>
                                 <Button
                                   variant="outline"
-                                  className="w-full justify-start text-left font-normal"
+                                  className="w-full justify-start text-left font-normal h-9"
                                 >
                                   <CalendarIcon className="mr-2 h-4 w-4" />
-                                  {date ? format(date, "PPP") : <span>Pick a date</span>}
+                                  <span className="truncate">
+                                    {date ? format(date, "MMM d") : "Pick date"}
+                                  </span>
                                 </Button>
                               </PopoverTrigger>
-                              <PopoverContent className="w-auto p-0 z-30">
+                              <PopoverContent className="w-auto p-0 z-30" align="start">
                                 <Calendar
                                   mode="single"
                                   selected={date}
@@ -472,17 +512,15 @@ const LogbookEntryPage: React.FC = () => {
                           
                           {/* Dynamic Fields */}
                           {allFields.map((field, index) => (
-                            <TableCell key={index} className="min-w-[150px] p-2">
-                              <div className="w-full">
-                                {renderFieldInput(field)}
-                              </div>
+                            <TableCell key={index} className="p-2">
+                              {renderFieldInput(field)}
                             </TableCell>
                           ))}
                           
                           {/* Remarks */}
-                          <TableCell className="min-w-[150px]">
+                          <TableCell className="p-2">
                             <Textarea
-                              className="w-full h-24"
+                              className="w-full min-w-[150px] h-20 resize-none"
                               value={formData.studentRemarks || ''}
                               onChange={(e) => updateFormData('studentRemarks', e.target.value)}
                               placeholder="Additional remarks..."
@@ -490,12 +528,17 @@ const LogbookEntryPage: React.FC = () => {
                           </TableCell>
                           
                           {/* Actions */}
-                          <TableCell className="text-right bg-white sticky right-0 z-10">
-                            <div className="flex justify-end space-x-2">
+                          <TableCell className="text-right bg-white sticky right-0 z-10 border-l p-2">
+                            <div className="flex justify-end space-x-1">
                               <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => setShowNewEntry(false)}
+                                onClick={() => {
+                                  setShowNewEntry(false);
+                                  setDate(new Date());
+                                  resetForm();
+                                }}
+                                className="h-8 w-8 p-0"
                               >
                                 <X className="h-4 w-4" />
                               </Button>
@@ -503,6 +546,7 @@ const LogbookEntryPage: React.FC = () => {
                                 size="sm"
                                 onClick={handleSubmit}
                                 disabled={isLoading}
+                                className="h-8 w-8 p-0"
                               >
                                 {isLoading ? (
                                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -518,40 +562,48 @@ const LogbookEntryPage: React.FC = () => {
                       {/* Existing Entries */}
                       {existingEntries.length > 0 ? (
                         existingEntries.map((entry, index) => (
-                          <TableRow key={index}>
-                            <TableCell className="bg-white sticky left-0 z-10">
-                              {entry.createdAt && format(new Date(entry.createdAt), "MMM d, yyyy")}
+                          <TableRow key={index} className="hover:bg-gray-50/50">
+                            <TableCell className="bg-white sticky left-0 z-10 border-r p-2">
+                              <div className="text-sm">
+                                {entry.createdAt && format(new Date(entry.createdAt), "MMM d, yyyy")}
+                              </div>
                             </TableCell>
                             
                             {/* Dynamic Fields */}
                             {allFields.map((field, fieldIndex) => (
-                              <TableCell key={fieldIndex} className="min-w-[150px]">
-                                {entry.dynamicFields?.[field.fieldName] ? (
-                                  field.fieldType === 'file' ? (
-                                    <a 
-                                      href={entry.dynamicFields[field.fieldName]} 
-                                      target="_blank" 
-                                      rel="noopener noreferrer"
-                                      className="flex items-center text-blue-600 hover:underline"
-                                    >
-                                      <FileText className="h-4 w-4 mr-1" />
-                                      View File
-                                    </a>
+                              <TableCell key={fieldIndex} className="p-2">
+                                <div className="min-w-0">
+                                  {entry.dynamicFields?.[field.fieldName] ? (
+                                    field.fieldType === 'file' ? (
+                                      <a 
+                                        href={entry.dynamicFields[field.fieldName]} 
+                                        target="_blank" 
+                                        rel="noopener noreferrer"
+                                        className="flex items-center text-blue-600 hover:underline text-sm"
+                                      >
+                                        <FileText className="h-4 w-4 mr-1 flex-shrink-0" />
+                                        <span className="truncate">View File</span>
+                                      </a>
+                                    ) : (
+                                      <div className="text-sm break-words" title={entry.dynamicFields[field.fieldName]}>
+                                        {entry.dynamicFields[field.fieldName]}
+                                      </div>
+                                    )
                                   ) : (
-                                    entry.dynamicFields[field.fieldName]
-                                  )
-                                ) : (
-                                  <span className="text-muted-foreground">-</span>
-                                )}
+                                    <span className="text-muted-foreground text-sm">-</span>
+                                  )}
+                                </div>
                               </TableCell>
                             ))}
                             
-                            <TableCell className="min-w-[150px]">
-                              {entry.studentRemarks || <span className="text-muted-foreground">-</span>}
+                            <TableCell className="p-2">
+                              <div className="text-sm break-words" title={entry.studentRemarks}>
+                                {entry.studentRemarks || <span className="text-muted-foreground">-</span>}
+                              </div>
                             </TableCell>
                             
-                            <TableCell className="text-right bg-white sticky right-0 z-10">
-                              <div className="flex justify-end space-x-2">
+                            <TableCell className="text-right bg-white sticky right-0 z-10 border-l p-2">
+                              <div className="flex justify-end">
                                 <Button
                                   variant="ghost"
                                   size="sm"
@@ -589,7 +641,7 @@ const LogbookEntryPage: React.FC = () => {
                     </TableBody>
                   </Table>
                 </div>
-              </ScrollArea>
+              </div>
             </div>
           </div>
         )}
