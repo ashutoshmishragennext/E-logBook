@@ -58,6 +58,7 @@ export function GeneralTemplateForm({
   const userId = user?.id || "1875bc17-47cd-4273-a8d5-d2fd0503e702";
   const router = useRouter();
   const isEditing = !!initialData;
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [templateSchema, setTemplateSchema] = useState<LogBookTemplateSchema>(
     initialData?.dynamicSchema || {
@@ -76,9 +77,15 @@ export function GeneralTemplateForm({
   });
 
   const onSubmit = async (data: z.infer<typeof generalTemplateSchema>) => {
+    // Prevent multiple submissions
+    if (isSubmitting) return;
+    
     try {
+      setIsSubmitting(true);
+      
+      // Validate that at least one field exists
       if (templateSchema.groups.every((group) => group.fields.length === 0)) {
-        toast("Please add at least one field to your template");
+        toast.error("Please add at least one field to your template");
         return;
       }
 
@@ -86,6 +93,8 @@ export function GeneralTemplateForm({
         ...data,
         dynamicSchema: templateSchema,
       };
+
+      console.log("Submitting template data:", templateData); // Debug log
 
       const response = await fetch("/api/log-book-template", {
         method: isEditing ? "PATCH" : "POST",
@@ -97,31 +106,64 @@ export function GeneralTemplateForm({
         ),
       });
 
+      const responseData = await response.json();
+      console.log("API Response:", responseData); // Debug log
+
       if (!response.ok) {
-        throw new Error("Failed to save template");
+        throw new Error(responseData?.message || `HTTP error! status: ${response.status}`);
       }
 
+      // Success handling
+      toast.success(isEditing ? "Template updated successfully!" : "Template created successfully!");
+      
+      // Reset form and template schema after successful save
+      if (!isEditing) {
+        form.reset({
+          name: "",
+          description: "",
+          templateType: "general",
+          createdBy: userId,
+        });
+        setTemplateSchema({
+          groups: [{ groupName: "General Information", fields: [] }],
+        });
+      }
+      
+      // Call onSuccess callback if provided
       if (onSuccess) {
         onSuccess();
-        toast("Template saved successfully!");
+      } else {
+        // Optional: redirect or refresh page if no callback
+        router.refresh();
       }
+
     } catch (error) {
-      toast(`Error saving template: ${error instanceof Error ? error.message : String(error)}`);
+      console.error("Error saving template:", error); // Debug log
+      const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
+      toast.error(`Error saving template: ${errorMessage}`);
+    } finally {
+      setIsSubmitting(false);
     }
+  };
+
+  const handleSaveClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    form.handleSubmit(onSubmit)();
   };
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold">General Templates</h2>
-        <div className="flex space-x-2">
-          <Button type="button" variant="outline" size="sm" onClick={() => router.back()}>
-            Cancel
-          </Button>
-          <Button type="submit" size="sm" form="template-form">
-            <Save className="h-3.5 w-3.5 mr-1" /> Save
-          </Button>
-        </div>
+        <Button 
+          type="button" 
+          variant="outline" 
+          size="sm" 
+          onClick={() => router.back()}
+          disabled={isSubmitting}
+        >
+          Cancel
+        </Button>
       </div>
 
       <Alert className="bg-blue-50 border-blue-200">
@@ -192,6 +234,19 @@ export function GeneralTemplateForm({
             templateSchema={templateSchema}
             setTemplateSchema={setTemplateSchema}
           />
+
+          {/* Save button at the bottom */}
+          <div className="flex justify-end pt-4">
+            <Button 
+              type="button" 
+              onClick={handleSaveClick}
+              disabled={isSubmitting}
+              className="min-w-[120px]"
+            >
+              <Save className="h-4 w-4 mr-2" /> 
+              {isSubmitting ? "Saving..." : "Save Template"}
+            </Button>
+          </div>
         </form>
       </Form>
     </div>

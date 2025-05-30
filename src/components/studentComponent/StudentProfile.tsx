@@ -1,15 +1,18 @@
 /*eslint-disable @typescript-eslint/no-unused-vars */
+/*eslint-disable @typescript-eslint/no-explicit-any */
+/*eslint-disable react-hooks/exhaustive-deps */
+
 import { useCurrentUser } from "@/hooks/auth";
 import { useStudentProfileStore, VerificationStatus } from "@/store/student";
 import { useStudentSubjectStore } from "@/store/studentSubjectStore";
 import { UploadButton } from "@/utils/uploadthing";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
 import {
   ICountry,
-  IState,
+  IState,  
   ICity,
   Country,
   State,
@@ -92,7 +95,7 @@ const StudentProfileCompact = () => {
   const userId = user?.id;
 
   // Profile store
-  const { profile, loading, fetchProfile, createProfile, updateProfile } =
+  const { profile, loading, error, fetchProfile, createProfile, updateProfile } =
     useStudentProfileStore();
 
   // Student subject store for academic data
@@ -115,7 +118,7 @@ const StudentProfileCompact = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
-  // const [isLoading, setIsLoading] = useState(false);
+  const [formInitialized, setFormInitialized] = useState(false);
 
   // Country, State, City selection
   const [selectedCountry, setSelectedCountry] = useState<ICountry | null>(null);
@@ -139,8 +142,8 @@ const StudentProfileCompact = () => {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      name: user?.name || "",
-      email: user?.email || "",
+      name: "",
+      email: "",
       mobileNo: "",
       Address: "",
       country: "",
@@ -157,6 +160,19 @@ const StudentProfileCompact = () => {
       teacherId: "",
     },
   });
+
+  // Debug logging
+  useEffect(() => {
+    console.log('Form state changed:', {
+      isEditing,
+      isSubmitting,
+      profileExists: !!profile,
+      profileId: profile?.id,
+      formInitialized,
+      formValues: form.getValues(),
+      formErrors: form.formState.errors
+    });
+  }, [isEditing, isSubmitting, profile, form.formState, formInitialized]);
 
   // Initialize countries on component mount
   useEffect(() => {
@@ -178,8 +194,10 @@ const StudentProfileCompact = () => {
         setSelectedState(null);
         setSelectedCity(null);
         setCities([]);
-        form.setValue("state", "");
-        form.setValue("city", "");
+        if (!formInitialized) {
+          form.setValue("state", "");
+          form.setValue("city", "");
+        }
       } catch (error) {
         console.error("Error loading states:", error);
         setStates([]);
@@ -190,7 +208,7 @@ const StudentProfileCompact = () => {
       setSelectedCity(null);
       setCities([]);
     }
-  }, [selectedCountry, form]);
+  }, [selectedCountry, form, formInitialized]);
 
   // Get cities for selected state
   useEffect(() => {
@@ -202,7 +220,9 @@ const StudentProfileCompact = () => {
         );
         setCities(cityList || []);
         setSelectedCity(null);
-        form.setValue("city", "");
+        if (!formInitialized) {
+          form.setValue("city", "");
+        }
       } catch (error) {
         console.error("Error loading cities:", error);
         setCities([]);
@@ -211,7 +231,7 @@ const StudentProfileCompact = () => {
       setCities([]);
       setSelectedCity(null);
     }
-  }, [selectedState, selectedCountry, form]);
+  }, [selectedState, selectedCountry, form, formInitialized]);
 
   // Fetch profile when userId is available
   useEffect(() => {
@@ -224,10 +244,12 @@ const StudentProfileCompact = () => {
   useEffect(() => {
     const loadData = async () => {
       try {
-        await fetchcolleges();
-        await fetchBranches();
-        await fetchAcademicYears();
-        await fetchCourses();
+        await Promise.all([
+          fetchcolleges(),
+          fetchBranches(),
+          fetchAcademicYears(),
+          fetchCourses(),
+        ]);
 
         // Fetch specific college if profile has collegeId
         if (profile?.collegeId) {
@@ -240,7 +262,7 @@ const StudentProfileCompact = () => {
 
     loadData();
   }, [
-    profile,
+    profile?.collegeId,
     fetchBranches,
     fetchAcademicYears,
     fetchCourses,
@@ -248,55 +270,74 @@ const StudentProfileCompact = () => {
     fetchcolleges,
   ]);
 
-  // Update form when profile is loaded
-  useEffect(() => {
-    if (profile) {
-      form.reset({
-        name: profile.name || user?.name || "",
-        email: profile.email || user?.email || "",
-        mobileNo: profile.mobileNo || "",
-        dateOfBirth: profile.dateOfBirth
-          ? new Date(profile.dateOfBirth)
-          : undefined,
-        Address: profile.Address || "",
-        country: profile.country || "",
-        state: profile.state || "",
-        city: profile.city || "",
-        adharNo: profile.adharNo || "",
-        maritalStatus: profile.maritalStatus || "",
-        yearOfPassing: profile.yearOfPassing || "",
-        academicYearId: profile.academicYearId || "",
-        courseId: profile.courseId || "",
-        branchId: profile.branchId || "",
-        rollNo: profile.rollNo || "",
-        collegeId: profile.collegeId || "",
-        teacherId: profile.teacherId || "",
-      });
+  // Reset form data function
+  const resetFormData = useCallback(() => {
+    if (!profile) return;
 
-      setProfilePhotoUrl(profile.profilePhoto || "");
-      setCollegeIdProofUrl(profile.collegeIdProof || "");
+    const formData = {
+      name: profile.name || user?.name || "",
+      email: profile.email || user?.email || "",
+      mobileNo: profile.mobileNo || "",
+      dateOfBirth: profile.dateOfBirth ? new Date(profile.dateOfBirth) : undefined,
+      Address: profile.Address || "",
+      country: profile.country || "",
+      state: profile.state || "",
+      city: profile.city || "",
+      adharNo: profile.adharNo || "",
+      maritalStatus: profile.maritalStatus || "",
+      yearOfPassing: profile.yearOfPassing || "",
+      academicYearId: profile.academicYearId || "",
+      courseId: profile.courseId || "",
+      branchId: profile.branchId || "",
+      rollNo: profile.rollNo || "",
+      collegeId: profile.collegeId || "",
+      teacherId: profile.teacherId || "",
+    };
+
+    form.reset(formData);
+    setProfilePhotoUrl(profile.profilePhoto || "");
+    setCollegeIdProofUrl(profile.collegeIdProof || "");
+    setFormInitialized(true);
+  }, [profile, user, form]);
+
+  // Update form when profile is loaded - CRITICAL FIX
+  useEffect(() => {
+    if (profile && !loading && !error) {
+      console.log('Profile loaded, updating form data');
+      
+      // Only reset form if we're not in edit mode to prevent form reset during editing
+      if (!isEditing) {
+        resetFormData();
+      }
 
       // Set location selections
-      if (profile.country) {
-        const country = allCountries.find(c => c.name === profile.country);
+      if (profile.country && allCountries.length > 0) {
+        const country = allCountries.find((c) => c.name === profile.country);
         if (country) {
           setSelectedCountry(country);
         }
       }
-      if (profile.state) {
-        const state = states.find(s => s.name === profile.state);
-        if (state) {
-          setSelectedState(state);
-        }
-      }
-      if (profile.city) {
-        const city = cities.find(c => c.name === profile.city);
-        if (city) {
-          setSelectedCity(city);
-        }
+    }
+  }, [profile, loading, error, isEditing, allCountries, resetFormData]);
+
+  // Set state and city selections when data is available
+  useEffect(() => {
+    if (profile?.state && states.length > 0 && !isEditing) {
+      const state = states.find((s) => s.name === profile.state);
+      if (state) {
+        setSelectedState(state);
       }
     }
-  }, [profile, form, user, allCountries, states, cities]);
+  }, [profile?.state, states, isEditing]);
+
+  useEffect(() => {
+    if (profile?.city && cities.length > 0 && !isEditing) {
+      const city = cities.find((c) => c.name === profile.city);
+      if (city) {
+        setSelectedCity(city);
+      }
+    }
+  }, [profile?.city, cities, isEditing]);
 
   // Update display names for select fields when data is loaded
   useEffect(() => {
@@ -316,19 +357,19 @@ const StudentProfileCompact = () => {
   }, [profile, colleges, branches, course, academicYears]);
 
   const handleCountrySelect = (countryName: string) => {
-    const country = allCountries.find(c => c.name === countryName);
+    const country = allCountries.find((c) => c.name === countryName);
     setSelectedCountry(country || null);
     form.setValue("country", countryName);
   };
 
   const handleStateSelect = (stateName: string) => {
-    const state = states.find(s => s.name === stateName);
+    const state = states.find((s) => s.name === stateName);
     setSelectedState(state || null);
     form.setValue("state", stateName);
   };
 
   const handleCitySelect = (cityName: string) => {
-    const city = cities.find(c => c.name === cityName);
+    const city = cities.find((c) => c.name === cityName);
     setSelectedCity(city || null);
     form.setValue("city", cityName);
   };
@@ -358,27 +399,64 @@ const StudentProfileCompact = () => {
     }
   };
 
-  const handleSaveClick = () => {
+  const handleEditClick = () => {
+    console.log("Edit button clicked");
+    setIsEditing(true);
+  };
+
+  const handleCancelClick = () => {
+    console.log("Cancel button clicked");
+    // Reset form to original profile data
+    if (profile) {
+      resetFormData();
+    }
+    setIsEditing(false);
+  };
+
+  const handleSaveClick = (e: React.MouseEvent) => {
+    console.log("Save button clicked");
+
+    // Prevent any default behavior
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+
     if (isProfileVerified) {
+      console.log("Profile is verified - showing dialog");
       setDialogOpen(true);
     } else {
+      console.log("Profile not verified - submitting form directly");
+      // Trigger form validation and submission
       form.handleSubmit(onSubmit)();
     }
   };
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
+    console.log("=== FORM SUBMISSION STARTED ===");
+    console.log("Form values:", values);
+    console.log("Current profile:", profile);
+    console.log("Is profile verified:", isProfileVerified);
+
     try {
       setIsSubmitting(true);
       setDialogOpen(false);
 
-      let profileData;
+      // Validate required fields
+      if (!values.name || !values.email || !values.mobileNo) {
+        throw new Error("Please fill in all required fields");
+      }
+
+      let profileData: any;
 
       if (isProfileVerified && profile) {
+        console.log("Updating verified profile - preserving locked fields");
         profileData = {
           ...values,
           userId: userId as string,
           profilePhoto: profilePhotoUrl,
           collegeIdProof: collegeIdProofUrl,
+          // Preserve locked fields for verified profiles
           adharNo: profile.adharNo,
           dateOfBirth: profile.dateOfBirth,
           rollNo: profile.rollNo,
@@ -390,6 +468,7 @@ const StudentProfileCompact = () => {
           verificationStatus: VerificationStatus.APPROVED,
         };
       } else {
+        console.log("Creating new profile or updating unverified profile");
         profileData = {
           ...values,
           userId: userId as string,
@@ -402,8 +481,10 @@ const StudentProfileCompact = () => {
         };
       }
 
-      if (profile) {
-        await updateProfile(
+      let result;
+      if (profile?.id) {
+        console.log("Updating existing profile with ID:", profile.id);
+        result = await updateProfile(
           { id: profile.id },
           {
             ...profileData,
@@ -414,20 +495,39 @@ const StudentProfileCompact = () => {
               : undefined,
           }
         );
+        console.log("Profile updated successfully:", result);
       } else {
-        await createProfile({
+        console.log("Creating new profile");
+        result = await createProfile({
           ...profileData,
           dateOfBirth: values.dateOfBirth
             ? values.dateOfBirth.toISOString()
             : undefined,
           verificationStatus: VerificationStatus.PENDING,
         });
+        console.log("Profile created successfully:", result);
       }
+
+      // Success: exit edit mode and refresh data
       setIsEditing(false);
-    } catch (err) {
-      console.error("Error saving profile:", err);
+      setFormInitialized(false); // Allow form to be reinitialized with new data
+
+      console.log("=== FORM SUBMISSION COMPLETED SUCCESSFULLY ===");
+    } catch (err: any) {
+      console.error("=== FORM SUBMISSION ERROR ===", err);
+
+      // Handle specific error types
+      if (err.message.includes("network") || err.message.includes("fetch")) {
+        console.error("Network error - check your internet connection");
+      } else if (err.message.includes("validation")) {
+        console.error("Validation error - check your form data");
+      }
+
+      // Optional: Show error message to user
+      alert(`Error saving profile: ${err.message}`);
     } finally {
       setIsSubmitting(false);
+      console.log("Form submission cleanup completed");
     }
   };
 
@@ -463,7 +563,7 @@ const StudentProfileCompact = () => {
         {!isEditing ? (
           <Button
             variant="outline"
-            onClick={() => setIsEditing(true)}
+            onClick={handleEditClick}
             className="gap-1 bg-white text-primary hover:bg-gray-100"
             size="sm"
           >
@@ -473,7 +573,7 @@ const StudentProfileCompact = () => {
         ) : (
           <Button
             variant="ghost"
-            onClick={() => setIsEditing(false)}
+            onClick={handleCancelClick}
             className="gap-1 text-white hover:bg-primary-foreground/10"
             size="sm"
           >
@@ -485,7 +585,13 @@ const StudentProfileCompact = () => {
 
       <CardContent className="p-4">
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)}>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault(); // Critical: prevent default browser form submission
+              console.log("Form submit event triggered");
+              form.handleSubmit(onSubmit)(e);
+            }}
+          >
             {/* Profile header with photo and ID proof side by side */}
             <div className="flex flex-wrap md:flex-nowrap gap-6 mb-6">
               {/* Left side: Profile photo with name and email */}
@@ -725,7 +831,7 @@ const StudentProfileCompact = () => {
             {/* Personal Information Section */}
             <Separator className="my-4" />
             <h3 className="font-medium text-sm mb-3">Personal Information</h3>
-            
+
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-4">
               <FormField
                 control={form.control}
@@ -882,7 +988,7 @@ const StudentProfileCompact = () => {
             {/* Address Information Section */}
             <Separator className="my-4" />
             <h3 className="font-medium text-sm mb-3">Address Information</h3>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
               <FormField
                 control={form.control}
@@ -987,13 +1093,8 @@ const StudentProfileCompact = () => {
             <Separator className="my-4" />
             <h3 className="font-medium text-sm mb-3">Academic Information</h3>
 
-
-            
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mb-4">
-
-
-
-               <FormField
+              <FormField
                 control={form.control}
                 name="rollNo"
                 render={({ field }) => (
@@ -1027,7 +1128,6 @@ const StudentProfileCompact = () => {
                 )}
               />
 
-              
               <FormField
                 control={form.control}
                 name="collegeId"
@@ -1067,7 +1167,7 @@ const StudentProfileCompact = () => {
                 )}
               />
 
-                <FormField
+              <FormField
                 control={form.control}
                 name="yearOfPassing"
                 render={({ field }) => (
@@ -1104,8 +1204,6 @@ const StudentProfileCompact = () => {
                 )}
               />
 
-
-              
               <FormField
                 control={form.control}
                 name="academicYearId"
@@ -1213,10 +1311,6 @@ const StudentProfileCompact = () => {
                   </FormItem>
                 )}
               />
-
-             
-
-            
             </div>
 
             {/* Save Button */}
@@ -1231,7 +1325,7 @@ const StudentProfileCompact = () => {
                   Cancel
                 </Button>
                 <Button
-                  type="button"
+                  type="button" // Keep as button to prevent form submission
                   onClick={handleSaveClick}
                   disabled={isSubmitting}
                   className="gap-2"
@@ -1266,14 +1360,15 @@ const StudentProfileCompact = () => {
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => setDialogOpen(false)}
-              >
+              <Button variant="outline" onClick={() => setDialogOpen(false)}>
                 Cancel
               </Button>
               <Button
-                onClick={() => form.handleSubmit(onSubmit)()}
+                onClick={(e) => {
+                  e.preventDefault();
+                  console.log("Dialog confirmed - submitting form");
+                  form.handleSubmit(onSubmit)();
+                }}
                 disabled={isSubmitting}
               >
                 {isSubmitting ? "Saving..." : "Save Changes"}

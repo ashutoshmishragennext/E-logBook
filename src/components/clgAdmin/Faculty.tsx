@@ -1,14 +1,16 @@
-// Faculty.tsx - Updated with Subject Assignment functionality
+// Faculty.tsx - Updated with Template Export functionality
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { FileExporter, FileImporter } from "@/components/common/FileHandler";
 import { useCurrentUser } from "@/hooks/auth";
 import { useCollegeStore } from "@/store/college";
 import { useTeacherStore } from "@/store/teacherProfile";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Loader2, Search } from "lucide-react";
+import { Loader2, Search, FileSpreadsheet } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
+import { toast } from 'sonner';
+import * as XLSX from 'xlsx';
 import SubjectAssignment from "./subjectAsignment";
 
 // Form schema remains the same
@@ -39,6 +41,17 @@ const Faculty = () => {
   const [showAssignSubjects, setShowAssignSubjects] = useState(false);
   const [selectedTeacher, setSelectedTeacher] = useState<any>(null);
 
+  // Template headers for Faculty/Teachers
+  const facultyTemplateHeaders = {
+    "Name": "",
+    "Email": "",
+    "Designation": "",
+    "Employee ID": "",
+    "Mobile Number": ""
+  };
+
+ 
+
   const exportHeaders = {
     name: "Name",
     email: "Email",
@@ -67,6 +80,63 @@ const Faculty = () => {
       fetchTeachers(college.id);
     }
   }, [college, form, fetchTeachers]);
+
+  // Function to export template Excel sheet
+  const exportTemplate = (templateType: 'faculty') => {
+    try {
+      const headers = templateType === 'faculty' ? facultyTemplateHeaders :'';
+      
+      // Check if headers exist
+      if (!headers || Object.keys(headers).length === 0) {
+        toast.error("Please add at least one field to your template");
+        return;
+      }
+
+      // Create workbook and worksheet
+      const workbook = XLSX.utils.book_new();
+      const worksheet = XLSX.utils.json_to_sheet([headers]);
+
+      // Style the header row (make it bold and add background color)
+      const range = XLSX.utils.decode_range(worksheet['!ref'] || 'A1');
+      for (let col = range.s.c; col <= range.e.c; col++) {
+        const cellAddress = XLSX.utils.encode_cell({ r: 0, c: col });
+        if (!worksheet[cellAddress]) continue;
+        
+        // Add styling (this is basic - actual styling depends on your XLSX version)
+        worksheet[cellAddress].s = {
+          font: { bold: true },
+          fill: { fgColor: { rgb: "E3F2FD" } },
+          border: {
+            top: { style: "thin" },
+            bottom: { style: "thin" },
+            left: { style: "thin" },
+            right: { style: "thin" }
+          }
+        };
+      }
+
+      // Set column widths for better readability
+      const columnWidths = Object.keys(headers).map(header => ({
+        wch: Math.max(header.length + 5, 15) // Minimum width of 15 characters
+      }));
+      worksheet['!cols'] = columnWidths;
+
+      // Add worksheet to workbook
+      XLSX.utils.book_append_sheet(workbook, worksheet, `${templateType}_template`);
+
+      // Generate filename with current date
+      const currentDate = new Date().toISOString().split('T')[0];
+      const filename = `${templateType}_import_template_${currentDate}.xlsx`;
+
+      // Write and download file
+      XLSX.writeFile(workbook, filename);
+      
+      toast.success(`${templateType.charAt(0).toUpperCase() + templateType.slice(1)} template downloaded successfully!`);
+    } catch (error) {
+      console.error('Error exporting template:', error);
+      toast.error('Failed to export template. Please try again.');
+    }
+  };
 
   // Form submission for adding a single teacher
   const onSubmit = async (data: FormValues) => {
@@ -295,6 +365,26 @@ const Faculty = () => {
             </div>
 
             <div className="flex gap-3">
+              {/* Template Export Buttons */}
+              <div className="flex gap-2 border-r pr-3">
+                <button
+                  onClick={() => exportTemplate('faculty')}
+                  className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
+                  title="Download Faculty Template"
+                >
+                  <FileSpreadsheet size={16} />
+                  Faculty Template
+                </button>
+                {/* <button
+                  onClick={() => exportTemplate('student')}
+                  className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition"
+                  title="Download Student Template"
+                >
+                  <FileSpreadsheet size={16} />
+                  Student Template
+                </button> */}
+              </div>
+
               {/* Using the reusable FileImporter component */}
               <FileImporter
                 onImport={handleImportComplete}
@@ -309,10 +399,19 @@ const Faculty = () => {
                   new Date().toISOString().split("T")[0]
                 }.xlsx`}
                 headers={exportHeaders}
-                buttonText="Export"
+                buttonText="Export Data"
                 disabled={filteredTeachers.length === 0}
               />
             </div>
+          </div>
+
+          {/* Info section about templates */}
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+            <h4 className="text-blue-800 font-medium mb-2">📋 Import Templates</h4>
+            <p className="text-blue-700 text-sm">
+              Download the template files above to get the correct format for importing faculty and student data. 
+              Fill in the template with your data and then use the Import button to upload.
+            </p>
           </div>
 
           {/* Teachers table */}

@@ -1,9 +1,15 @@
+/*eslint-disable @typescript-eslint/no-explicit-any */
 // src/components/templates/types.ts
+
+import { ReactNode } from "react";
 
 // Field definition types
 export type FieldType = "text" | "number" | "date" | "select" | "textarea" | "file";
 
 export interface FieldDefinition {
+  type(type: any): import("react").ReactNode;
+  label: ReactNode;
+  required: any;
   fieldName: string;
   fieldLabel: string;
   fieldType: FieldType;

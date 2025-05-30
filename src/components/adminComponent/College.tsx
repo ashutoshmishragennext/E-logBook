@@ -1478,7 +1478,6 @@ const College: React.FC = () => {
                           )}
                       </div>
                     </td>
-                    {/* College Admin column fix */}
                     {/* Fixed College Admin column */}
                     <td className="px-4 py-2 text-sm text-gray-700">
                       {college.collegeAdmin ? (
@@ -1669,6 +1668,12 @@ const College: React.FC = () => {
                             <span className="font-medium">Email:</span>{" "}
                             {selectedCollege.collegeAdmin.email}
                           </p>
+                          {selectedCollege.collegeAdmin.phone && (
+                            <p className="text-sm">
+                              <span className="font-medium">Phone:</span>{" "}
+                              {selectedCollege.collegeAdmin.phone}
+                            </p>
+                          )}
                         </div>
                       </div>
                     ) : (

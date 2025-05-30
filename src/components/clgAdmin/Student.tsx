@@ -1,13 +1,16 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+/*eslint-disable @typescript-eslint/no-unused-vars */
 import { FileExporter, FileImporter } from "@/components/common/FileHandler";
 import { useCurrentUser } from "@/hooks/auth";
 import { useCollegeStore } from "@/store/college";
 import { useStudentProfileStore } from "@/store/student";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Loader2, Search } from "lucide-react";
+import { FileSpreadsheet, Loader2, Search } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
+import { toast } from "sonner";
 import { z } from "zod";
+import * as XLSX from "xlsx";
 
 // Form schema for student
 const formSchema = z.object({
@@ -25,6 +28,13 @@ type FormValues = z.infer<typeof formSchema>;
 // New component to handle branch name fetching and display
 type BranchNameProps = {
   branchId?: string;
+};
+
+const studentTemplateHeaders = {
+  Name: "",
+  Email: "",
+  "Roll Number": "",
+  "Mobile Number": "",
 };
 
 const BranchName = ({ branchId }: BranchNameProps) => {
@@ -263,6 +273,59 @@ const Students = () => {
     }
   );
 
+  const exportTemplate = (templateType: "student") => {
+    try {
+      const headers = studentTemplateHeaders;
+
+      if (!headers || Object.keys(headers).length === 0) {
+        toast.error("Please add at least one field to your template");
+        return;
+      }
+
+      const workbook = XLSX.utils.book_new();
+      const worksheet = XLSX.utils.json_to_sheet([headers]);
+
+      // Style the header row
+      const range = XLSX.utils.decode_range(worksheet["!ref"] || "A1");
+      for (let col = range.s.c; col <= range.e.c; col++) {
+        const cellAddress = XLSX.utils.encode_cell({ r: 0, c: col });
+        if (!worksheet[cellAddress]) continue;
+
+        worksheet[cellAddress].s = {
+          font: { bold: true },
+          fill: { fgColor: { rgb: "E3F2FD" } },
+          border: {
+            top: { style: "thin" },
+            bottom: { style: "thin" },
+            left: { style: "thin" },
+            right: { style: "thin" },
+          },
+        };
+      }
+
+      // Set column widths
+      const columnWidths = Object.keys(headers).map((header) => ({
+        wch: Math.max(header.length + 5, 15),
+      }));
+      worksheet["!cols"] = columnWidths;
+
+      // Add worksheet to workbook
+      XLSX.utils.book_append_sheet(workbook, worksheet, "student_template");
+
+      // Generate filename with current date
+      const currentDate = new Date().toISOString().split("T")[0];
+      const filename = `student_import_template_${currentDate}.xlsx`;
+
+      // Write and download file
+      XLSX.writeFile(workbook, filename);
+
+      toast.success("Student template downloaded successfully!");
+    } catch (error) {
+      console.error("Error exporting template:", error);
+      toast.error("Failed to export template. Please try again.");
+    }
+  };
+
   // const handleDeleteStudent = (student: any) => {
   //   const confirmDelete = window.confirm(
   //     `Are you sure you want to delete ${student.name}?`
@@ -374,6 +437,16 @@ const Students = () => {
                 buttonText="Export"
                 disabled={filteredStudents.length === 0}
               />
+
+              {/* Template download button */}
+              <button
+                onClick={() => exportTemplate("student")}
+                className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition"
+                title="Download Student Template"
+              >
+                <FileSpreadsheet size={16} />
+                Student Template
+              </button>
             </div>
           </div>
 
