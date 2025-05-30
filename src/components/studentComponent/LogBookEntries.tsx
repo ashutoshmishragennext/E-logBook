@@ -28,7 +28,7 @@ import {
 import { useCurrentUser } from "@/hooks/auth";
 import useLogbookStore from "@/store/logBook";
 import { UploadButton } from "@/utils/uploadthing";
-import { format } from "date-fns";
+import { format, isAfter, isBefore, startOfDay, subDays } from "date-fns";
 import {
   CalendarIcon,
   FileText,
@@ -46,7 +46,7 @@ const LogbookEntryPage: React.FC = () => {
   const [showNewEntry, setShowNewEntry] = useState(false);
   const [date, setDate] = useState<Date | undefined>(new Date());
   const [existingEntries, setExistingEntries] = useState<any[]>([]);
-  
+
   const {
     collegeId,
     studentId,
@@ -94,7 +94,11 @@ const LogbookEntryPage: React.FC = () => {
 
   // Fetch templates and teachers when type changes
   useEffect(() => {
-    if (selectedType && ((selectedType === "general") || (selectedType === "subject" && studentSubjects.length > 0))) {
+    if (
+      selectedType &&
+      (selectedType === "general" ||
+        (selectedType === "subject" && studentSubjects.length > 0))
+    ) {
       fetchTemplates();
       if (selectedType === "general" && collegeId) {
         fetchAllTeachers(collegeId);
@@ -111,12 +115,14 @@ const LogbookEntryPage: React.FC = () => {
             studentId,
             logBookTemplateId: selectedTemplateId,
           });
-          
+
           if (selectedStudentSubjectId) {
-            queryParams.append('studentSubjectId', selectedStudentSubjectId);
+            queryParams.append("studentSubjectId", selectedStudentSubjectId);
           }
-          
-          const response = await fetch(`/api/log-books?${queryParams.toString()}`);
+
+          const response = await fetch(
+            `/api/log-books?${queryParams.toString()}`
+          );
           if (response.ok) {
             const data = await response.json();
             setExistingEntries(data);
@@ -126,7 +132,7 @@ const LogbookEntryPage: React.FC = () => {
         }
       }
     };
-    
+
     fetchExistingEntries();
   }, [studentId, selectedTemplateId, selectedStudentSubjectId]);
 
@@ -150,28 +156,30 @@ const LogbookEntryPage: React.FC = () => {
   const handleSubmit = async () => {
     // Add the selected date to formData before submitting
     if (date) {
-      updateFormData('entryDate', format(date, "yyyy-MM-dd"));
+      updateFormData("entryDate", format(date, "yyyy-MM-dd"));
     }
-    
+
     const success = await submitLogbookEntry();
     if (success) {
       setShowNewEntry(false);
       setDate(new Date()); // Reset date to today
       resetForm();
-      
+
       // Refresh existing entries
       if (studentId && selectedTemplateId) {
         const queryParams = new URLSearchParams({
           studentId,
           logBookTemplateId: selectedTemplateId,
         });
-        
+
         if (selectedStudentSubjectId) {
-          queryParams.append('studentSubjectId', selectedStudentSubjectId);
+          queryParams.append("studentSubjectId", selectedStudentSubjectId);
         }
-        
+
         try {
-          const response = await fetch(`/api/log-books?${queryParams.toString()}`);
+          const response = await fetch(
+            `/api/log-books?${queryParams.toString()}`
+          );
           if (response.ok) {
             const data = await response.json();
             setExistingEntries(data);
@@ -194,85 +202,89 @@ const LogbookEntryPage: React.FC = () => {
     }
   };
 
-  const handleFileUpload = (fieldName: string) => (files: { url: string; name: string }[]) => {
-    if (files.length > 0) {
-      updateFileUpload(fieldName, { url: files[0].url, name: files[0].name });
-    }
-  };
+  const handleFileUpload =
+    (fieldName: string) => (files: { url: string; name: string }[]) => {
+      if (files.length > 0) {
+        updateFileUpload(fieldName, { url: files[0].url, name: files[0].name });
+      }
+    };
 
   const handleRemoveFile = (fieldName: string) => {
     removeFileUpload(fieldName);
   };
 
-  const selectedTemplate = templates.find(t => t.id === selectedTemplateId);
-  
+  const selectedTemplate = templates.find((t) => t.id === selectedTemplateId);
+
   // Flatten groups to get all fields
   const allFields = selectedTemplate
-    ? selectedTemplate.dynamicSchema.groups.flatMap(group => 
-        group.fields.map(field => ({ ...field, groupName: group.groupName }))
+    ? selectedTemplate.dynamicSchema.groups.flatMap((group) =>
+        group.fields.map((field) => ({ ...field, groupName: group.groupName }))
       )
     : [];
 
   // Prepare options for searchable selectors
   const templateTypeOptions = [
     { label: "General", value: "general" },
-    { label: "Subject", value: "subject" }
+    { label: "Subject", value: "subject" },
   ];
 
-  const teacherOptions = teachers.map(teacher => ({
+  const teacherOptions = teachers.map((teacher) => ({
     label: teacher.name,
-    value: teacher.id
+    value: teacher.id,
   }));
 
-  const subjectOptions = studentSubjects.map(subject => ({
-    label: `${subjectNames[subject.subjectId] || `Subject ID: ${subject.subjectId}`}${subject.teacher ? ` (${subject.teacher.fullName})` : ''}`,
-    value: subject.id
+  const subjectOptions = studentSubjects.map((subject) => ({
+    label: `${
+      subjectNames[subject.subjectId] || `Subject ID: ${subject.subjectId}`
+    }${subject.teacher ? ` (${subject.teacher.fullName})` : ""}`,
+    value: subject.id,
   }));
 
-  const templateOptions = templates.map(template => ({
+  const templateOptions = templates.map((template) => ({
     label: template.name,
-    value: template.id
+    value: template.id,
   }));
 
   const renderFieldInput = (field: any) => {
     switch (field.fieldType) {
-      case 'text':
+      case "text":
         return (
           <Input
             className="w-full min-w-[120px]"
-            value={formData[field.fieldName] || ''}
+            value={formData[field.fieldName] || ""}
             onChange={(e) => updateFormData(field.fieldName, e.target.value)}
             placeholder={field.fieldLabel}
           />
         );
-      case 'textarea':
+      case "textarea":
         return (
           <Textarea
             className="w-full min-w-[150px] h-20 resize-none"
-            value={formData[field.fieldName] || ''}
+            value={formData[field.fieldName] || ""}
             onChange={(e) => updateFormData(field.fieldName, e.target.value)}
             placeholder={field.fieldLabel}
           />
         );
-      case 'select':
-        const selectOptions = field.options && field.options[0] 
-          ? field.options[0].split(',').map((option: string) => ({
-              label: option.trim(),
-              value: option.trim()
-            }))
-          : [];
-        
+      case "select":
+        const selectOptions =
+          field.options && field.options[0]
+            ? field.options[0].split(",").map((option: string) => ({
+                label: option.trim(),
+                value: option.trim(),
+              }))
+            : [];
+
         return (
           <div className="min-w-[120px]">
             <SearchableSubjectSelect
               options={selectOptions}
-              value={formData[field.fieldName] || ''}
+              value={formData[field.fieldName] || ""}
               onChange={(value) => updateFormData(field.fieldName, value)}
               placeholder={`Select ${field.fieldLabel}`}
             />
           </div>
         );
-      case 'date':
+      case "date":
         return (
           <Popover>
             <PopoverTrigger asChild>
@@ -281,28 +293,46 @@ const LogbookEntryPage: React.FC = () => {
                 className="w-full min-w-[140px] justify-start text-left font-normal"
               >
                 <CalendarIcon className="mr-2 h-4 w-4" />
-                {formData[field.fieldName] ? 
-                  format(new Date(formData[field.fieldName]), "MMM d, yyyy") : 
+                {formData[field.fieldName] ? (
+                  format(new Date(formData[field.fieldName]), "MMM d, yyyy")
+                ) : (
                   <span className="text-muted-foreground">Pick date</span>
-                }
+                )}
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0" align="start">
               <Calendar
                 mode="single"
-                selected={formData[field.fieldName] ? new Date(formData[field.fieldName]) : undefined}
-                onSelect={(date) => updateFormData(field.fieldName, date ? format(date, "yyyy-MM-dd") : '')}
+                selected={
+                  formData[field.fieldName]
+                    ? new Date(formData[field.fieldName])
+                    : undefined
+                }
+                onSelect={(date) =>
+                  updateFormData(
+                    field.fieldName,
+                    date ? format(date, "yyyy-MM-dd") : ""
+                  )
+                }
                 initialFocus
+                disabled={(date) => {
+                  const today = startOfDay(new Date());
+                  const sevenDaysAgo = subDays(today, 7);
+                  return isBefore(date, sevenDaysAgo) || isAfter(date, today);
+                }}
               />
             </PopoverContent>
           </Popover>
         );
-      case 'file':
+      case "file":
         return (
           <div className="space-y-2 min-w-[150px]">
             {fileUploads[field.fieldName] ? (
               <div className="flex items-center justify-between p-2 border rounded-md bg-gray-50">
-                <span className="truncate text-sm max-w-[100px]" title={fileUploads[field.fieldName]?.name}>
+                <span
+                  className="truncate text-sm max-w-[100px]"
+                  title={fileUploads[field.fieldName]?.name}
+                >
                   {fileUploads[field.fieldName]?.name}
                 </span>
                 <Button
@@ -327,13 +357,23 @@ const LogbookEntryPage: React.FC = () => {
                     color: "text-white",
                     width: "w-full",
                     fontSize: "12px",
-                    height: "32px"
+                    height: "32px",
                   },
                   allowedContent: "hidden",
                 }}
               />
             )}
           </div>
+        );
+      case "number":
+        return (
+          <Input
+            type="number"
+            className="w-full min-w-[120px]"
+            value={formData[field.fieldName] || ""}
+            onChange={(e) => updateFormData(field.fieldName, e.target.value)}
+            placeholder={field.fieldLabel}
+          />
         );
       default:
         return <Input className="min-w-[120px]" />;
@@ -426,8 +466,8 @@ const LogbookEntryPage: React.FC = () => {
               </Tooltip>
             </TooltipProvider>
 
-            <Button 
-              onClick={() => setShowNewEntry(true)} 
+            <Button
+              onClick={() => setShowNewEntry(true)}
               disabled={!selectedTemplateId}
               className="bg-primary hover:bg-primary/90 w-full sm:w-auto"
             >
@@ -442,12 +482,18 @@ const LogbookEntryPage: React.FC = () => {
           <Card className="mb-4">
             <CardContent className="pt-4">
               <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 mb-2">
-                <h2 className="text-xl font-semibold">{selectedTemplate.name}</h2>
+                <h2 className="text-xl font-semibold">
+                  {selectedTemplate.name}
+                </h2>
                 <div className="text-sm text-muted-foreground">
-                  Type: {selectedTemplate.templateType.charAt(0).toUpperCase() + selectedTemplate.templateType.slice(1)}
+                  Type:{" "}
+                  {selectedTemplate.templateType.charAt(0).toUpperCase() +
+                    selectedTemplate.templateType.slice(1)}
                 </div>
               </div>
-              <p className="text-sm text-muted-foreground">{selectedTemplate.description}</p>
+              <p className="text-sm text-muted-foreground">
+                {selectedTemplate.description}
+              </p>
             </CardContent>
           </Card>
         )}
@@ -456,7 +502,11 @@ const LogbookEntryPage: React.FC = () => {
         {selectedTemplate && (
           <div className="border rounded-md overflow-hidden">
             <div className="overflow-x-auto">
-              <div style={{ minWidth: `${Math.max(800, (allFields.length + 3) * 150)}px` }}>
+              <div
+                style={{
+                  minWidth: `${Math.max(800, (allFields.length + 3) * 150)}px`,
+                }}
+              >
                 <div className="h-[500px] overflow-y-auto">
                   <Table>
                     <TableHeader className="sticky top-0 bg-white z-10">
@@ -465,18 +515,22 @@ const LogbookEntryPage: React.FC = () => {
                           Date
                         </TableHead>
                         {allFields.map((field, index) => (
-                          <TableHead 
-                            key={index} 
+                          <TableHead
+                            key={index}
                             className="min-w-[150px] px-2"
                             title={`${field.groupName}: ${field.fieldLabel}`}
                           >
                             <div className="truncate">
                               {field.fieldLabel}
-                              {field.isRequired && <span className="text-red-500 ml-1">*</span>}
+                              {field.isRequired && (
+                                <span className="text-red-500 ml-1">*</span>
+                              )}
                             </div>
                           </TableHead>
                         ))}
-                        <TableHead className="min-w-[150px] px-2">Remarks</TableHead>
+                        <TableHead className="min-w-[150px] px-2">
+                          Remarks
+                        </TableHead>
                         <TableHead className="w-[100px] text-right bg-white sticky right-0 z-20 border-l">
                           Actions
                         </TableHead>
@@ -499,7 +553,10 @@ const LogbookEntryPage: React.FC = () => {
                                   </span>
                                 </Button>
                               </PopoverTrigger>
-                              <PopoverContent className="w-auto p-0 z-30" align="start">
+                              <PopoverContent
+                                className="w-auto p-0 z-30"
+                                align="start"
+                              >
                                 <Calendar
                                   mode="single"
                                   selected={date}
@@ -509,24 +566,26 @@ const LogbookEntryPage: React.FC = () => {
                               </PopoverContent>
                             </Popover>
                           </TableCell>
-                          
+
                           {/* Dynamic Fields */}
                           {allFields.map((field, index) => (
                             <TableCell key={index} className="p-2">
                               {renderFieldInput(field)}
                             </TableCell>
                           ))}
-                          
+
                           {/* Remarks */}
                           <TableCell className="p-2">
                             <Textarea
                               className="w-full min-w-[150px] h-20 resize-none"
-                              value={formData.studentRemarks || ''}
-                              onChange={(e) => updateFormData('studentRemarks', e.target.value)}
+                              value={formData.studentRemarks || ""}
+                              onChange={(e) =>
+                                updateFormData("studentRemarks", e.target.value)
+                              }
                               placeholder="Additional remarks..."
                             />
                           </TableCell>
-                          
+
                           {/* Actions */}
                           <TableCell className="text-right bg-white sticky right-0 z-10 border-l p-2">
                             <div className="flex justify-end space-x-1">
@@ -558,50 +617,72 @@ const LogbookEntryPage: React.FC = () => {
                           </TableCell>
                         </TableRow>
                       )}
-                      
+
                       {/* Existing Entries */}
                       {existingEntries.length > 0 ? (
                         existingEntries.map((entry, index) => (
                           <TableRow key={index} className="hover:bg-gray-50/50">
                             <TableCell className="bg-white sticky left-0 z-10 border-r p-2">
                               <div className="text-sm">
-                                {entry.createdAt && format(new Date(entry.createdAt), "MMM d, yyyy")}
+                                {entry.createdAt &&
+                                  format(
+                                    new Date(entry.createdAt),
+                                    "MMM d, yyyy"
+                                  )}
                               </div>
                             </TableCell>
-                            
+
                             {/* Dynamic Fields */}
                             {allFields.map((field, fieldIndex) => (
                               <TableCell key={fieldIndex} className="p-2">
                                 <div className="min-w-0">
                                   {entry.dynamicFields?.[field.fieldName] ? (
-                                    field.fieldType === 'file' ? (
-                                      <a 
-                                        href={entry.dynamicFields[field.fieldName]} 
-                                        target="_blank" 
+                                    field.fieldType === "file" ? (
+                                      <a
+                                        href={
+                                          entry.dynamicFields[field.fieldName]
+                                        }
+                                        target="_blank"
                                         rel="noopener noreferrer"
                                         className="flex items-center text-blue-600 hover:underline text-sm"
                                       >
                                         <FileText className="h-4 w-4 mr-1 flex-shrink-0" />
-                                        <span className="truncate">View File</span>
+                                        <span className="truncate">
+                                          View File
+                                        </span>
                                       </a>
                                     ) : (
-                                      <div className="text-sm break-words" title={entry.dynamicFields[field.fieldName]}>
+                                      <div
+                                        className="text-sm break-words"
+                                        title={
+                                          entry.dynamicFields[field.fieldName]
+                                        }
+                                      >
                                         {entry.dynamicFields[field.fieldName]}
                                       </div>
                                     )
                                   ) : (
-                                    <span className="text-muted-foreground text-sm">-</span>
+                                    <span className="text-muted-foreground text-sm">
+                                      -
+                                    </span>
                                   )}
                                 </div>
                               </TableCell>
                             ))}
-                            
+
                             <TableCell className="p-2">
-                              <div className="text-sm break-words" title={entry.studentRemarks}>
-                                {entry.studentRemarks || <span className="text-muted-foreground">-</span>}
+                              <div
+                                className="text-sm break-words"
+                                title={entry.studentRemarks}
+                              >
+                                {entry.studentRemarks || (
+                                  <span className="text-muted-foreground">
+                                    -
+                                  </span>
+                                )}
                               </div>
                             </TableCell>
-                            
+
                             <TableCell className="text-right bg-white sticky right-0 z-10 border-l p-2">
                               <div className="flex justify-end">
                                 <Button
@@ -617,14 +698,19 @@ const LogbookEntryPage: React.FC = () => {
                         ))
                       ) : (
                         <TableRow>
-                          <TableCell colSpan={allFields.length + 3} className="h-24 text-center">
+                          <TableCell
+                            colSpan={allFields.length + 3}
+                            className="h-24 text-center"
+                          >
                             {selectedTemplateId ? (
                               <div className="flex flex-col items-center justify-center">
-                                <p className="text-muted-foreground">No entries found</p>
+                                <p className="text-muted-foreground">
+                                  No entries found
+                                </p>
                                 {!showNewEntry && (
-                                  <Button 
-                                    variant="outline" 
-                                    className="mt-2" 
+                                  <Button
+                                    variant="outline"
+                                    className="mt-2"
                                     onClick={() => setShowNewEntry(true)}
                                   >
                                     <PlusCircle className="mr-2 h-4 w-4" />
@@ -633,7 +719,9 @@ const LogbookEntryPage: React.FC = () => {
                                 )}
                               </div>
                             ) : (
-                              <p className="text-muted-foreground">Select a template to view entries</p>
+                              <p className="text-muted-foreground">
+                                Select a template to view entries
+                              </p>
                             )}
                           </TableCell>
                         </TableRow>

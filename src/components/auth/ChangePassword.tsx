@@ -64,6 +64,13 @@ const PasswordChangeScreen: React.FC<PasswordChangeScreenProps> = ({
     return 'Strong';
   };
 
+  const togglePasswordVisibility = (field: PasswordField): void => {
+    setShowPasswords(prev => ({
+      ...prev,
+      [field]: !prev[field]
+    }));
+  };
+
   const handleSubmit = async () => {
     setLoading(true);
     setMessage({ type: '', text: '' });
@@ -111,10 +118,6 @@ const PasswordChangeScreen: React.FC<PasswordChangeScreenProps> = ({
       setLoading(false);
     }
   };
-
-  function togglePasswordVisibility(arg0: string): void {
-    throw new Error('Function not implemented.');
-  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center p-4">

@@ -25,6 +25,7 @@ import Course from "@/components/adminComponent/Course";
 import Department from "@/components/adminComponent/Department";
 import { GeneralTemplateForm } from "@/components/adminComponent/General";
 import Subject from "@/components/adminComponent/Subject";
+import AdminTemplatesDashboard from "@/components/adminComponent/TemplatesDisplay";
 // import { GeneralTemplatesDisplay } from "@/components/adminComponent/DisplayTemplate";
 
 // import { SubjectTemplateForm } from "@/components/adminComponent/SubjectTemplate";
@@ -77,10 +78,10 @@ const sidebarItems = [
       //   label: "Specified",
       //   component: <SubjectTemplateForm />,
       // },
-      // {
-      //   id: "logbook-templates",
-      //   label: "Templates",
-      //   component: <GeneralTemplatesDisplay/>}
+      {
+        id: "logbook-templates",
+        label: "Templates",
+        component: <AdminTemplatesDashboard/>}
     ],
   },
 ];
