@@ -232,7 +232,7 @@ const SidebarContent = ({
         <div className="flex items-center">
           {/* You can add your logo here */}
           {sidebarOpen && (
-            <span className="text-lg font-bold text-blue-600">Student Portal</span>
+            <span className="text-lg font-bold text-blue-600">Teacher Portal</span>
           )}
           {!sidebarOpen && (
             <span className="text-lg font-bold text-blue-600">AP</span>
