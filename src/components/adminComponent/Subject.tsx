@@ -34,7 +34,7 @@ const Subject = () => {
   });
   const [approvedFilter, setApprovedFilter] = useState<
     "all" | "approved" | "pending"
-  >("all");
+  >("pending");
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [confirmText, setConfirmText] = useState("");
   const [onConfirmCallback, setOnConfirmCallback] = useState<

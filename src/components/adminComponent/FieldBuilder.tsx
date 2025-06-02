@@ -3,12 +3,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -199,8 +194,18 @@ export function FieldBuilder({
                       className="border rounded p-2 bg-muted/50"
                     >
                       <div className="grid grid-cols-12 gap-2 items-end">
+
+                        <div className="col-span-2">
+                          <Label className="text-xs">(ID)</Label>
+                          <Input
+                            value={field.fieldName}
+                            readOnly
+                            disabled
+                            className="h-8 text-xs bg-muted text-muted-foreground"
+                          />
+                        </div>
                         <div className="col-span-3">
-                          <Label className="text-xs">Label</Label>
+                          <Label className="text-xs">Name</Label>
                           <Input
                             value={field.fieldLabel}
                             onChange={(e) =>
@@ -211,18 +216,7 @@ export function FieldBuilder({
                             className="h-8 text-xs"
                           />
                         </div>
-                        <div className="col-span-2">
-                          <Label className="text-xs">Name (ID)</Label>
-                          <Input
-                            value={field.fieldName}
-                            onChange={(e) =>
-                              updateField(groupIndex, fieldIndex, {
-                                fieldName: e.target.value,
-                              })
-                            }
-                            className="h-8 text-xs"
-                          />
-                        </div>
+                        
                         <div className="col-span-2">
                           <Label className="text-xs">Type</Label>
                           <Select

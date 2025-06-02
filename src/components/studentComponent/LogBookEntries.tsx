@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable react-hooks/exhaustive-deps*/
-import { FileExporter, FileImporter } from "@/components/common/FileHandler";
+import { FileImporter } from "@/components/common/FileHandler";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent } from "@/components/ui/card";
@@ -39,6 +39,7 @@ import {
 } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import SearchableSubjectSelect from "../adminComponent/SubjectSerachSelect";
+import PDFExporter from "../common/PdfExport";
 
 const LogbookEntryPage: React.FC = () => {
   const user = useCurrentUser();
@@ -214,6 +215,8 @@ const LogbookEntryPage: React.FC = () => {
   };
 
   const selectedTemplate = templates.find((t) => t.id === selectedTemplateId);
+  const selectedTeacher = teachers.find((t) => t.id === selectedTeacherId);
+  const selectedSubject = studentSubjects.find((s) => s.id === selectedStudentSubjectId);
 
   // Flatten groups to get all fields
   const allFields = selectedTemplate
@@ -244,6 +247,16 @@ const LogbookEntryPage: React.FC = () => {
     label: template.name,
     value: template.id,
   }));
+
+  // Get teacher name for PDF export
+  const getTeacherNameForExport = () => {
+    if (selectedType === "general" && selectedTeacher) {
+      return selectedTeacher.name;
+    } else if (selectedType === "subject" && selectedSubject?.teacher) {
+      return selectedSubject.teacher.fullName;
+    }
+    return "";
+  };
 
   const renderFieldInput = (field: any) => {
     switch (field.fieldType) {
@@ -453,15 +466,18 @@ const LogbookEntryPage: React.FC = () => {
               <Tooltip>
                 <TooltipTrigger asChild>
                   <div>
-                    <FileExporter
+                    <PDFExporter
                       data={existingEntries}
-                      buttonText="Export"
+                      buttonText="Export PDF"
                       className="flex items-center justify-center w-full sm:w-auto px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+                      teacherName={getTeacherNameForExport()}
+                      templateName={selectedTemplate?.name || ""}
+                      allFields={allFields}
                     />
                   </div>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>Export entries to Excel</p>
+                  <p>Export entries to PDF</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
@@ -529,7 +545,10 @@ const LogbookEntryPage: React.FC = () => {
                           </TableHead>
                         ))}
                         <TableHead className="min-w-[150px] px-2">
-                          Remarks
+                          Student Remarks
+                        </TableHead>
+                        <TableHead>
+                          Teacher Remarks
                         </TableHead>
                         <TableHead className="w-[100px] text-right bg-white sticky right-0 z-20 border-l">
                           Actions
@@ -585,6 +604,15 @@ const LogbookEntryPage: React.FC = () => {
                               placeholder="Additional remarks..."
                             />
                           </TableCell>
+
+                          <TableCell className="p-2">
+                            <Textarea
+                              className="w-full min-w-[150px] h-20 resize-none"
+                              value={formData.teacherRemarks || "-"}
+                              readOnly
+                              placeholder="Teacher remarks..."
+                            />
+                            </TableCell>
 
                           {/* Actions */}
                           <TableCell className="text-right bg-white sticky right-0 z-10 border-l p-2">
@@ -652,43 +680,42 @@ const LogbookEntryPage: React.FC = () => {
                                         </span>
                                       </a>
                                     ) : (
-                                      <div
-                                        className="text-sm break-words"
-                                        title={
-                                          entry.dynamicFields[field.fieldName]
-                                        }
-                                      >
+                                      <div className="text-sm break-words">
                                         {entry.dynamicFields[field.fieldName]}
                                       </div>
                                     )
                                   ) : (
-                                    <span className="text-muted-foreground text-sm">
-                                      -
-                                    </span>
+                                    <div className="text-sm text-gray-400">-</div>
                                   )}
                                 </div>
                               </TableCell>
                             ))}
 
+                            {/* Student Remarks */}
                             <TableCell className="p-2">
-                              <div
-                                className="text-sm break-words"
-                                title={entry.studentRemarks}
-                              >
-                                {entry.studentRemarks || (
-                                  <span className="text-muted-foreground">
-                                    -
-                                  </span>
-                                )}
+                              <div className="text-sm break-words min-w-[150px]">
+                                {entry.studentRemarks || "-"}
                               </div>
                             </TableCell>
 
+                            {/* Teacher Remarks */}
+                            <TableCell className="p-2">
+                              <div className="text-sm break-words min-w-[150px]">
+                                {entry.teacherRemarks || "-"}
+                              </div>
+                            </TableCell>
+
+                            {/* Actions */}
                             <TableCell className="text-right bg-white sticky right-0 z-10 border-l p-2">
                               <div className="flex justify-end">
                                 <Button
                                   variant="ghost"
                                   size="sm"
                                   className="h-8 w-8 p-0"
+                                  onClick={() => {
+                                    // Add edit functionality here if needed
+                                    console.log("Edit entry:", entry.id);
+                                  }}
                                 >
                                   <FileText className="h-4 w-4" />
                                 </Button>
@@ -699,30 +726,10 @@ const LogbookEntryPage: React.FC = () => {
                       ) : (
                         <TableRow>
                           <TableCell
-                            colSpan={allFields.length + 3}
-                            className="h-24 text-center"
+                            colSpan={allFields.length + 4}
+                            className="text-center py-8 text-muted-foreground"
                           >
-                            {selectedTemplateId ? (
-                              <div className="flex flex-col items-center justify-center">
-                                <p className="text-muted-foreground">
-                                  No entries found
-                                </p>
-                                {!showNewEntry && (
-                                  <Button
-                                    variant="outline"
-                                    className="mt-2"
-                                    onClick={() => setShowNewEntry(true)}
-                                  >
-                                    <PlusCircle className="mr-2 h-4 w-4" />
-                                    Create New Entry
-                                  </Button>
-                                )}
-                              </div>
-                            ) : (
-                              <p className="text-muted-foreground">
-                                Select a template to view entries
-                              </p>
-                            )}
+                            No entries found. Click <span className="font-bold"> New Entry</span>  to add your first entry.
                           </TableCell>
                         </TableRow>
                       )}
@@ -732,6 +739,21 @@ const LogbookEntryPage: React.FC = () => {
               </div>
             </div>
           </div>
+        )}
+
+        {/* Empty State */}
+        {!selectedTemplate && (
+          <Card className="text-center py-12">
+            <CardContent>
+              <div className="text-muted-foreground">
+                <FileText className="mx-auto h-12 w-12 mb-4 opacity-50" />
+                <h3 className="text-lg font-medium mb-2">No Template Selected</h3>
+                <p className="text-sm">
+                  Please select a template type and template to start creating logbook entries.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
         )}
       </div>
     </div>

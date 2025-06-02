@@ -1,7 +1,13 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */ 
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import {
   Form,
   FormControl,
@@ -14,6 +20,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useCurrentUser } from "@/hooks/auth";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { InfoIcon, Save } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
@@ -28,9 +35,8 @@ import {
 
 import { toast } from "sonner";
 import { useCollegeStore } from "@/store/college";
-import { Alert, AlertDescription } from "../ui/alert";
-import SearchableSubjectSelect from "./SubjectSerachSelect";
-import { Save } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
+import SubjectSelector from "../clgAdmin/SubjectComponent";
 
 // Simplified form validation schema
 const subjectTemplateSchema = z.object({
@@ -58,22 +64,18 @@ export function SubjectTemplateForm({
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [collegeId, setCollegeId] = useState<string | null>(null);
+  const [subjects, setSubjects] = useState<Subject[]>([]);
+
+  // New state for SubjectSelector
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedSubject, setSelectedSubject] = useState<{
+    id: string;
+    name: string;
+    code?: string;
+  } | null>(null);
+  const [selectedPhaseId, setSelectedPhaseId] = useState(""); // You may need to set this based on your app logic
 
   const { college, fetchCollegeDetail } = useCollegeStore();
-
-  useEffect(() => {
-    if (userId) {
-      fetchCollegeDetail(userId);
-    }
-  }, [userId, fetchCollegeDetail]);
-  console.log("College:", college);
-  useEffect(() => {
-    if (college) {
-      setCollegeId(college.id);
-    }
-  }, [college]);
-
-  console.log("College ID:", collegeId);
 
   // State for dynamic form building
   const [templateSchema, setTemplateSchema] = useState<LogBookTemplateSchema>(
@@ -81,8 +83,6 @@ export function SubjectTemplateForm({
       groups: [{ groupName: "Subject Information", fields: [] }],
     }
   );
-
-  const [subjects, setSubjects] = useState<Subject[]>([]);
 
   // Form for template details
   const form = useForm<z.infer<typeof subjectTemplateSchema>>({
@@ -97,7 +97,34 @@ export function SubjectTemplateForm({
     },
   });
 
-  // Fetch subjects on component mount
+  useEffect(() => {
+    if (userId) {
+      fetchCollegeDetail(userId);
+    }
+  }, [userId, fetchCollegeDetail]);
+
+  useEffect(() => {
+    if (college) {
+      setCollegeId(college.id);
+    }
+  }, [college]);
+
+  // Initialize selected subject when editing
+  useEffect(() => {
+    if (initialData?.subjectId && subjects.length > 0) {
+      const subject = subjects.find(s => s.id === initialData.subjectId);
+      if (subject) {
+        setSelectedSubject({
+          id: subject.id,
+          name: subject.name,
+          code: subject.code,
+        });
+        setSearchQuery(subject.name);
+      }
+    }
+  }, [initialData?.subjectId, subjects]);
+
+  // Fetch subjects on component mount (for initialization purposes)
   useEffect(() => {
     const fetchSubjects = async () => {
       try {
@@ -106,7 +133,7 @@ export function SubjectTemplateForm({
         const data = await response.json();
         setSubjects(data);
       } catch (error) {
-        toast(
+        toast.error(
           `Error fetching subjects: ${
             error instanceof Error ? error.message : String(error)
           }`
@@ -117,15 +144,30 @@ export function SubjectTemplateForm({
     fetchSubjects();
   }, []);
 
+  // Set a default phase ID - you may need to adjust this based on your app logic
+  useEffect(() => {
+    // If you have a way to determine the phase ID, set it here
+    // For now, setting a placeholder - you'll need to replace this with actual logic
+    setSelectedPhaseId("default-phase-id"); // Replace with actual phase selection logic
+  }, []);
+
+  // Handle subject selection from SubjectSelector
+  const handleSubjectSelect = (subjectId: string) => {
+    form.setValue("subjectId", subjectId);
+    // The SubjectSelector will handle updating the searchQuery and selectedSubject internally
+  };
+
   // Handle form submission
   const onSubmit = async (data: z.infer<typeof subjectTemplateSchema>) => {
+    // Prevent multiple submissions
+    if (isSubmitting) return;
+
     try {
       setIsSubmitting(true);
 
       // Validate that there are fields in the template
       if (templateSchema.groups.every((group) => group.fields.length === 0)) {
-        toast("Please add at least one field to your template");
-        setIsSubmitting(false);
+        toast.error("Please add at least one field to your template");
         return;
       }
 
@@ -134,6 +176,8 @@ export function SubjectTemplateForm({
         ...data,
         dynamicSchema: templateSchema,
       };
+
+      console.log("Submitting template data:", templateData); // Debug log
 
       // Send data to API
       const response = await fetch("/api/log-book-template", {
@@ -146,32 +190,74 @@ export function SubjectTemplateForm({
         ),
       });
 
+      const responseData = await response.json();
+      console.log("API Response:", responseData); // Debug log
+
       if (!response.ok) {
-        throw new Error("Failed to save template");
+        throw new Error(responseData?.message || `HTTP error! status: ${response.status}`);
       }
 
-      // Show success toast
-      toast(`Template ${isEditing ? "updated" : "created"} successfully!`);
-
-      // Execute success callback or navigate to templates list
+      // Success handling
+      toast.success(isEditing ? "Template updated successfully!" : "Template created successfully!");
+      
+      // Reset form and template schema after successful save
+      if (!isEditing) {
+        form.reset({
+          name: "",
+          description: "",
+          templateType: "subject",
+          subjectId: "",
+          createdBy: userId,
+          collegeId: collegeId ?? undefined,
+        });
+        setTemplateSchema({
+          groups: [{ groupName: "Subject Information", fields: [] }],
+        });
+        // Reset SubjectSelector state
+        setSearchQuery("");
+        setSelectedSubject(null);
+      }
+      
+      // Call onSuccess callback if provided
       if (onSuccess) {
         onSuccess();
-        toast("Template saved successfully!");
       } else {
-        // If no callback provided, you might want to redirect
-        toast("Template saved successfully!");
+        // Optional: redirect or refresh page if no callback
+        router.refresh();
       }
+
     } catch (error) {
-      toast(error instanceof Error ? error.message : "Error saving template");
+      console.error("Error saving template:", error); // Debug log
+      const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
+      toast.error(`Error saving template: ${errorMessage}`);
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  const handleSaveClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    form.handleSubmit(onSubmit)();
+  };
+
   return (
-    <div className="p-1">
-      <h2 className="text-2xl font-bold mb-1">Subject-Specific Templates</h2>
-      <Alert className="bg-blue-50 border-blue-200 mb-4">
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-bold">Subject-Specific Templates</h2>
+        <Button 
+          type="button" 
+          variant="outline" 
+          size="sm" 
+          onClick={() => router.back()}
+          disabled={isSubmitting}
+        >
+          Cancel
+        </Button>
+      </div>
+
+      <Alert className="bg-blue-50 border-blue-200">
+        <InfoIcon className="h-4 w-4 text-blue-500" />
+        <AlertTitle className="text-blue-800">About Subject Templates</AlertTitle>
         <AlertDescription className="text-blue-700">
           <div className="space-y-2">
             <p>
@@ -212,11 +298,14 @@ export function SubjectTemplateForm({
           </div>
         </AlertDescription>
       </Alert>
+
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-          <Card className="p-2">
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4" id="template-form">
+          <Card>
+            <CardHeader>
+              <CardTitle>Template Details</CardTitle>
+            </CardHeader>
             <CardContent className="grid grid-cols-2 gap-4 p-2">
-              {/* First Row: Name + Description */}
               <FormField
                 control={form.control}
                 name="name"
@@ -224,7 +313,10 @@ export function SubjectTemplateForm({
                   <FormItem>
                     <FormLabel>Template Name</FormLabel>
                     <FormControl>
-                      <Input placeholder="Enter template name" {...field} />
+                      <Input 
+                        placeholder="Enter template name (e.g., 'Chemistry Lab Report')" 
+                        {...field} 
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -239,7 +331,7 @@ export function SubjectTemplateForm({
                     <FormLabel>Description</FormLabel>
                     <FormControl>
                       <Textarea
-                        placeholder="Enter template description"
+                        placeholder="Describe the purpose of this template"
                         {...field}
                       />
                     </FormControl>
@@ -248,27 +340,28 @@ export function SubjectTemplateForm({
                 )}
               />
 
-              <FormField
-                control={form.control}
-                name="subjectId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Subject</FormLabel>
-                    <FormControl>
-                      <SearchableSubjectSelect
-                        options={subjects.map((subject) => ({
-                          label: `${subject.name} (${subject.code})`, // This will be displayed
-                          value: subject.id, // This will be the actual form value
-                        }))}
-                        value={field.value}
-                        onChange={field.onChange}
-                        placeholder="Subject"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <div className="col-span-2">
+                <FormField
+                  control={form.control}
+                  name="subjectId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Subject</FormLabel>
+                      <FormControl>
+                        <SubjectSelector
+                          selectedPhaseId={selectedPhaseId}
+                          onSelectSubject={handleSubjectSelect}
+                          disabled={!selectedPhaseId}
+                          searchQuery={searchQuery}
+                          setSearchQuery={setSearchQuery}
+                          selectedSubject={selectedSubject}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
             </CardContent>
           </Card>
 
@@ -277,16 +370,15 @@ export function SubjectTemplateForm({
             setTemplateSchema={setTemplateSchema}
           />
 
-          <div className="flex justify-end space-x-2">
-            <Button
-              variant="outline"
-              type="button"
-              onClick={() => router.back()}
+          {/* Save button at the bottom */}
+          <div className="flex justify-end pt-4">
+            <Button 
+              type="button" 
+              onClick={handleSaveClick}
+              disabled={isSubmitting}
+              className="min-w-[120px]"
             >
-              Cancel
-            </Button>
-            <Button type="submit" disabled={isSubmitting}>
-              <Save className="h-4 w-4 mr-1" />
+              <Save className="h-4 w-4 mr-2" /> 
               {isSubmitting ? "Saving..." : "Save Template"}
             </Button>
           </div>

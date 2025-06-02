@@ -119,8 +119,6 @@ export default function Dashboard() {
   return (
     <div className="mx-4">
       {/* Your default dashboard content goes here */}
-      <h1>Dashboard</h1>
-      <p>Welcome to your dashboard!</p>
     </div>
   );
 }

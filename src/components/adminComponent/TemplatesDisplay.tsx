@@ -17,17 +17,17 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+// import {
+//   DropdownMenu,
+//   DropdownMenuContent,
+//   DropdownMenuItem,
+//   DropdownMenuTrigger,
+// } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";;
 import { format } from "date-fns";
 import {
   Search,
-  MoreVertical,
+  // MoreVertical,
   Eye,
   FileText,
   Calendar,
@@ -89,6 +89,7 @@ const AdminTemplatesDashboard: React.FC = () => {
           const data = await response.json();
           setTemplates(data);
           setFilteredTemplates(data);
+          
         }
       } catch (error) {
         console.error('Failed to fetch templates:', error);
@@ -233,10 +234,6 @@ const AdminTemplatesDashboard: React.FC = () => {
             Manage and organize logbook templates for your institution
           </p>
         </div>
-        {/* <Button onClick={() => setShowCreateDialog(true)} className="lg:w-auto">
-          <Plus className="mr-2 h-4 w-4" />
-          Create Template
-        </Button> */}
       </div>
 
       {/* Stats Cards */}
@@ -386,51 +383,16 @@ const AdminTemplatesDashboard: React.FC = () => {
                           {format(new Date(template.createdAt), 'MMM d, yyyy')}
                         </div>
                       </TableCell>
-                      {/* <TableCell>
-                        <Badge variant={template.isActive ? 'default' : 'secondary'}>
-                          {template.isActive ? 'Active' : 'Inactive'}
-                        </Badge>
-                      </TableCell> */}
-                      {/* <TableCell>
-                        <div className="text-sm font-medium">
-                          {template.usageCount || 0} entries
-                        </div>
-                      </TableCell> */}
                       <TableCell className="text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm">
-                              <MoreVertical className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => setSelectedTemplate(template)}>
-                              <Eye className="mr-2 h-4 w-4" />
-                              View Details
-                            </DropdownMenuItem>
-                            {/* <DropdownMenuItem>
-                              <Edit className="mr-2 h-4 w-4" />
-                              Edit Template
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleDuplicateTemplate(template)}>
-                              <Copy className="mr-2 h-4 w-4" />
-                              Duplicate
-                            </DropdownMenuItem> */}
-                            {/* <DropdownMenuItem 
-                              onClick={() => handleToggleActive(template.id, template.isActive)}
-                            >
-                              <Settings className="mr-2 h-4 w-4" />
-                              {template.isActive ? 'Deactivate' : 'Activate'}
-                            </DropdownMenuItem> */}
-                            {/* <DropdownMenuItem 
-                              onClick={() => handleDeleteTemplate(template.id)}
-                              className="text-red-600"
-                            >
-                              <Trash2 className="mr-2 h-4 w-4" />
-                              Delete
-                            </DropdownMenuItem> */}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setSelectedTemplate(template)}
+                          className="mr-2"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -460,18 +422,6 @@ const AdminTemplatesDashboard: React.FC = () => {
                       {selectedTemplate.templateType}
                     </Badge>
                   </div>
-                </div>
-                {/* <div>
-                  <label className="text-sm font-medium text-muted-foreground">Status</label>
-                  <div className="mt-1">
-                    <Badge variant={selectedTemplate.isActive ? 'default' : 'secondary'}>
-                      {selectedTemplate.isActive ? 'Active' : 'Inactive'}
-                    </Badge>
-                  </div>
-                </div> */}
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground">Created By</label>
-                  <div className="mt-1 text-sm">{selectedTemplate.createdBy.name}</div>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-muted-foreground">Created Date</label>
