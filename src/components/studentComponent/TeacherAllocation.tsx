@@ -1,4 +1,5 @@
 /*eslint-disable @typescript-eslint/no-unused-vars */
+/*eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import SubjectSelector from "@/components/clgAdmin/SubjectComponent";
@@ -31,14 +32,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-// import {
-//   Dialog,
-//   DialogContent,
-//   DialogDescription,
-//   DialogFooter,
-//   DialogHeader,
-//   DialogTitle,
-// } from "@/components/ui/dialog";
 import { useStudentProfileStore } from "@/store/student";
 import { useStudentSubjectStore } from "@/store/studentSubjectStore";
 import {
@@ -51,8 +44,17 @@ import {
 } from "lucide-react";
 import { useEffect, useState, useCallback, useMemo } from "react";
 
+// Updated interface to accept full student profile
 interface StudentSubjectSelectionProps {
-  studentId: string;
+  studentProfile: {
+    id: string;
+    academicYearId: string;
+    collegeId: string;
+    courseId: string;
+    branchId: string;
+    verificationStatus: string;
+    [key: string]: any; // Allow other profile properties
+  } | null;
 }
 
 interface SelectedSubjectTeacher {
@@ -70,7 +72,7 @@ const GLOBAL_CACHE = {
 };
 
 export default function StudentSubjectSelection({
-  studentId,
+  studentProfile,
 }: StudentSubjectSelectionProps) {
   // Access store state and actions
   const {
@@ -83,33 +85,29 @@ export default function StudentSubjectSelection({
     fetchAcademicYears,
     fetchPhases,
     fetchcolleges,
-    fetchTeacherSubjectsBySubjectId,
+    fetchTeacherSubjectsWithFilters, // Updated method name
     fetchStudentAllocations,
     createAllocation,
   } = useStudentSubjectStore();
 
   // Local state
-  const [selectedAcademicYearId, setSelectedAcademicYearId] =
-    useState<string>("");
+  const [selectedAcademicYearId, setSelectedAcademicYearId] = useState<string>("");
   const [selectedCollegeId, setSelectedCollegeId] = useState<string>("");
   const [selectedPhaseId, setSelectedPhaseId] = useState<string>("");
-  const [selectedSubjects, setSelectedSubjects] = useState<
-    SelectedSubjectTeacher[]
-  >([]);
+  const [selectedSubjects, setSelectedSubjects] = useState<SelectedSubjectTeacher[]>([]);
   const [currentSubjectId, setCurrentSubjectId] = useState<string>("");
-  const [currentTeacherSubjectId, setCurrentTeacherSubjectId] =
-    useState<string>("");
+  const [currentTeacherSubjectId, setCurrentTeacherSubjectId] = useState<string>("");
   const [submitLoading, setSubmitLoading] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const { profile, fetchProfile } = useStudentProfileStore();
-  const [profileLoading, setProfileLoading] = useState(true);
+  
   // Add new state for the no teachers dialog
   const [noTeachersDialog, setNoTeachersDialog] = useState({
     isOpen: false,
     subjectId: "",
     subjectName: "",
   });
+  
   // State to track if teachers are being loaded for a subject
   const [loadingTeachers, setLoadingTeachers] = useState(false);
 
@@ -327,43 +325,29 @@ export default function StudentSubjectSelection({
     }
   }, []);
 
-  // Fetch student profile once
+  // Set academic year and college when studentProfile is loaded and approved
   useEffect(() => {
-    const fetchStudentProfile = async () => {
-      setProfileLoading(true);
-      if (studentId) {
-        await fetchProfile({ id: studentId });
-      }
-      setProfileLoading(false);
-    };
-
-    fetchStudentProfile();
-  }, [studentId, fetchProfile]);
-
-  // Set academic year and college when profile is loaded and approved
-  useEffect(() => {
-    if (profile && profile.verificationStatus === "APPROVED") {
-      setSelectedAcademicYearId(profile.academicYearId);
-      setSelectedCollegeId(profile.collegeId);
+    if (studentProfile && studentProfile.verificationStatus === "APPROVED") {
+      setSelectedAcademicYearId(studentProfile.academicYearId);
+      setSelectedCollegeId(studentProfile.collegeId);
     }
-  }, [profile]);
+  }, [studentProfile]);
 
   // Load initial data only once when profile is approved
   useEffect(() => {
-    if (profile && profile.verificationStatus === "APPROVED") {
+    if (studentProfile && studentProfile.verificationStatus === "APPROVED") {
       // Load base data
       fetchAcademicYears();
       fetchcolleges();
 
       // Load student allocations
-      fetchStudentAllocations(studentId);
+      fetchStudentAllocations(studentProfile.id);
     }
   }, [
     fetchAcademicYears,
     fetchcolleges,
     fetchStudentAllocations,
-    studentId,
-    profile,
+    studentProfile,
   ]);
 
   // Extract all IDs from allocations for batch loading
@@ -401,13 +385,17 @@ export default function StudentSubjectSelection({
   useEffect(() => {
     if (selectedAcademicYearId && selectedCollegeId) {
       console.log(
-        "Fetching phases for academic year and college:", selectedAcademicYearId, selectedCollegeId)
+        "Fetching phases for academic year and college:",
+        selectedAcademicYearId,
+        selectedCollegeId
+      );
       fetchPhases({
         academicYears: selectedAcademicYearId,
         collegeId: selectedCollegeId,
       });
     }
   }, [selectedAcademicYearId, selectedCollegeId, fetchPhases]);
+
   console.log("phases", phases);
 
   // Clear selections when criteria changes
@@ -422,40 +410,63 @@ export default function StudentSubjectSelection({
     setSelectedPhaseId(value);
   };
 
-// Update the handleSubjectSelect function in your component
-const handleSubjectSelect = (subjectId: string) => {
-  setCurrentSubjectId(subjectId);
-  setLoadingTeachers(true);
+  // Updated handleSubjectSelect function with comprehensive filters
+  const handleSubjectSelect = (subjectId: string) => {
+    setCurrentSubjectId(subjectId);
+    setLoadingTeachers(true);
 
-  // Prefetch subject name if not in cache
-  if (
-    subjectId &&
-    !dataCache.subjects[subjectId] &&
-    !GLOBAL_CACHE.subjects.has(subjectId)
-  ) {
-    batchFetchSubjects([subjectId]);
-  }
-
-  // Fetch teachers for this subject with college ID filter
-  fetchTeacherSubjectsBySubjectId(subjectId, selectedCollegeId).then(() => {
-    setLoadingTeachers(false);
-
-    // Check if there are no teachers for this subject
-    if (teacherSubjects.length === 0) {
-      // Get the subject name
-      const subjectName = getSubjectName(subjectId);
-
-      // Show the dialog for no teachers
-      setNoTeachersDialog({
-        isOpen: true,
-        subjectId,
-        subjectName,
-      });
+    // Prefetch subject name if not in cache
+    if (
+      subjectId &&
+      !dataCache.subjects[subjectId] &&
+      !GLOBAL_CACHE.subjects.has(subjectId)
+    ) {
+      batchFetchSubjects([subjectId]);
     }
-  });
 
-  setCurrentTeacherSubjectId("");
-};
+    // Validate that we have all required data from student profile
+    if (!studentProfile) {
+      console.error("Student profile is required");
+      setLoadingTeachers(false);
+      return;
+    }
+
+    // Fetch teachers with comprehensive filters
+    const filters = {
+      subjectId: subjectId,
+      phaseId: selectedPhaseId,
+      academicYearId: selectedAcademicYearId,
+      courseId: studentProfile.courseId,
+      branchId: studentProfile.branchId,
+      collegeId: selectedCollegeId,
+    };
+
+    console.log("Fetching teachers with filters:", filters);
+
+    fetchTeacherSubjectsWithFilters(filters)
+      .then(() => {
+        setLoadingTeachers(false);
+
+        // Check if there are no teachers for this subject with the given filters
+        if (teacherSubjects.length === 0) {
+          // Get the subject name
+          const subjectName = getSubjectName(subjectId);
+
+          // Show the dialog for no teachers
+          setNoTeachersDialog({
+            isOpen: true,
+            subjectId,
+            subjectName,
+          });
+        }
+      })
+      .catch((error) => {
+        console.error("Error fetching teacher subjects:", error);
+        setLoadingTeachers(false);
+      });
+
+    setCurrentTeacherSubjectId("");
+  };
 
   // Handle teacher selection for a subject
   const handleTeacherSelect = (teacherSubjectId: string) => {
@@ -604,40 +615,45 @@ const handleSubjectSelect = (subjectId: string) => {
     );
   };
 
- // Update the handleSubmit function in your component
-const handleSubmit = async () => {
-  setSubmitLoading(true);
-  setSubmitSuccess(false);
-
-  try {
-    // Create allocation for each selected subject-teacher pair
-    for (const item of selectedSubjects) {
-      await createAllocation({
-        studentId,
-        subjectId: item.subjectId,
-        teacherSubjectId: item.teacherSubjectId,
-        teacherId: item.teacherId,
-        academicYearId: selectedAcademicYearId,
-        phaseId: selectedPhaseId,
-        collegeId: selectedCollegeId, // Add collegeId here
-      });
+  // Updated handleSubmit function with student profile validation
+  const handleSubmit = async () => {
+    if (!studentProfile) {
+      console.error("Student profile is required for submission");
+      return;
     }
 
-    // Reset selections and show success
-    setSelectedSubjects([]);
-    setSubmitSuccess(true);
-    fetchStudentAllocations(studentId);
+    setSubmitLoading(true);
+    setSubmitSuccess(false);
 
-    // Clear success message after 3 seconds
-    setTimeout(() => {
-      setSubmitSuccess(false);
-    }, 3000);
-  } catch (err) {
-    console.error("Error submitting allocations:", err);
-  } finally {
-    setSubmitLoading(false);
-  }
-};
+    try {
+      // Create allocation for each selected subject-teacher pair
+      for (const item of selectedSubjects) {
+        await createAllocation({
+          studentId: studentProfile.id,
+          subjectId: item.subjectId,
+          teacherSubjectId: item.teacherSubjectId,
+          teacherId: item.teacherId,
+          academicYearId: selectedAcademicYearId,
+          phaseId: selectedPhaseId,
+          collegeId: selectedCollegeId,
+        });
+      }
+
+      // Reset selections and show success
+      setSelectedSubjects([]);
+      setSubmitSuccess(true);
+      fetchStudentAllocations(studentProfile.id);
+
+      // Clear success message after 3 seconds
+      setTimeout(() => {
+        setSubmitSuccess(false);
+      }, 3000);
+    } catch (err) {
+      console.error("Error submitting allocations:", err);
+    } finally {
+      setSubmitLoading(false);
+    }
+  };
 
   // Check if a subject is already allocated to student
   const isSubjectAllocated = (subjectId: string): boolean => {
@@ -656,27 +672,19 @@ const handleSubmit = async () => {
       selectedAcademicYearId &&
       selectedCollegeId &&
       selectedPhaseId &&
-      selectedSubjects.length > 0
+      selectedSubjects.length > 0 &&
+      studentProfile // Add student profile validation
     );
   }, [
     selectedAcademicYearId,
     selectedCollegeId,
     selectedPhaseId,
     selectedSubjects.length,
+    studentProfile,
   ]);
 
-  // Display loading state
-  if (profileLoading) {
-    return (
-      <div className="flex items-center justify-center p-8">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        <span className="ml-2">Loading profile...</span>
-      </div>
-    );
-  }
-
   // Display message if profile doesn't exist
-  if (!profile) {
+  if (!studentProfile) {
     return (
       <Card className="w-full">
         <CardHeader>
@@ -696,7 +704,7 @@ const handleSubmit = async () => {
   }
 
   // Display message if profile is not approved
-  if (profile.verificationStatus !== "APPROVED") {
+  if (studentProfile.verificationStatus !== "APPROVED") {
     return (
       <Card className="w-full">
         <CardHeader>
@@ -706,7 +714,7 @@ const handleSubmit = async () => {
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
-              Your profile verification status is {profile.verificationStatus}.
+              Your profile verification status is {studentProfile.verificationStatus}.
               Only students with approved profiles can access this section.
             </AlertDescription>
           </Alert>
@@ -717,40 +725,6 @@ const handleSubmit = async () => {
 
   return (
     <div className="w-full space-y-6">
-      {/* No Teachers Dialog
-      <Dialog
-        open={noTeachersDialog.isOpen}
-        onOpenChange={(open) => {
-          if (!open) {
-            setNoTeachersDialog((prev) => ({ ...prev, isOpen: false }));
-          }
-        }}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>No Teachers Available</DialogTitle>
-            <DialogDescription>
-              There are no teachers currently allocated to teach{" "}
-              {noTeachersDialog.subjectName}. Would you like to submit your
-              profile as a potential teacher for this subject?
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="flex justify-between space-x-2 mt-4">
-            <Button
-              variant="outline"
-              onClick={() =>
-                setNoTeachersDialog((prev) => ({ ...prev, isOpen: false }))
-              }
-            >
-              Cancel
-            </Button>
-            <Button onClick={handleTeacherProfileSubmit}>
-              Submit Teacher Profile
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog> */}
-
       {/* Existing Allocations - Moved to top */}
       <Card className="w-full">
         <CardHeader className="pb-3">
@@ -944,10 +918,7 @@ const handleSubmit = async () => {
                 </SelectTrigger>
                 <SelectContent>
                   {teacherSubjects.map((teacherSubject) => (
-                    <SelectItem
-                      key={teacherSubject.id}
-                      value={teacherSubject.id}
-                    >
+                    <SelectItem key={teacherSubject.id} value={teacherSubject.id}>
                       {getTeacherName(teacherSubject.teacherId)}
                     </SelectItem>
                   ))}
@@ -956,110 +927,181 @@ const handleSubmit = async () => {
             </div>
 
             {/* Add Button */}
-            <div className="mt-8">
+            <div className="space-y-3 z-10">
+              <Label>&nbsp;</Label> {/* Spacer for alignment */}
               <Button
                 onClick={handleAddSubjectTeacher}
-                disabled={!currentSubjectId || !currentTeacherSubjectId}
+                disabled={
+                  !currentSubjectId ||
+                  !currentTeacherSubjectId ||
+                  isSubjectAllocated(currentSubjectId) ||
+                  selectedSubjects.some(
+                    (item) => item.subjectId === currentSubjectId
+                  )
+                }
                 className="w-full"
               >
-                <Plus className="mr-2 h-4 w-4" /> Add Subject
+                <Plus className="h-4 w-4 mr-2" />
+                Add Subject
               </Button>
             </div>
+          </div>
 
-            {/* Overlay loading indicator during fetches */}
-            {loadingTeachers && (
-              <div className="absolute inset-0 bg-white/50 flex items-center justify-center rounded-md z-30">
-                <Loader2 className="h-6 w-6 animate-spin text-primary" />
-              </div>
+          {/* Warning for already selected */}
+          {currentSubjectId &&
+            selectedSubjects.some(
+              (item) => item.subjectId === currentSubjectId
+            ) && (
+              <Alert>
+                <Info className="h-4 w-4" />
+                <AlertDescription>
+                  This subject is already selected below.
+                </AlertDescription>
+              </Alert>
             )}
-          </div>
 
-          {/* Information card when teachers are being loaded */}
+          {/* Warning for already allocated */}
+          {currentSubjectId && isSubjectAllocated(currentSubjectId) && (
+            <Alert>
+              <Info className="h-4 w-4" />
+              <AlertDescription>
+                This subject is already allocated to you for the selected phase.
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {/* Loading indicator */}
           {loadingTeachers && (
-            <Alert className="bg-blue-50 border-blue-200">
-              <Info className="h-4 w-4 text-blue-500" />
-              <AlertDescription className="text-blue-600">
-                Loading available teachers for this subject...
-              </AlertDescription>
-            </Alert>
-          )}
-
-          {/* Selected Subjects Section */}
-          <div className="mt-6">
-            <h3 className="text-sm font-medium mb-3">Selected Subjects</h3>
-            <div className="border rounded-md p-1">
-              <ScrollArea className={selectedSubjects.length > 5 ? "h-52" : ""}>
-                {selectedSubjects.length > 0 ? (
-                  <div className="space-y-2 p-2">
-                    {selectedSubjects.map((item) => (
-                      <div
-                        key={item.subjectId}
-                        className="flex items-center justify-between bg-gray-50 p-3 rounded-md"
-                      >
-                        <div className="flex-1">
-                          <p className="font-medium">{item.subjectName}</p>
-                          <p className="text-sm text-gray-600">
-                            Teacher: {item.teacherName}
-                          </p>
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleRemoveSubject(item.subjectId)}
-                          title="Remove subject"
-                        >
-                          <Trash2 className="h-4 w-4 text-red-500" />
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="p-6 text-center">
-                    <p className="text-gray-500">No subjects selected</p>
-                  </div>
-                )}
-              </ScrollArea>
+            <div className="flex items-center justify-center p-4">
+              <Loader2 className="h-5 w-5 animate-spin mr-2" />
+              <span className="text-sm text-gray-500">Loading teachers...</span>
             </div>
-          </div>
-
-          {/* Success/Error Messages */}
-          {submitSuccess && (
-            <Alert className="bg-green-50 border-green-200">
-              <CheckCircle2 className="h-4 w-4 text-green-500" />
-              <AlertDescription className="text-green-600">
-                Subject allocations submitted successfully!
-              </AlertDescription>
-            </Alert>
           )}
 
-          {error && (
-            <Alert variant="destructive">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
+          {/* Selected Subjects Preview */}
+          {selectedSubjects.length > 0 && (
+            <div className="space-y-3">
+              <Separator />
+              <Label>Selected Subjects</Label>
+              <div className="space-y-2">
+                {selectedSubjects.map((item) => (
+                  <div
+                    key={item.subjectId}
+                    className="flex items-center justify-between p-3 border rounded-md bg-gray-50"
+                  >
+                    <div className="flex-1">
+                      <div className="font-medium">{item.subjectName}</div>
+                      <div className="text-sm text-gray-600">
+                        Teacher: {item.teacherName}
+                      </div>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleRemoveSubject(item.subjectId)}
+                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </div>
           )}
-
-          {/* Separator before submit button */}
-          <Separator className="my-4" />
         </CardContent>
 
         <CardFooter>
-          <Button
-            onClick={handleSubmit}
-            disabled={!isFormValid || submitLoading}
-            className="w-full"
-          >
-            {submitLoading ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Submitting...
-              </>
-            ) : (
-              "Submit Allocation Request"
+          <div className="w-full space-y-3">
+            {/* Success Message */}
+            {submitSuccess && (
+              <Alert className="border-green-200 bg-green-50">
+                <CheckCircle2 className="h-4 w-4 text-green-600" />
+                <AlertDescription className="text-green-800">
+                  Subject allocations submitted successfully!
+                </AlertDescription>
+              </Alert>
             )}
-          </Button>
+
+            {/* Error Message */}
+            {error && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
+
+            {/* Submit Button */}
+            <Button
+              onClick={handleSubmit}
+              disabled={!isFormValid || submitLoading}
+              className="w-full"
+            >
+              {submitLoading ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Submitting...
+                </>
+              ) : (
+                `Submit ${selectedSubjects.length} Subject${
+                  selectedSubjects.length !== 1 ? "s" : ""
+                } for Approval`
+              )}
+            </Button>
+          </div>
         </CardFooter>
       </Card>
+
+      {/* No Teachers Dialog
+      {noTeachersDialog.isOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <Card className="w-full max-w-md mx-4">
+            <CardHeader>
+              <CardTitle>No Teachers Available</CardTitle>
+              <CardDescription>
+                No teachers are currently available for{" "}
+                <strong>{noTeachersDialog.subjectName}</strong> in the selected
+                phase and criteria.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-gray-600 mb-4">
+                This could be because:
+              </p>
+              <ul className="text-sm text-gray-600 space-y-1 mb-4">
+                <li>• No teachers have been assigned to this subject</li>
+                <li>• Teachers may not be available for your course/branch</li>
+                <li>• Subject may not be offered in the current phase</li>
+              </ul>
+              <p className="text-sm text-gray-600">
+                You can try selecting a different phase or contact the
+                administration for assistance.
+              </p>
+            </CardContent>
+            <CardFooter className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={() =>
+                  setNoTeachersDialog({
+                    isOpen: false,
+                    subjectId: "",
+                    subjectName: "",
+                  })
+                }
+                className="flex-1"
+              >
+                Close
+              </Button>
+              <Button
+                onClick={handleTeacherProfileSubmit}
+                className="flex-1"
+                variant="default"
+              >
+                Contact Admin
+              </Button>
+            </CardFooter>
+          </Card>
+        </div>
+      )} */}
     </div>
   );
 }

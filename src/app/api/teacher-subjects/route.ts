@@ -10,18 +10,21 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const teacherId = searchParams.get("teacherId");
     const subjectId = searchParams.get("subjectId");
-    const CollegeId = searchParams.get("collegeId");
+    const collegeId = searchParams.get("collegeId");
+    const academicYearId = searchParams.get("academicYearId");
+    const phaseId = searchParams.get("phaseId");
+    const branchId = searchParams.get("branchId");
+    const courseId = searchParams.get("courseId");
     const id = searchParams.get("id");
 
-    if (!teacherId && !subjectId && !id && !CollegeId) {
+    if (!teacherId && !subjectId && !id && !collegeId) {
       return NextResponse.json(
-        { error: "Missing teacherId or subjectId" },
+        { error: "Missing required parameters" },
         { status: 400 }
       );
     }
 
-    // If subjectId is provided, filter by it
-
+    // If specific ID is provided, return that single record
     if (id) {
       const teacherSubject = await db
         .select()
@@ -29,31 +32,37 @@ export async function GET(req: NextRequest) {
         .where(eq(TeacherSubjectTable.id, id));
       return NextResponse.json(teacherSubject);
     }
-    if (subjectId && CollegeId) {
-      const teacherSubjects = await db
-        .select()
-        .from(TeacherSubjectTable)
-        .where(and(
-          eq(TeacherSubjectTable.collegeId, CollegeId),
-            eq(TeacherSubjectTable.subjectId, subjectId))
-        );
-      return NextResponse.json(teacherSubjects);
+
+    // Build the query conditions based on provided parameters
+    const conditions = [];
+
+    if (teacherId) {
+      conditions.push(eq(TeacherSubjectTable.teacherId, teacherId));
     }
-     if (subjectId) {
-      const teacherSubjects = await db
-        .select()
-        .from(TeacherSubjectTable)
-        .where(
-            eq(TeacherSubjectTable.subjectId, subjectId)
-        );
-      return NextResponse.json(teacherSubjects);
+    if (subjectId) {
+      conditions.push(eq(TeacherSubjectTable.subjectId, subjectId));
+    }
+    if (collegeId) {
+      conditions.push(eq(TeacherSubjectTable.collegeId, collegeId));
+    }
+    if (academicYearId) {
+      conditions.push(eq(TeacherSubjectTable.academicYearId, academicYearId));
+    }
+    if (phaseId) {
+      conditions.push(eq(TeacherSubjectTable.phaseId, phaseId));
+    }
+    if (branchId) {
+      conditions.push(eq(TeacherSubjectTable.branchId, branchId));
+    }
+    if (courseId) {
+      conditions.push(eq(TeacherSubjectTable.courseId, courseId));
     }
 
-    
+    // Execute the query with all conditions
     const teacherSubjects = await db
       .select()
       .from(TeacherSubjectTable)
-      .where(eq(TeacherSubjectTable.teacherId, teacherId!));
+      .where(and(...conditions));
     
     return NextResponse.json(teacherSubjects);
   } catch (error) {

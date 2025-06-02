@@ -56,7 +56,18 @@ const Sidebar = () => {
       id: "SubjectSelection",
       label: "Subject",
       icon: <Building2 size={20} />,
-      component: <StudentSubjectSelection studentId={profile?.id || ""} />,
+      component: (
+        <StudentSubjectSelection
+          studentProfile={
+            profile
+              ? {
+                  ...profile,
+                  verificationStatus: profile.verificationStatus ?? ""
+                }
+              : null
+          }
+        />
+      ),
       isLocked: !isProfileApproved,
     },
     {

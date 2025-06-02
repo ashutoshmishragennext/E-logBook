@@ -11,12 +11,16 @@ export interface Subject {
   credit: number;
 }
 
-
 export interface TeacherSubject {
   teacherName: string;
   id: string;
   teacherId: string;
   subjectId: string;
+  academicYearId: string;
+  phaseId: string;
+  branchId: string;
+  courseId: string;
+  collegeId: string;
   teacher: {
     id: string;
     name: string;
@@ -55,6 +59,16 @@ interface teacher{
   name: string;
 }
 
+// Add interface for teacher subject query parameters
+interface TeacherSubjectQuery {
+  subjectId: string;
+  phaseId?: string;
+  academicYearId?: string;
+  courseId?: string;
+  branchId?: string;
+  collegeId?: string;
+}
+
 interface StudentSubjectStore {
   // Data states
   subjects: Subject[];
@@ -85,7 +99,11 @@ interface StudentSubjectStore {
   fetchCourses: () => Promise<void>;
   fetchcolleges: () => Promise<void>;
   fetchSubjects: () => Promise<void>;
+  
+  // Updated function signature to accept multiple parameters
   fetchTeacherSubjectsBySubjectId: (subjectId: string, collegeId?: string) => Promise<void>;
+  fetchTeacherSubjectsWithFilters: (query: TeacherSubjectQuery) => Promise<void>;
+  
   fetchAcademicYears: () => Promise<void>;
   fetchPhases: (query: { id?: string; academicYears?: string; collegeId?: string }) => Promise<void>;
   fetchStudentAllocations: (studentId: string) => Promise<void>;
@@ -147,6 +165,7 @@ export const useStudentSubjectStore = create<StudentSubjectStore>((set, get) => 
       set({ error: err.message, loading: false });
     }
   },
+  
   fetchCourses: async () => {
     set({ loading: true, error: null });
     try {
@@ -215,25 +234,56 @@ export const useStudentSubjectStore = create<StudentSubjectStore>((set, get) => 
     }
   },
 
-// Update the fetchTeacherSubjectsBySubjectId function in your store
-fetchTeacherSubjectsBySubjectId: async (subjectId: string, collegeId?: string) => {
-  set({ loading: true, error: null, selectedTeacherSubjectId: null });
-  try {
-    // Build the URL with both subjectId and collegeId if provided
-    const params = new URLSearchParams({ subjectId });
-    if (collegeId) {
-      params.append('collegeId', collegeId);
+  // Keep the old function for backward compatibility
+  fetchTeacherSubjectsBySubjectId: async (subjectId: string, collegeId?: string) => {
+    set({ loading: true, error: null, selectedTeacherSubjectId: null });
+    try {
+      // Build the URL with both subjectId and collegeId if provided
+      const params = new URLSearchParams({ subjectId });
+      if (collegeId) {
+        params.append('collegeId', collegeId);
+      }
+      
+      const res = await fetch(`/api/teacher-subjects?${params.toString()}`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Failed to fetch teacher subjects');
+      set({ teacherSubjects: data, loading: false });
+    } catch (err: any) {
+      console.error('Error fetching teacher subjects:', err);
+      set({ error: err.message, loading: false, teacherSubjects: [] });
     }
-    
-    const res = await fetch(`/api/teacher-subjects?${params.toString()}`);
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.message || 'Failed to fetch teacher subjects');
-    set({ teacherSubjects: data, loading: false });
-  } catch (err: any) {
-    console.error('Error fetching teacher subjects:', err);
-    set({ error: err.message, loading: false, teacherSubjects: [] });
-  }
-},
+  },
+
+  // New function with comprehensive filtering
+  fetchTeacherSubjectsWithFilters: async (query: TeacherSubjectQuery) => {
+    set({ loading: true, error: null, selectedTeacherSubjectId: null });
+    try {
+      // Build the URL with all the filter parameters
+      const params = new URLSearchParams();
+      
+      // Add required subjectId
+      params.append('subjectId', query.subjectId);
+      
+      // Add optional parameters if they exist
+      if (query.phaseId) params.append('phaseId', query.phaseId);
+      if (query.academicYearId) params.append('academicYearId', query.academicYearId);
+      if (query.courseId) params.append('courseId', query.courseId);
+      if (query.branchId) params.append('branchId', query.branchId);
+      if (query.collegeId) params.append('collegeId', query.collegeId);
+      
+      console.log('Fetching teacher subjects with filters:', params.toString());
+      
+      const res = await fetch(`/api/teacher-subjects?${params.toString()}`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Failed to fetch teacher subjects');
+      
+      console.log('Fetched teacher subjects:', data);
+      set({ teacherSubjects: data, loading: false });
+    } catch (err: any) {
+      console.error('Error fetching teacher subjects with filters:', err);
+      set({ error: err.message, loading: false, teacherSubjects: [] });
+    }
+  },
 
   fetchAcademicYears: async () => {
     set({ loading: true, error: null });
@@ -277,48 +327,48 @@ fetchTeacherSubjectsBySubjectId: async (subjectId: string, collegeId?: string) =
   },
 
   setSelectedSubjectId: (id: string | null, collegeId?: string) => {
-  set({ selectedSubjectId: id });
-  if (id) {
-    get().fetchTeacherSubjectsBySubjectId(id, collegeId);
-  } else {
-    set({ teacherSubjects: [], selectedTeacherSubjectId: null });
-  }
-},
+    set({ selectedSubjectId: id });
+    if (id) {
+      get().fetchTeacherSubjectsBySubjectId(id, collegeId);
+    } else {
+      set({ teacherSubjects: [], selectedTeacherSubjectId: null });
+    }
+  },
 
   setSelectedTeacherSubjectId: (id: string | null) => set({ selectedTeacherSubjectId: id }),
   setSelectedAcademicYearId: (id: string | null) => set({ selectedAcademicYearId: id }),
   setSelectedPhaseId: (id: string | null) => set({ selectedPhaseId: id }),
 
- // Update the createAllocation function in your store
-createAllocation: async (data: {
-  studentId: string;
-  subjectId: string;
-  teacherSubjectId: string;
-  academicYearId: string;
-  phaseId: string;
-  teacherId: string;
-  collegeId: string; // Add collegeId to the interface
-}) => {
-  set({ loading: true, error: null });
-  try {
-    const res = await fetch('/api/student-subject', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data), // This will now include collegeId
-    });
-    const result = await res.json();
-    if (!res.ok) throw new Error(result.message || 'Failed to create allocation');
+  // Update the createAllocation function in your store
+  createAllocation: async (data: {
+    studentId: string;
+    subjectId: string;
+    teacherSubjectId: string;
+    academicYearId: string;
+    phaseId: string;
+    teacherId: string;
+    collegeId: string; // Add collegeId to the interface
+  }) => {
+    set({ loading: true, error: null });
+    try {
+      const res = await fetch('/api/student-subject', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data), // This will now include collegeId
+      });
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.message || 'Failed to create allocation');
 
-    set((state) => ({
-      studentAllocations: [...state.studentAllocations, result],
-      loading: false,
-    }));
-    get().resetSelections();
-  } catch (err: any) {
-    console.error('Error creating allocation:', err);
-    set({ error: err.message, loading: false });
-  }
-},
+      set((state) => ({
+        studentAllocations: [...state.studentAllocations, result],
+        loading: false,
+      }));
+      get().resetSelections();
+    } catch (err: any) {
+      console.error('Error creating allocation:', err);
+      set({ error: err.message, loading: false });
+    }
+  },
 
   updateAllocation: async (id, data) => {
     set({ loading: true, error: null });
