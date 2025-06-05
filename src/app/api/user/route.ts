@@ -47,7 +47,7 @@ function generateDefaultPassword(length = 5) {
 async function sendWelcomeEmail(name: string, email: string, password: string, role: string) {
   try {
     const loginUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/auth/login`;
-    
+
     await sendEmail(
       "Elog Book",
       email,
@@ -105,7 +105,7 @@ async function sendWelcomeEmail(name: string, email: string, password: string, r
       </body>
       </html>`
     );
-    
+
     console.log(`Welcome email sent successfully to ${email}`);
     return true;
   } catch (error) {
@@ -117,10 +117,10 @@ async function sendWelcomeEmail(name: string, email: string, password: string, r
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    
+
     // Check if the request is for bulk user creation (array of users)
     const isBulkOperation = Array.isArray(body);
-    
+
     if (isBulkOperation) {
       return handleBulkUserCreation(body);
     } else {
@@ -128,10 +128,10 @@ export async function POST(req: NextRequest) {
     }
   } catch (error) {
     console.error("Error creating user(s):", error);
-    
+
     // Check for specific error types
     const errorMessage = error instanceof Error ? error.message : "Internal server error";
-    
+
     // Handle duplicate email error (database specific - this example is for PostgreSQL)
     if (errorMessage.includes("duplicate key") && errorMessage.includes("email")) {
       return NextResponse.json(
@@ -139,7 +139,7 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       );
     }
-    
+
     return NextResponse.json(
       { error: errorMessage },
       { status: 500 }
@@ -158,19 +158,19 @@ async function handleSingleUserCreation(userData: any) {
 
   // Default to USER role if not specified
   const role = userData.role || "USER";
-  
+
   // Generate default password for TEACHER and STUDENT roles, use provided password otherwise
   let password: string;
   let isTemporaryPassword = false;
-  
-  if (!userData.password && (role === "TEACHER" || role === "STUDENT")) {
+
+  if (!userData.password && (role === "TEACHER" || role === "STUDENT" || role === "COLLEGE_ADMIN")) {
     password = generateDefaultPassword(5); // Generate 5-character default password
     isTemporaryPassword = true;
   } else {
     password = userData.password || userData.email; // Fallback to email if no password provided
     isTemporaryPassword = !userData.password;
   }
-  
+
   console.log("Generated password:", password);
 
   // Create user
@@ -183,7 +183,7 @@ async function handleSingleUserCreation(userData: any) {
       phone: userData.phone || null,
       defaultpassword: isTemporaryPassword ? password : null // Store default password if generated
     })
-    .returning({ 
+    .returning({
       id: UsersTable.id,
       email: UsersTable.email,
       role: UsersTable.role
@@ -218,7 +218,7 @@ async function handleSingleUserCreation(userData: any) {
     teacherId = teacher.id;
     console.log("Teacher profile created with ID:", teacherId);
   }
-  
+
   // Handle student profile creation
   if (role === "STUDENT" && userData.studentData) {
     if (!userData.studentData.collegeId) {
@@ -242,7 +242,7 @@ async function handleSingleUserCreation(userData: any) {
       })
       .returning({ id: StudentProfileTable.id });
 
-      console.log("Student profile created:", student);
+    console.log("Student profile created:", student);
     studentId = student.id;
     console.log("Student profile created with ID:", studentId);
   }
@@ -258,7 +258,7 @@ async function handleSingleUserCreation(userData: any) {
     email: userData.email,
     role: user.role,
     emailSent: emailSent,
-    ...(userData.teacherData && { 
+    ...(userData.teacherData && {
       collegeId: userData.teacherData.collegeId,
       designation: userData.teacherData.designation || "Lecturer",
       employeeId: userData.teacherData.employeeId
@@ -306,19 +306,19 @@ async function handleBulkUserCreation(usersData: any[]) {
 
       // Default to USER role if not specified
       const role = userData.role || "USER";
-      
+
       // Generate default password for TEACHER and STUDENT roles, use provided password otherwise
       let password: string;
       let isTemporaryPassword = false;
-      
-      if (!userData.password && (role === "TEACHER" || role === "STUDENT")) {
+
+      if (!userData.password && (role === "TEACHER" || role === "STUDENT" || role === "COLLEGE_ADMIN")) {
         password = generateDefaultPassword(5); // Generate 5-character default password
         isTemporaryPassword = true;
       } else {
         password = userData.password || userData.email; // Fallback to email if no password provided
         isTemporaryPassword = !userData.password;
       }
-      
+
       console.log("Generated password:", password);
 
       // Create user
@@ -331,7 +331,7 @@ async function handleBulkUserCreation(usersData: any[]) {
           phone: userData.phone || null,
           defaultpassword: isTemporaryPassword ? password : null // Store default password if generated
         })
-        .returning({ 
+        .returning({
           id: UsersTable.id,
           email: UsersTable.email,
           role: UsersTable.role
@@ -346,7 +346,7 @@ async function handleBulkUserCreation(usersData: any[]) {
         if (!userData.teacherData.collegeId || !userData.teacherData.employeeId) {
           results.failed++;
           results.errors.push(`Teacher data missing collegeId or employeeId for: ${userData.email}`);
-          
+
           // Delete the created user since we couldn't complete the teacher profile
           await db.delete(UsersTable).where(eq(UsersTable.id, user.id));
           continue;
@@ -366,14 +366,14 @@ async function handleBulkUserCreation(usersData: any[]) {
 
         teacherId = teacher.id;
       }
-      
+
       // Handle student profile creation if applicable
       if (role === "STUDENT" && userData.studentData) {
         // Validate student-specific required fields
         if (!userData.studentData.collegeId) {
           results.failed++;
           results.errors.push(`Student data missing collegeId for: ${userData.email}`);
-          
+
           // Delete the created user since we couldn't complete the student profile
           await db.delete(UsersTable).where(eq(UsersTable.id, user.id));
           continue;
@@ -398,7 +398,7 @@ async function handleBulkUserCreation(usersData: any[]) {
 
       // Send welcome email with login credentials
       const emailSent = await sendWelcomeEmail(userData.name, userData.email, password, role);
-      
+
       if (emailSent) {
         results.emailResults.sent++;
       } else {
@@ -421,7 +421,7 @@ async function handleBulkUserCreation(usersData: any[]) {
       results.failed++;
       const errorMessage = error instanceof Error ? error.message : "Unknown error";
       results.errors.push(`Failed to create user ${userData.email}: ${errorMessage}`);
-      
+
       // Log for debugging
       console.error(`Error creating user ${userData.email}:`, error);
     }

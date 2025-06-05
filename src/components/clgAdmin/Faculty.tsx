@@ -409,7 +409,7 @@ const Faculty = () => {
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
             <h4 className="text-blue-800 font-medium mb-2">📋 Import Templates</h4>
             <p className="text-blue-700 text-sm">
-              Download the template files above to get the correct format for importing faculty and student data. 
+              Download the template files above to get the correct format for importing faculty data. 
               Fill in the template with your data and then use the Import button to upload.
             </p>
           </div>

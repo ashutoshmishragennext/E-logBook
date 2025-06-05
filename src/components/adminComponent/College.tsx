@@ -1107,7 +1107,15 @@ const College: React.FC = () => {
       <div className="space-y-2">
         <div className="flex items-center gap-2 mb-4">
           <div className="h-10 w-10 bg-blue-100 rounded-full flex items-center justify-center">
-            <Building className="h-5 w-5 text-blue-600" />
+            {/* <Building className="h-5 w-5 text-blue-600" /> */}
+            <Image
+              src={selectedCollege?.logo || "/default-college-logo.png"}
+              alt="College Logo"
+              width={40}
+              height={40}
+              className="h-8 w-8 object-cover rounded-full"
+              />
+              
           </div>
           <div>
             <h3 className="font-medium text-sm text-gray-500">College</h3>

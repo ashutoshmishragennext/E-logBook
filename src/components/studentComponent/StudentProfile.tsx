@@ -949,7 +949,7 @@ const StudentProfileCompact = () => {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="text-xs flex items-center gap-1">
-                      Aadhar Number
+                      Aadhar Number *
                       {isProfileVerified && isEditing && (
                         <span className="text-xs text-amber-600">
                           <span title="Cannot be changed after verification">
@@ -1111,7 +1111,7 @@ const StudentProfileCompact = () => {
                     </FormLabel>
                     <FormControl>
                       <Input
-                        placeholder="Enter roll number"
+                        placeholder="Enter roll number *"
                         {...field}
                         disabled={
                           !isEditing || (isProfileVerified && isEditing)

@@ -674,7 +674,7 @@ const SubjectAssignment: React.FC<SubjectAssignmentProps> = ({
               {/* Phase */}
               <div>
                 <label className="block text-sm font-medium mb-1 text-gray-700">
-                  Phase *
+                  Batch *
                 </label>
                 <select
                   {...form.register("phaseId")}

@@ -309,7 +309,7 @@ export function FieldBuilder({
                       {field.fieldType === "select" && (
                         <div className="mt-1">
                           <Label className="text-xs">
-                            Options (one per line)
+                            Options (comma separated)
                           </Label>
                           <textarea
                             value={field.options?.join("\n") || ""}
@@ -321,7 +321,7 @@ export function FieldBuilder({
                               updateField(groupIndex, fieldIndex, { options });
                             }}
                             className="w-full h-20 text-xs p-2 border rounded-md"
-                            placeholder="Option 1&#10;Option 2&#10;Option 3"
+                            placeholder="Option 1&#10; ,Option 2&#10; , Option 3"
                           />
                         </div>
                       )}
