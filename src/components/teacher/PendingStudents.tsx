@@ -281,82 +281,110 @@ export default function StudentVerificationSystem() {
     setSortConfig({ key, direction });
   };
 
-  const handleApprove = async (student: any) => {
-    try {
-      const response = await fetch("/api/student-subject?id=" + student?.id, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          ...student,
-          verificationStatus: "APPROVED",
-          approvedAt: new Date(),
-          hasLogbookAccess: "true",
-        }),
-      });
-
-      if (response.ok) {
-        const updatedStudent = await response.json();
-        setStudents((prev) =>
-          prev.map((s) => (s.id === updatedStudent.id ? updatedStudent : s))
-        );
-
-        // Close modal if approval is happening from modal
-        if (showProfileModal) {
-          setShowProfileModal(false);
-          setSelectedStudent(null);
-        }
-      } else {
-        alert("Failed to approve the student");
-      }
-    } catch (error) {
-      console.error("Error approving student:", error);
-      alert("An error occurred while approving the student");
-    }
-  };
+ 
 
   const handleReject = (student: any) => {
     setSelectedStudent(student);
     setShowRejectionModal(true);
   };
 
-  const confirmReject = async () => {
-    if (!rejectionReason.trim()) {
-      alert("Please provide a reason for rejection");
-      return;
-    }
+  const handleApprove = async (student: any) => {
+  try {
+    const response = await fetch("/api/student-subject?id=" + student?.id, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        ...student,
+        verificationStatus: "APPROVED",
+        approvedAt: new Date(),
+        hasLogbookAccess: "true",
+      }),
+    });
 
-    try {
-      const response = await fetch("/api/student-subject?id=" + selectedStudent.id, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          ...selectedStudent,
-          verificationStatus: "REJECTED",
-          rejectionReason: rejectionReason,
-          hasLogbookAccess: "false",
-        }),
-      });
+    if (response.ok) {
+      const updatedStudent = await response.json();
+      
+      // Preserve the nested details from the original student object
+      const studentWithDetails = {
+        ...updatedStudent,
+        studentDetails: student.studentDetails,
+        subjectDetails: student.subjectDetails,
+        phaseDetails: student.phaseDetails,
+      };
 
-      if (response.ok) {
-        const updatedStudent = await response.json();
-        setStudents((prev) =>
-          prev.map((s) => (s.id === updatedStudent.id ? updatedStudent : s))
-        );
-        setShowRejectionModal(false);
-        setRejectionReason("");
+      setStudents((prev) =>
+        prev.map((s) => (s.id === studentWithDetails.id ? studentWithDetails : s))
+      );
+
+      // Close modal if approval is happening from modal
+      if (showProfileModal) {
+        setShowProfileModal(false);
         setSelectedStudent(null);
-      } else {
-        alert("Failed to reject the student");
       }
-    } catch (error) {
-      console.error("Error rejecting student:", error);
-      alert("An error occurred while rejecting the student");
+    } else {
+      alert("Failed to approve the student");
     }
-  };
+  } catch (error) {
+    console.error("Error approving student:", error);
+    alert("An error occurred while approving the student");
+  }
+};
+
+const confirmReject = async () => {
+  if (!rejectionReason.trim()) {
+    alert("Please provide a reason for rejection");
+    return;
+  }
+
+  try {
+    const response = await fetch("/api/student-subject?id=" + selectedStudent.id, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        ...selectedStudent,
+        verificationStatus: "REJECTED",
+        rejectionReason: rejectionReason,
+        hasLogbookAccess: "false",
+      }),
+    });
+
+    if (response.ok) {
+      const updatedStudent = await response.json();
+      
+      // Preserve the nested details from the original student object
+      const studentWithDetails = {
+        ...updatedStudent,
+        studentDetails: selectedStudent.studentDetails,
+        subjectDetails: selectedStudent.subjectDetails,
+        phaseDetails: selectedStudent.phaseDetails,
+      };
+
+      setStudents((prev) =>
+        prev.map((s) => (s.id === studentWithDetails.id ? studentWithDetails : s))
+      );
+      
+      setShowRejectionModal(false);
+      setRejectionReason("");
+      setSelectedStudent(null);
+      
+      // Also close profile modal if it's open
+      if (showProfileModal) {
+        setShowProfileModal(false);
+      }
+    } else {
+      alert("Failed to reject the student");
+    }
+  } catch (error) {
+    console.error("Error rejecting student:", error);
+    alert("An error occurred while rejecting the student");
+  }
+};
+
+
 
   const viewProfile = (student: any) => {
     setSelectedStudent(student);
