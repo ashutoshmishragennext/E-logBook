@@ -138,7 +138,37 @@ export const CollegeTable = pgTable(
     email: text("email"),
     website: text("website"),
     description: text("description"),
-    logo: text("logo"),
+   logo: text("logo"), // URL to logo image
+    favicon: text("favicon"), // URL to favicon
+    bannerImage: text("banner_image"), // URL to banner/header image
+    
+    // Color Theme Configuration
+    primaryColor: text("primary_color").default("#3B82F6"), // Main brand color
+    secondaryColor: text("secondary_color").default("#1E40AF"), // Secondary brand color
+    accentColor: text("accent_color").default("#F59E0B"), // Accent color for highlights
+    backgroundColor: text("background_color").default("#FFFFFF"), // Main background
+    surfaceColor: text("surface_color").default("#F9FAFB"), // Card/surface background
+    textPrimary: text("text_primary").default("#111827"), // Primary text color
+    textSecondary: text("text_secondary").default("#6B7280"), // Secondary text color
+    textMuted: text("text_muted").default("#9CA3AF"), // Muted text color
+    borderColor: text("border_color").default("#E5E7EB"), // Border color
+    successColor: text("success_color").default("#10B981"), // Success states
+    errorColor: text("error_color").default("#EF4444"), // Error states
+    warningColor: text("warning_color").default("#F59E0B"), // Warning states
+    infoColor: text("info_color").default("#3B82F6"), // Info states
+    
+    // Advanced Theme Settings (Optional)
+    themeConfig: jsonb("theme_config").default({
+      darkMode: false,
+      fontFamily: "Inter",
+      borderRadius: "medium", // small, medium, large, xl
+      shadows: true,
+      animations: true,
+      customCss: null
+    }),
+    
+    // Status & Metadata
+    isActive: boolean("is_active").default(true),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },
@@ -440,6 +470,24 @@ export type LogBookDynamicSchema = {
   }>;
 };
 
+export type CollegeThemeConfig = {
+  darkMode: boolean;
+  fontFamily: string;
+  borderRadius: "small" | "medium" | "large" | "xl";
+  shadows: boolean;
+  animations: boolean;
+  customCss?: string | null;
+  // Future extensions
+  gradients?: {
+    primary: string;
+    secondary: string;
+  };
+  spacing?: {
+    scale: number; // multiplier for spacing values
+  };
+};
+
+
 // Export Types
 export type AcademicYear = InferModel<typeof AcademicYearTable>;
 export type NewAcademicYear = InferModel<typeof AcademicYearTable, "insert">;
@@ -475,6 +523,8 @@ export type NewTeacherSubject = InferModel<typeof TeacherSubjectTable, "insert">
 
 export type StudentSubject = InferModel<typeof StudentSubjectTable>;
 export type NewStudentSubject = InferModel<typeof StudentSubjectTable, "insert">;
+export type College = InferModel<typeof CollegeTable>;
+export type NewCollege = InferModel<typeof CollegeTable, "insert">;
 
 // Relations
 export const collegeRelations = relations(CollegeTable, ({ many }) => ({

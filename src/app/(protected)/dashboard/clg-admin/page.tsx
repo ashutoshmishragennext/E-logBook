@@ -185,9 +185,7 @@ const Sidebar = () => {
       >
         {/* Top navigation bar - improved styling */}
         <header className="bg-white shadow-sm border-b border-gray-200 h-16 flex items-center justify-between px-4 lg:px-6">
-          <div className="flex items-center">
-            {/* Optional header content */}
-          </div>
+         
 
           {/* Profile dropdown - enhanced */}
           <div className="relative profile-dropdown">

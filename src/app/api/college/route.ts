@@ -28,6 +28,7 @@ export async function GET(req: NextRequest) {
     const data = await db.select().from(CollegeTable);
     return NextResponse.json(data);
   } catch (error) {
+    console.error("Error fetching colleges:", error);
     return NextResponse.json({ message: "Failed to fetch colleges" }, { status: 500 });
   }
 }
