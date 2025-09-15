@@ -176,6 +176,8 @@ export async function PUT(req: NextRequest) {
     const id = searchParams.get("id");
     const userId = searchParams.get("userId");
 
+    console.log("PUT request params:", { id, userId });
+
     if (!id && !userId) {
       return NextResponse.json(
         { message: "Either ID or User ID is required" },
@@ -183,16 +185,29 @@ export async function PUT(req: NextRequest) {
       );
     }
 
+    console.log("Updating profile for:", id ? `ID=${id}` : `UserID=${userId}`);
+
     // Parse the request body
     const body = await req.json();
 
     // 🔧 Sanitize UUID fields
-    const sanitizedBody = {
-      ...body,
-      teacherId: body.teacherId?.trim() || null,
-      updatedAt: new Date(),
-    };
+    function sanitizeUUID(value: string | null | undefined): string | null {
+  if (!value) return null;
+  const trimmed = value.trim();
+  return trimmed === "" ? null : trimmed;
+}
 
+const sanitizedBody = {
+  ...body,
+  teacherId: sanitizeUUID(body.teacherId),
+  userId: sanitizeUUID(body.userId),
+
+  academicYearId: sanitizeUUID(body.academicYearId),
+  courseId: sanitizeUUID(body.courseId),
+  branchId: sanitizeUUID(body.branchId),
+  // add any other UUID fields here
+  updatedAt: new Date(),
+};
     // Check if profile exists based on which parameter was provided
     let existingProfile;
     if (id) {
