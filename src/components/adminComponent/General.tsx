@@ -82,7 +82,7 @@ export function GeneralTemplateForm({
     
     try {
       setIsSubmitting(true);
-      
+      console.log(templateSchema)
       // Validate that at least one field exists
       if (templateSchema.groups.every((group) => group.fields.length === 0)) {
         toast.error("Please add at least one field to your template");

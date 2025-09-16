@@ -73,7 +73,7 @@ function LoginForm() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-light-gray">
+    <div className="min-h-screen flex items-center justify-center bg-white  py-4 px-4 sm:px-6 lg:px-8">
       <Card className="w-full max-w-md overflow-hidden border-0 shadow-xl">
         <div className="h-2 bg-gradient-to-r from-dark-blue to-custom-purple"></div>
         
@@ -114,7 +114,7 @@ function LoginForm() {
                         <Input
                           {...field}
                           placeholder="Enter the Email"
-                          className="h-12  rounded-lg border-custom-slate/30 focus:border-dark-blue focus:ring-1 focus:ring-dark-blue transition-all duration-200"
+                          className="h-12  rounded-xl border-custom-slate/30 focus:border-dark-blue focus:ring-1 focus:ring-dark-blue transition-all duration-200"
                           type="email"
                           disabled={isPending}
                         />
@@ -137,7 +137,7 @@ function LoginForm() {
                         <Input
                           {...field}
                           placeholder="********"
-                          className="h-12  pr-10 rounded-lg border-custom-slate/30 focus:border-dark-blue focus:ring-1 focus:ring-dark-blue transition-all duration-200"
+                          className="h-12  pr-10 rounded-xl border-custom-slate/30 focus:border-dark-blue focus:ring-1 focus:ring-dark-blue transition-all duration-200"
                           type={showPassword ? "text" : "password"}
                           disabled={isPending}
                         />

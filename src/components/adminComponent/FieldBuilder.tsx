@@ -176,7 +176,7 @@ export function FieldBuilder({
                     type="button"
                     variant="destructive"
                     size="sm"
-                    className="h-8"
+                    className="h-8 "
                     onClick={() => removeGroup(groupIndex)}
                   >
                     <Trash2 className="h-3.5 w-3.5 mr-1" /> Remove
@@ -191,7 +191,7 @@ export function FieldBuilder({
                   {group.fields.map((field, fieldIndex) => (
                     <div
                       key={fieldIndex}
-                      className="border rounded p-2 bg-muted/50"
+                      className="border rounded-theme p-2 py-1 bg-muted/50"
                     >
                       <div className="grid grid-cols-12 gap-2 items-end">
 
@@ -217,7 +217,7 @@ export function FieldBuilder({
                           />
                         </div>
                         
-                        <div className="col-span-2">
+                        <div className="col-span-2 ">
                           <Label className="text-xs">Type</Label>
                           <Select
                             value={field.fieldType}
@@ -228,10 +228,10 @@ export function FieldBuilder({
                               })
                             }
                           >
-                            <SelectTrigger className="h-8 text-xs">
+                            <SelectTrigger className="h-8 text-xs bg-white">
                               <SelectValue />
                             </SelectTrigger>
-                            <SelectContent>
+                            <SelectContent className="bg-white">
                               <SelectItem value="text" className="text-xs">
                                 Text
                               </SelectItem>

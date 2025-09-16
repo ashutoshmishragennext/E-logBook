@@ -62,7 +62,7 @@ const Department = () => {
 
   const handleInputChange = (e: { target: { name: any; value: any } }) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    setFormData((prev) => ({ ...prev, [name]: capitalizeFirstLetter(value) }));
   };
 
   const resetForm = () => {
@@ -204,7 +204,10 @@ const Department = () => {
   return (
     <div className="relative space-y-4">
       {error && (
-        <Alert variant="destructive" className="mb-4">
+        <Alert
+          variant="destructive"
+          className="mb-4 bg-red-700 text-white shadow-sm hover:bg-red-700/50"
+        >
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
@@ -357,8 +360,7 @@ const Department = () => {
           </div>
           <div className="p-4 flex-1 overflow-y-auto">
             <div className="space-y-4">
-
-                       <div>
+              <div>
                 <label
                   htmlFor="code"
                   className="block text-sm font-medium text-gray-700 mb-1"
@@ -369,10 +371,19 @@ const Department = () => {
                   id="code"
                   name="code"
                   value={formData.code}
-                  onChange={handleInputChange}
-                  placeholder="COM-SCI"
+                  onChange={(e) => {
+                    const value = e.target.value
+                      .toUpperCase() // force uppercase
+                      .replace(/[^A-Z0-9-]/g, ""); // allow only alphanumeric (A–Z, 0–9)
+
+                    handleInputChange({
+                      target: { name: "code", value },
+                    });
+                  }}
+                  placeholder="COM-SCI123"
                 />
               </div>
+
               <div>
                 <label
                   htmlFor="name"
@@ -384,10 +395,19 @@ const Department = () => {
                   id="name"
                   name="name"
                   value={formData.name}
-                  onChange={handleInputChange}
+                  onChange={(e) => {
+                    const value = e.target.value
+                      .toLowerCase() // make all lowercase first
+                      .replace(/\b\w/g, (char) => char.toUpperCase()); // capitalize first letter of each word
+
+                    handleInputChange({
+                      target: { name: "name", value },
+                    });
+                  }}
                   placeholder="Computer Science"
                 />
               </div>
+
               <div>
                 <label
                   htmlFor="description"
@@ -402,6 +422,7 @@ const Department = () => {
                   onChange={handleInputChange}
                   placeholder="Enter department description"
                   rows={2}
+                  className="normal-case"
                 />
               </div>
             </div>

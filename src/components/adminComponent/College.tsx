@@ -1099,7 +1099,7 @@ const College: React.FC = () => {
       )}
 
       {adminCreationError && (
-        <Alert variant="destructive" className="mb-4">
+        <Alert  className="mb-4 bg-red-700">
           <AlertDescription>{adminCreationError}</AlertDescription>
         </Alert>
       )}

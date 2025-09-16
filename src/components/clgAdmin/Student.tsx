@@ -351,13 +351,13 @@ const Students = () => {
   // };
 
   return (
-    <div className="p-6 bg-white rounded-lg shadow-md">
+    <div className="p-6 bg-white rounded-theme shadow-md">
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-2xl font-bold">Student Management</h2>
         <div className="flex gap-2">
           <button
             onClick={() => setActiveTab("list")}
-            className={`px-4 py-2 rounded-lg ${
+            className={`px-4 py-2 rounded-theme ${
               activeTab === "list" ? "bg-blue-600 text-white" : "bg-gray-200"
             }`}
           >
@@ -365,7 +365,7 @@ const Students = () => {
           </button>
           <button
             onClick={() => setActiveTab("add")}
-            className={`px-4 py-2 rounded-lg ${
+            className={`px-4 py-2 rounded-theme ${
               activeTab === "add" ? "bg-blue-600 text-white" : "bg-gray-200"
             }`}
           >
@@ -376,20 +376,20 @@ const Students = () => {
 
       {/* Status Messages */}
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded mb-4">
+        <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-theme mb-4">
           {error}
         </div>
       )}
 
       {status.includes("✅") && (
-        <div className="bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded mb-4">
+        <div className="bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-theme mb-4">
           {status}
         </div>
       )}
 
       {uploadStatus && (
         <div
-          className={`border px-4 py-3 rounded mb-4 ${
+          className={`border px-4 py-3 rounded-theme mb-4 ${
             uploadStatus.includes("✅")
               ? "bg-green-50 border-green-200 text-green-800"
               : uploadStatus.includes("❌")
@@ -415,7 +415,7 @@ const Students = () => {
                 placeholder="Search students..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border rounded-lg"
+                className="w-full pl-10 pr-4 py-2 border rounded-theme"
               />
             </div>
 
@@ -441,7 +441,7 @@ const Students = () => {
               {/* Template download button */}
               <button
                 onClick={() => exportTemplate("student")}
-                className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition"
+                className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-theme hover:bg-purple-700 transition"
                 title="Download Student Template"
               >
                 <FileSpreadsheet size={16} />
@@ -450,7 +450,7 @@ const Students = () => {
             </div>
           </div>
 
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+          <div className="bg-blue-50 border border-blue-200 rounded-theme p-4 mb-6">
             <h4 className="text-blue-800 font-medium mb-2">📋 Import Templates</h4>
             <p className="text-blue-700 text-sm">
               Download the template files above to get the correct format for importing student data. 
@@ -559,7 +559,7 @@ const Students = () => {
                 </label>
                 <input
                   {...form.register("name")}
-                  className="w-full px-4 py-2 border rounded-lg"
+                  className="w-full px-4 py-2 border rounded-theme"
                 />
                 {form.formState.errors.name && (
                   <p className="text-red-500 text-xs mt-1">
@@ -579,7 +579,7 @@ const Students = () => {
                     },
                   })}
                   type="email"
-                  className="w-full px-4 py-2 border rounded-lg"
+                  className="w-full px-4 py-2 border rounded-theme"
                 />
                 {form.formState.errors.email && (
                   <p className="text-red-500 text-xs mt-1">
@@ -601,7 +601,7 @@ const Students = () => {
                       !/\s/.test(value ?? "") ||
                       "Roll number must not contain spaces",
                   })}
-                  className="w-full px-4 py-2 border rounded-lg"
+                  className="w-full px-4 py-2 border rounded-theme"
                   onInput={(e) => {
                     const input = e.target as HTMLInputElement;
                     input.value = input.value.replace(/\s/g, ""); // Remove all spaces
@@ -627,7 +627,7 @@ const Students = () => {
                       message: "Mobile number must be exactly 10 digits",
                     },
                   })}
-                  className="w-full px-4 py-2 border rounded-lg"
+                  className="w-full px-4 py-2 border rounded-theme"
                   maxLength={10}
                   inputMode="numeric"
                   pattern="[0-9]*"
@@ -655,7 +655,7 @@ const Students = () => {
             <button
               type="submit"
               disabled={isSubmitting}
-              className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition disabled:bg-blue-400"
+              className="w-full bg-blue-600 text-white py-2 rounded-theme hover:bg-blue-700 transition disabled:bg-blue-400"
             >
               {isSubmitting ? (
                 <span className="flex items-center justify-center">

@@ -67,9 +67,9 @@ const Profile = () => {
   };
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-2">
       {college && (
-        <Card className="w-full shadow-md">
+        <Card className="w-full shadow-md bg-white">
           <CardHeader className="flex flex-row justify-between items-center">
             <CardTitle className="text-xl flex items-center gap-4">
               <Image
@@ -81,7 +81,7 @@ const Profile = () => {
                     : college.logo
                 }
                 alt={college.name}
-                className="w-12 h-12 rounded-full object-cover"
+                className="w-12 h-12 rounded-theme object-cover"
               />
 
               {isEditing && (
@@ -123,13 +123,13 @@ const Profile = () => {
             </CardTitle>
             {isEditing ? (
               <div className="flex gap-2">
-                <Button variant="outline" onClick={() => setIsEditing(false)}>
+                <Button className="rounded-theme bg-white" onClick={() => setIsEditing(false)}>
                   Cancel
                 </Button>
-                <Button onClick={handleSave}>Save</Button>
+                <Button onClick={handleSave} className="rounded-theme text-white hover:text-black hover:bg-secondary">Save</Button>
               </div>
             ) : (
-              <Button variant="outline" onClick={() => setIsEditing(true)}>
+              <Button  className="bg-primary rounded-theme text-white hover:text-black" onClick={() => setIsEditing(true)}>
                 Edit
               </Button>
             )}

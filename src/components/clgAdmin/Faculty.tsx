@@ -302,16 +302,16 @@ const Faculty = () => {
         <div className="flex gap-2">
           <button
             onClick={() => setActiveTab("list")}
-            className={`px-4 py-2 rounded-lg ${
-              activeTab === "list" ? "bg-blue-600 text-white" : "bg-gray-200"
+            className={`px-4 py-2 rounded-theme ${
+              activeTab === "list" ? "bg-primary text-white" : "bg-gray-200"
             }`}
           >
             List View
           </button>
           <button
             onClick={() => setActiveTab("add")}
-            className={`px-4 py-2 rounded-lg ${
-              activeTab === "add" ? "bg-blue-600 text-white" : "bg-gray-200"
+            className={`px-4 py-2 rounded-theme ${
+              activeTab === "add" ? "bg-primary text-white" : "bg-gray-200"
             }`}
           >
             Add Teacher
@@ -334,7 +334,7 @@ const Faculty = () => {
 
       {uploadStatus && (
         <div
-          className={`border px-4 py-3 rounded mb-4 ${
+          className={`border px-4 py-3 rounded-theme mb-4 ${
             uploadStatus.includes("✅")
               ? "bg-green-50 border-green-200 text-green-800"
               : uploadStatus.includes("❌")
@@ -369,7 +369,7 @@ const Faculty = () => {
               <div className="flex gap-2 border-r pr-3">
                 <button
                   onClick={() => exportTemplate('faculty')}
-                  className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
+                  className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-theme hover:bg-green-700 transition"
                   title="Download Faculty Template"
                 >
                   <FileSpreadsheet size={16} />
@@ -406,7 +406,7 @@ const Faculty = () => {
           </div>
 
           {/* Info section about templates */}
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+          <div className="bg-blue-50 border border-blue-200 rounded-theme p-4 mb-6">
             <h4 className="text-blue-800 font-medium mb-2">📋 Import Templates</h4>
             <p className="text-blue-700 text-sm">
               Download the template files above to get the correct format for importing faculty data. 
@@ -505,7 +505,7 @@ const Faculty = () => {
                   {...form.register("name", {
                     required: "Full Name is required",
                   })}
-                  className="w-full px-4 py-2 border rounded-lg"
+                  className="w-full px-4 py-2 border rounded-theme"
                 />
                 {form.formState.errors.name && (
                   <p className="text-red-500 text-xs mt-1">
@@ -525,7 +525,7 @@ const Faculty = () => {
                     },
                   })}
                   type="email"
-                  className="w-full px-4 py-2 border rounded-lg"
+                  className="w-full px-4 py-2 border rounded-theme"
                 />
                 {form.formState.errors.email && (
                   <p className="text-red-500 text-xs mt-1">
@@ -548,7 +548,7 @@ const Faculty = () => {
                       message: "Mobile number must be exactly 10 digits",
                     },
                   })}
-                  className="w-full px-4 py-2 border rounded-lg"
+                  className="w-full px-4 py-2 border rounded-theme"
                   maxLength={10}
                   inputMode="numeric"
                   pattern="[0-9]*"
@@ -572,7 +572,7 @@ const Faculty = () => {
                   {...form.register("designation", {
                     required: "Designation is required",
                   })}
-                  className="w-full px-4 py-2 border rounded-lg"
+                  className="w-full px-4 py-2 border rounded-theme"
                   placeholder="e.g., Professor, Assistant Professor"
                 />
                 {form.formState.errors.designation && (
@@ -593,7 +593,7 @@ const Faculty = () => {
                   validate: (value) =>
                     !/\s/.test(value) || "Employee ID must not contain spaces",
                 })}
-                className="w-full px-4 py-2 border rounded-lg"
+                className="w-full px-4 py-2 border rounded-theme"
               />
               {form.formState.errors.employeeId && (
                 <p className="text-red-500 text-xs mt-1">
@@ -611,7 +611,7 @@ const Faculty = () => {
             <button
               type="submit"
               disabled={isSubmitting}
-              className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition disabled:bg-blue-400"
+              className="w-full bg-blue-600 text-white py-2 rounded-theme hover:bg-blue-700 transition disabled:bg-blue-400"
             >
               {isSubmitting ? (
                 <span className="flex items-center justify-center">

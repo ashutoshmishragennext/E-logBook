@@ -199,7 +199,7 @@ const Academicyear = () => {
                   <TableCell>{format(new Date(year.startDate), 'yyyy-MM-dd')}</TableCell>
                   <TableCell>{format(new Date(year.endDate), 'yyyy-MM-dd')}</TableCell>
                   <TableCell className="text-right">
-                    <Button variant="destructive" onClick={() => handleDelete(year.id)}>Delete</Button>
+                    <Button className="bg-red-700 text-white shadow-sm hover:bg-red-700/50" onClick={() => handleDelete(year.id)}>Delete</Button>
                   </TableCell>
                 </TableRow>
               ))}

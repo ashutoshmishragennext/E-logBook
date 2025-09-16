@@ -28,7 +28,7 @@ export const FileImporter: React.FC<FileImporterProps> = ({
   onImport,
   acceptedFileTypes = ".xlsx,.xls,.csv",
   buttonText = "Import",
-  className = "flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition disabled:bg-green-400",
+  className = "flex items-center px-4 py-2 bg-green-600 text-white rounded-theme hover:bg-green-700 transition disabled:bg-green-400",
 }) => {
   const [isUploading, setIsUploading] = useState(false);
 
@@ -131,7 +131,7 @@ export const FileExporter: React.FC<FileExporterProps> = ({
   fileName = `export_${new Date().toISOString().split("T")[0]}`,
   headers = {},
   buttonText = "Export",
-  className = "flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition",
+  className = "flex items-center px-4 py-2 bg-blue-600 text-white rounded-theme hover:bg-blue-700 transition",
   disabled = false,
 }) => {
   const exportToExcel = () => {

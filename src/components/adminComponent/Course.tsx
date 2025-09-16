@@ -202,7 +202,7 @@ const Course = () => {
   return (
     <div className="relative space-y-4">
       {error && (
-        <Alert variant="destructive" className="mb-4">
+        <Alert variant="destructive" className="mb-4 bg-red-700 text-white shadow-sm hover:bg-red-700/50">
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}

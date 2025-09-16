@@ -34,7 +34,7 @@ const Subject = () => {
   });
   const [approvedFilter, setApprovedFilter] = useState<
     "all" | "approved" | "pending"
-  >("pending");
+  >("all");
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [confirmText, setConfirmText] = useState("");
   const [onConfirmCallback, setOnConfirmCallback] = useState<
@@ -50,7 +50,7 @@ const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
   const { name, value, type, checked } = e.target;
   const updatedFormData = { 
     ...formData, 
-    [name]: type === 'checkbox' ? checked : value 
+    [name]: type === 'checkbox' ? checked : capitalizeFirstLetter(value )
   };
 
   if (name === 'name') {
@@ -68,6 +68,7 @@ function generateSubjectCode(subjectName: string) {
 
   // Get last 3 digits of current timestamp for uniqueness
   const timestampPart = Date.now().toString().slice(-3);
+  console.log("date",Date.now().toString())
 
   return `${namePart}${timestampPart}`; // Example: MAT451
 }
@@ -157,26 +158,32 @@ function generateSubjectCode(subjectName: string) {
 
   // Quick approval toggle function
   const handleQuickApproval = async (id: string, currentApprovalStatus: boolean) => {
-    try {
-      const response = await fetch(`/api/subject?id=${id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ approved: !currentApprovalStatus }),
-      });
+  const action = currentApprovalStatus ? "mark this subject as Pending" : "approve this subject";
+  const confirmed = window.confirm(`Are you sure you want to ${action}?`);
 
-      if (response.ok) {
-        await fetchSubjects();
-      } else {
-        const errorData = await response.json();
-        setError(errorData.message || "Failed to update approval status");
-      }
-    } catch (err) {
-      setError(
-        "Error updating approval status: " +
-          (err instanceof Error ? err.message : "Unknown error")
-      );
+  if (!confirmed) return;
+
+  try {
+    const response = await fetch(`/api/subject?id=${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ approved: !currentApprovalStatus }),
+    });
+
+    if (response.ok) {
+      await fetchSubjects();
+    } else {
+      const errorData = await response.json();
+      setError(errorData.message || "Failed to update approval status");
     }
-  };
+  } catch (err) {
+    setError(
+      "Error updating approval status: " +
+        (err instanceof Error ? err.message : "Unknown error")
+    );
+  }
+};
+
 
   const handleDelete = async (id: string) => {
     setConfirmText(`Are you sure you want to delete this Subject?`);
@@ -236,7 +243,7 @@ function generateSubjectCode(subjectName: string) {
   return (
     <div className="relative space-y-4">
       {error && (
-        <Alert variant="destructive" className="mb-4">
+        <Alert variant="destructive" className="mb-4 bg-red-700 text-white shadow-sm hover:bg-red-700/50">
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}

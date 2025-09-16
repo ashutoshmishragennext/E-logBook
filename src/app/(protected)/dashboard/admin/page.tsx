@@ -39,17 +39,18 @@ const sidebarItems = [
     component: <College />,
   },
   {
-    id: "department",
-    label: "Departments",
-    icon: <Building2 size={20} />,
-    component: <Department />,
-  },
-  {
     id: "courses",
     label: "Courses",
     icon: <GraduationCap size={20} />,
     component: <Course />,
   },
+  {
+    id: "department",
+    label: "Departments",
+    icon: <Building2 size={20} />,
+    component: <Department />,
+  },
+  
   {
     id: "subject",
     label: "Subjects",

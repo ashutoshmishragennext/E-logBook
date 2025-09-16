@@ -427,17 +427,17 @@ const StudentApproval = () => {
   }, [filterStatus]);
 
   return (
-    <div className="container mx-auto p-6">
+    <div className="container mx-auto p-6 bg-white">
       <h1 className="text-2xl font-bold mb-6">Student Verification</h1>
 
       {/* Filters and Actions */}
       <div className="flex flex-wrap justify-between items-center mb-6 gap-4">
         <div className="flex items-center space-x-2">
-          <Select value={filterStatus} onValueChange={handleFilterChange}>
-            <SelectTrigger className="w-[180px]">
+          <Select value={filterStatus} onValueChange={handleFilterChange} >
+            <SelectTrigger className="w-[180px] bg-white">
               <SelectValue placeholder="Filter by status" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="bg-white">
               <SelectItem value="PENDING">Pending</SelectItem>
               <SelectItem value="APPROVED">Approved</SelectItem>
               <SelectItem value="REJECTED">Rejected</SelectItem>
@@ -484,7 +484,7 @@ const StudentApproval = () => {
       </div>
 
       {/* Table */}
-      <div className="overflow-x-auto rounded-md border">
+      <div className="overflow-x-auto rounded-theme border">
         <table className="w-full text-sm">
           <thead className="bg-gray-50">
             <tr>
@@ -575,7 +575,7 @@ const StudentApproval = () => {
             bg-black 
             text-white 
             text-xs 
-            rounded 
+            rounded-theme 
             px-2 
             py-1 
             whitespace-nowrap 
@@ -717,7 +717,7 @@ const StudentApproval = () => {
                 return (
                   <div
                     key={student.id}
-                    className="p-3 border rounded-lg bg-yellow-50"
+                    className="p-3 border rounded-theme bg-yellow-50"
                   >
                     <div className="font-medium text-gray-900">
                       {student.name || "N/A"} ({student.rollNo || "No Roll No"})

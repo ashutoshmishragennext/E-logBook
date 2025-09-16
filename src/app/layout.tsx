@@ -1,9 +1,11 @@
+// src/app/layout.tsx
 import { auth } from "@/auth";
 import { Toaster } from "@/components/ui/sonner";
 import type { Metadata } from "next";
 import { SessionProvider } from "next-auth/react";
 import { Inter } from "next/font/google";
 import "./globals.css";
+import ThemeProvider from "@/components/ThemeProvider";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -26,7 +28,10 @@ export default async function RootLayout({
     <SessionProvider session={session}>
       <html lang="en">
         <body className={inter.className}>
-            {children} <Toaster position="top-right" richColors />
+          <ThemeProvider>
+            {children} 
+            <Toaster position="top-right" richColors  className=""/>
+          </ThemeProvider>
         </body>
       </html>
     </SessionProvider>

@@ -11,6 +11,7 @@ export async function GET(req: NextRequest) {
   const userId = req.nextUrl.searchParams.get('userId');
   const collegeAdminId = req.nextUrl.searchParams.get('collegeAdminId');
   const collegeId = req.nextUrl.searchParams.get('collegeId');
+  console.log("UserId ",userId)
 
   try {
     if (collegeAdminId) {
@@ -23,6 +24,7 @@ export async function GET(req: NextRequest) {
     }
     if(userId){
       const data = await db.select().from(CollegeTable).where(eq(CollegeTable.createdBy, userId));
+      console.log(data)
       return NextResponse.json(data[0]);
     }
     const data = await db.select().from(CollegeTable);

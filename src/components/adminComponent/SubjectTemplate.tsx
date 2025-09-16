@@ -241,7 +241,7 @@ export function SubjectTemplateForm({
   };
 
   return (
-    <div className="space-y-4">
+    <div className="w-full shadow-md rounded bg-white space-y-4 p-4">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold">Subject-Specific Templates</h2>
         <Button 
@@ -255,9 +255,9 @@ export function SubjectTemplateForm({
         </Button>
       </div>
 
-      <Alert className="bg-blue-50 border-blue-200">
-        <InfoIcon className="h-4 w-4 text-blue-500" />
-        <AlertTitle className="text-blue-800">About Subject Templates</AlertTitle>
+      <Alert className="bg-background border-primary rounded-theme">
+        <InfoIcon className="h-4 w-4 text-primary " />
+        <AlertTitle className="text-primary">About Subject Templates</AlertTitle>
         <AlertDescription className="text-blue-700">
           <div className="space-y-2">
             <p>
@@ -267,7 +267,7 @@ export function SubjectTemplateForm({
               subject-specific activities like lab work, assignments, or
               practicals.
             </p>
-            <ul className="list-disc pl-5 space-y-1">
+            {/* <ul className="list-disc pl-5 space-y-1">
               <li>
                 Assign the template to a specific subject (e.g., Physics,
                 Chemistry, Math)
@@ -277,8 +277,8 @@ export function SubjectTemplateForm({
               </li>
               <li>
                 Create dynamic fields to capture important academic details
-              </li>
-              <li>
+              </li> */}
+              {/* <li>
                 Organize fields into logical groups (e.g., Experiment Info,
                 Observations)
               </li>
@@ -288,8 +288,8 @@ export function SubjectTemplateForm({
               </li>
               <li>
                 Mark fields as required or optional depending on importance
-              </li>
-            </ul>
+              </li> */}
+            {/* </ul> */}
             <p>
               Once created, these templates can be reused whenever log books
               need to be maintained for the assigned subject, saving time and
@@ -305,64 +305,68 @@ export function SubjectTemplateForm({
             <CardHeader>
               <CardTitle>Template Details</CardTitle>
             </CardHeader>
-            <CardContent className="grid grid-cols-2 gap-4 p-2">
-              <FormField
-                control={form.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Template Name</FormLabel>
-                    <FormControl>
-                      <Input 
-                        placeholder="Enter template name (e.g., 'Chemistry Lab Report')" 
-                        {...field} 
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+           <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4 p-2 px-6">
+  {/* Name field */}
+  <FormField
+    control={form.control}
+    name="name"
+    render={({ field }) => (
+      <FormItem>
+        <FormLabel>Template Name</FormLabel>
+        <FormControl>
+          <Input 
+            placeholder="Enter template name (e.g., 'Chemistry Lab Report')" 
+            {...field} 
+          />
+        </FormControl>
+        <FormMessage />
+      </FormItem>
+    )}
+  />
 
-              <FormField
-                control={form.control}
-                name="description"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Description</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        placeholder="Describe the purpose of this template"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+  {/* Description field */}
+  <FormField
+    control={form.control}
+    name="description"
+    render={({ field }) => (
+      <FormItem>
+        <FormLabel>Description</FormLabel>
+        <FormControl>
+          <Textarea
+            placeholder="Describe the purpose of this template"
+            {...field}
+          />
+        </FormControl>
+        <FormMessage />
+      </FormItem>
+    )}
+  />
 
-              <div className="col-span-2">
-                <FormField
-                  control={form.control}
-                  name="subjectId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Subject</FormLabel>
-                      <FormControl>
-                        <SubjectSelector
-                          selectedPhaseId={selectedPhaseId}
-                          onSelectSubject={handleSubjectSelect}
-                          disabled={!selectedPhaseId}
-                          searchQuery={searchQuery}
-                          setSearchQuery={setSearchQuery}
-                          selectedSubject={selectedSubject}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-            </CardContent>
+  {/* Subject field full width */}
+  <div className="md:col-span-2">
+    <FormField
+      control={form.control}
+      name="subjectId"
+      render={({ field }) => (
+        <FormItem>
+          <FormLabel>Subject</FormLabel>
+          <FormControl>
+            <SubjectSelector
+              selectedPhaseId={selectedPhaseId}
+              onSelectSubject={handleSubjectSelect}
+              disabled={!selectedPhaseId}
+              searchQuery={searchQuery}
+              setSearchQuery={setSearchQuery}
+              selectedSubject={selectedSubject}
+            />
+          </FormControl>
+          <FormMessage />
+        </FormItem>
+      )}
+    />
+  </div>
+</CardContent>
+
           </Card>
 
           <FieldBuilder

@@ -7,6 +7,8 @@ import Faculty from "@/components/clgAdmin/Faculty";
 import Profile from "@/components/clgAdmin/Profile";
 import Students from "@/components/clgAdmin/Student";
 import StudentApproval from "@/components/clgAdmin/StudentApproval";
+import { useThemeStore } from "@/store/themeStore";
+
 import {
   Building2,
   ChevronDown,
@@ -16,72 +18,54 @@ import {
   Menu,
   School,
   User,
+  X,
 } from "lucide-react";
 import { signOut, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 const sidebarItems = [
-  {
-    id: "Profile",
-    label: "Profile",
-    icon: <School size={20} />,
-    component: <Profile />,
-  },
-  {
-    id: "Batch",
-    label: "Batch",
-    icon: <Building2 size={20} />,
-    component: <Batch />,
-  },
-  {
-    id: "Faculty",
-    label: "Faculty",
-    icon: <Building2 size={20} />,
-    component: <Faculty />,
-  },
-  {
-    id: "Students",
-    label: "Students",
-    icon: <User size={20} />,
-    component: <Students />,
-  },
-  {
-    id: "StudentApproval",
-    label: "Student Approval",
-    icon: <User size={20} />,
-    component: <StudentApproval />,
-  },
-  {
-    id:"Templates",
-    label:"Subject Templates",
-    icon:<User size={20} />,
-    component: <SubjectTemplateForm/>,
-  }
+  { id: "Profile", label: "Profile", icon: <School size={20} />, component: <Profile /> },
+  { id: "Batch", label: "Batch", icon: <Building2 size={20} />, component: <Batch /> },
+  { id: "Faculty", label: "Faculty", icon: <Building2 size={20} />, component: <Faculty /> },
+  { id: "Students", label: "Students", icon: <User size={20} />, component: <Students /> },
+  { id: "StudentApproval", label: "Student Approval", icon: <User size={20} />, component: <StudentApproval /> },
+  { id: "Templates", label: "Subject Templates", icon: <User size={20} />, component: <SubjectTemplateForm /> }
 ];
 
 const Sidebar = () => {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const { collegeData, isLoading: isLoadingTheme, } = useThemeStore();
+  
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeComponent, setActiveComponent] = useState("Profile");
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-
-  // Find the active component to render
-  const activeItem = sidebarItems.find((item) => item.id === activeComponent);
-
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
-  const handleLogout = async (
-    e: React.MouseEvent<HTMLButtonElement, MouseEvent>
-  ) => {
-    // Ensure we have the event parameter and prevent default behavior
-    if (e) {
-      e.preventDefault();
-      e.stopPropagation();
-    }
+  const activeItem = sidebarItems.find((item) => item.id === activeComponent);
 
+  // Handle responsive sidebar
+  useEffect(() => {
+    const handleResize = () => {
+      const isDesktop = window.innerWidth >= 1024;
+      setSidebarOpen(isDesktop);
+      if (isDesktop) {
+        setMobileMenuOpen(false); // Close mobile menu on desktop
+      }
+    };
+    
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Fetch college data
+
+
+  const handleLogout = async (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
     setIsLoggingOut(true);
     try {
       await signOut({ callbackUrl: "/auth/login" });
@@ -90,18 +74,20 @@ const Sidebar = () => {
       setIsLoggingOut(false);
     }
   };
-  useEffect(() => {
-    if (session?.user?.role !== "COLLEGE_ADMIN") {
-      router.push("/auth/login");
-    }
-  }, [session, router]);
-  useEffect(() => {
-    if (status === "unauthenticated") {
-      router.push("/auth/login");
-    }
-  }, [status, router]);
 
-  // Close profile dropdown when clicking outside
+  const handleMenuItemClick = (id: string) => {
+    setActiveComponent(id);
+    setMobileMenuOpen(false); // Close mobile menu when item is selected
+  };
+
+
+  useEffect(() => {
+    if (status === "unauthenticated" || session?.user?.role !== "COLLEGE_ADMIN") {
+      router.push("/auth/login");
+    }
+  }, [status, session, router]);
+
+  // Close dropdowns when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as HTMLElement;
@@ -111,30 +97,34 @@ const Sidebar = () => {
     };
 
     document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [profileDropdownOpen]);
 
-  return (
-    <div className="flex h-screen bg-gray-50">
-      {/* Mobile menu button - improved positioning */}
-      <div className="lg:hidden fixed top-4 left-4 z-50">
-        <button
-          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          className="p-2 rounded-md bg-white shadow-md text-gray-600 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          aria-label="Toggle menu"
-        >
-          <Menu size={24} />
-        </button>
+  if (isLoadingTheme) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-surface">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
       </div>
+    );
+  }
 
-      {/* Sidebar - Desktop */}
-      <div
-        className={`hidden lg:flex flex-col ${
-          sidebarOpen ? "w-64" : "w-20"
-        } transition-all duration-300 bg-white border-r border-gray-200 shadow-sm`}
-      >
+  return (
+    <div className="flex h-screen bg-white">
+      {/* Mobile Menu Button - Only show on mobile when menu is closed */}
+      {!mobileMenuOpen && (
+        <div className="lg:hidden fixed top-2 left-4 z-50">
+          <button
+            onClick={() => setMobileMenuOpen(true)}
+            className="p-3 rounded-md shadow-md hover:opacity-80 focus:outline-none focus:ring-2 focus:ring-primary bg-background text-primary border border-color"
+            aria-label="Open menu"
+          >
+            <Menu size={20} />
+          </button>
+        </div>
+      )}
+
+      {/* Desktop Sidebar */}
+      <div className={`hidden lg:flex flex-col ${sidebarOpen ? "w-64" : "w-20"} transition-all duration-300 border-r border-color shadow-sm `}>
         <SidebarContent
           sidebarOpen={sidebarOpen}
           setSidebarOpen={setSidebarOpen}
@@ -142,80 +132,72 @@ const Sidebar = () => {
           setActiveComponent={setActiveComponent}
           session={session}
           handleLogout={handleLogout}
+          collegeData={collegeData}
+          isLoggingOut={isLoggingOut}
+          isMobile={false}
+          onClose={() => {}}
         />
       </div>
 
-      {/* Sidebar - Mobile - improved layout */}
-      <div
-        className={`lg:hidden fixed inset-0 z-40 transform ${
-          mobileMenuOpen ? "translate-x-0" : "-translate-x-full"
-        } transition-transform duration-300 ease-in-out`}
-      >
-        <div className="relative flex flex-col w-64 h-full bg-white border-r border-gray-200 shadow-xl">
-          <div className="h-16 flex items-center justify-end px-4 border-b border-gray-200">
-            <button
-              onClick={() => setMobileMenuOpen(false)}
-              className="p-2 rounded-full text-gray-500 hover:bg-gray-100 focus:outline-none"
-              aria-label="Close menu"
-            >
-              <ChevronLeft size={24} />
-            </button>
+      {/* Mobile Sidebar Overlay */}
+      {mobileMenuOpen && (
+        <>
+          <div className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-40" onClick={() => setMobileMenuOpen(false)} />
+          <div className="lg:hidden fixed inset-y-0 left-0 z-50 w-64 transform transition-transform duration-300 ease-in-out">
+            <div className="flex flex-col h-full border-r border-color shadow-xl bg-white">
+              <SidebarContent
+                sidebarOpen={true}
+                setSidebarOpen={() => {}}
+                activeComponent={activeComponent}
+                setActiveComponent={handleMenuItemClick}
+                session={session}
+                handleLogout={handleLogout}
+                collegeData={collegeData}
+                isLoggingOut={isLoggingOut}
+                isMobile={true}
+                onClose={() => setMobileMenuOpen(false)}
+              />
+            </div>
           </div>
-          <div className="flex-1 overflow-y-auto">
-            <SidebarContent
-              sidebarOpen={true}
-              setSidebarOpen={() => {}}
-              activeComponent={activeComponent}
-              setActiveComponent={(id: string) => {
-                setActiveComponent(id);
-                setMobileMenuOpen(false);
-              }}
-              session={session}
-              handleLogout={handleLogout}
-            />
-          </div>
-        </div>
-      </div>
+        </>
+      )}
 
-      {/* Main content - adjusted for mobile menu */}
-      <div
-        className={`flex-1 flex flex-col overflow-hidden transition-all duration-300 ${
-          mobileMenuOpen ? "ml-64" : "ml-0"
-        } lg:ml-0`}
-      >
-        {/* Top navigation bar - improved styling */}
-        <header className="bg-white shadow-sm border-b border-gray-200 h-16 flex items-center justify-between px-4 lg:px-6">
-         <div className="flex items-center space-x-3">
+      {/* Main Content */}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {/* Header */}
+        <header className="shadow-sm border-b border-color h-16 flex items-center justify-between px-4 lg:px-6 ">
+          <div className="flex items-center space-x-3">
+            {collegeData?.logo && (
+              <img src={collegeData.logo} alt={collegeData.name} className="h-8 w-8 rounded-full object-cover" />
+            )}
+            <span className="font-semibold text-lg hidden md:block text-primary">
+              {collegeData?.name || "College Portal"}
+            </span>
           </div>
-          {/* Profile dropdown - enhanced */}
+          
+          {/* Profile Dropdown */}
           <div className="relative profile-dropdown">
             <button
               onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
-              className="flex items-center space-x-2 text-gray-700 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-full p-1"
+              className="flex items-center space-x-2 hover:opacity-80 focus:outline-none focus:ring-2 focus:ring-primary rounded-full p-2 text-primary"
             >
-              <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
-                <User size={20} className="text-blue-600" />
+              <div className="w-8 h-8 rounded-full flex items-center justify-center  text-primary">
+                <User size={20} />
               </div>
-              <span className="hidden md:inline-block font-medium text-sm">
+              <span className="hidden md:inline-block font-medium text-sm text-primary">
                 {session?.user?.name || "College Admin"}
               </span>
-              <ChevronDown
-                size={16}
-                className={`transition-transform duration-200 ${
-                  profileDropdownOpen ? "rotate-180" : ""
-                }`}
-              />
+              <ChevronDown size={16} className={`transition-transform duration-200 text-secondary ${profileDropdownOpen ? "rotate-180" : ""}`} />
             </button>
 
-            {/* Dropdown menu - fixed with proper event handling */}
             {profileDropdownOpen && (
-              <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 border border-gray-200 z-10 profile-dropdown">
+              <div className="absolute right-0 mt-2 w-48 rounded-theme shadow-lg py-1 border border-color z-10 bg-background">
                 <button
-                  onClick={(e) => handleLogout(e)}
+                  onClick={handleLogout}
                   disabled={isLoggingOut}
-                  className="w-full text-left px-4 py-2.5 text-sm text-red-600 hover:bg-gray-100 transition-colors flex items-center space-x-3"
+                  className="w-full text-left px-4 py-3 text-sm hover:bg-error/10 transition-colors flex items-center space-x-3 text-error"
                 >
-                  <LogOut size={16} className="text-red-500" />
+                  <LogOut size={16} />
                   <span>{isLoggingOut ? "Logging out..." : "Logout"}</span>
                 </button>
               </div>
@@ -223,9 +205,9 @@ const Sidebar = () => {
           </div>
         </header>
 
-        {/* Content area - improved */}
-        <main className="flex-1 overflow-auto bg-gray-50 p-4">
-          <div className="bg-white h-full overflow-auto">
+        {/* Main Content Area */}
+        <main className="flex-1 overflow-auto  ">
+          <div className="h-full overflow-auto rounded-theme bg-background p-2 bg-white  border border-color">
             {activeItem?.component}
           </div>
         </main>
@@ -234,16 +216,18 @@ const Sidebar = () => {
   );
 };
 
-// Extracted sidebar content component for reuse
+// Simplified Sidebar Content Component
 type SidebarContentProps = {
   sidebarOpen: boolean;
   setSidebarOpen: React.Dispatch<React.SetStateAction<boolean>>;
   activeComponent: string;
-  setActiveComponent:
-    | React.Dispatch<React.SetStateAction<string>>
-    | ((id: string) => void);
+  setActiveComponent: React.Dispatch<React.SetStateAction<string>> | ((id: string) => void);
   session: any;
-  handleLogout: (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => void;
+  handleLogout: (e: React.MouseEvent<HTMLButtonElement>) => void;
+  collegeData: any;
+  isLoggingOut: boolean;
+  isMobile: boolean;
+  onClose: () => void;
 };
 
 const SidebarContent = ({
@@ -253,60 +237,69 @@ const SidebarContent = ({
   setActiveComponent,
   session,
   handleLogout,
+  collegeData,
+  isLoggingOut,
+  isMobile,
+  onClose,
 }: SidebarContentProps) => {
   return (
     <>
-      {/* Logo and toggle button */}
-      <div className="flex items-center justify-between p-4 border-b border-gray-200">
-        <div className="flex items-center">
-          {/* You can add your logo here */}
-          {sidebarOpen && (
-            <span className="text-lg font-bold text-blue-600">
-              College Portal
-            </span>
+      {/* Header */}
+      <div className="flex items-center justify-between p-4 border-b border-color">
+        <div className="flex items-center space-x-2">
+          {collegeData?.logo && sidebarOpen && (
+            <img src={collegeData.logo} alt={collegeData.name} className="h-8 w-8 rounded-full object-cover" />
           )}
-          {!sidebarOpen && (
-            <span className="text-lg font-bold text-blue-600">CP</span>
-          )}
-        </div>
-        <button
-          onClick={() => setSidebarOpen(!sidebarOpen)}
-          className="text-gray-500 hover:bg-gray-100 p-1 rounded-full focus:outline-none"
-        >
-          {sidebarOpen ? <ChevronLeft size={20} /> : <ChevronRight size={20} />}
-        </button>
-      </div>
-
-      {/* User profile in sidebar */}
-      <div className="p-4 border-b border-gray-200">
-        <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
-            <User size={20} className="text-blue-600" />
-          </div>
           {sidebarOpen && (
             <div>
-              <p className="font-medium text-gray-800">
-                {session?.user?.name || "College Admin"}
-              </p>
-              <p className="text-xs text-gray-500">
-                {session?.user?.email || "admin@example.com"}
-              </p>
+              <span className="text-lg font-bold block text-primary">
+                {collegeData?.name || "College Portal"}
+              </span>
+              <span className="text-xs text-secondary">
+                {collegeData?.code || "CP"}
+              </span>
             </div>
           )}
         </div>
+        
+        {/* Toggle/Close Button */}
+        {isMobile ? (
+          <button onClick={onClose} className="p-1 rounded-full hover:bg-primary/10 text-primary">
+            <X size={20} />
+          </button>
+        ) : (
+          <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-1 rounded-full hover:bg-primary/10 text-primary">
+            {sidebarOpen ? <ChevronLeft size={20} /> : <ChevronRight size={20} />}
+          </button>
+        )}
       </div>
 
-      {/* Menu */}
+      {/* User Profile */}
+      {sidebarOpen && (
+        <div className="p-4 border-b border-color">
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 rounded-full flex items-center justify-center  text-primary">
+              <User size={20} />
+            </div>
+            <div>
+              <p className="font-medium text-primary">{session?.user?.name || "College Admin"}</p>
+              <p className="text-xs text-secondary">{session?.user?.email || "admin@example.com"}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Navigation Menu */}
       <div className="flex-1 overflow-y-auto py-4">
         <nav className="px-3 space-y-1">
           {sidebarItems.map((item) => (
             <button
               key={item.id}
               onClick={() => setActiveComponent(item.id)}
-              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
+              className={`w-full flex items-center gap-3 px-3 py-3 rounded-theme transition-colors text-sm md:text-base ${
                 activeComponent === item.id
-                  ? "bg-blue-50 text-blue-600 font-medium"
-                  : "text-gray-700 hover:bg-gray-100"
+                  ? "bg-primary/10  text-primary font-medium"
+                  : "text-secondary bg-white hover:text-primary"
               }`}
             >
               <div className="flex items-center justify-center w-8 h-8">
@@ -318,17 +311,17 @@ const SidebarContent = ({
         </nav>
       </div>
 
-      {/* Logout button */}
-      <div className="p-4 border-t border-gray-200">
+      {/* Logout Button */}
+      <div className="p-4 border-t border-color">
         <button
-          onClick={(e) => handleLogout(e)}
-          disabled={false}
-          className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-red-600 hover:bg-red-50 transition-colors ${
+          onClick={handleLogout}
+          disabled={isLoggingOut}
+          className={`w-full flex items-center gap-3 px-3 py-3 rounded-theme transition-colors text-error hover:bg-error/10 ${
             !sidebarOpen && "justify-center"
           }`}
         >
           <LogOut size={20} />
-          {sidebarOpen && <span>Logout</span>}
+          {sidebarOpen && <span>{isLoggingOut ? "Logging out..." : "Logout"}</span>}
         </button>
       </div>
     </>

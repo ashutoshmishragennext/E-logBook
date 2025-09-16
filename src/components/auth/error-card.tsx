@@ -9,7 +9,7 @@ export function ErrorCard() {
       backButtonHref="/login"
     >
       <div className="flex w-full items-center justify-center">
-        <TriangleAlert className="text-destructive" />
+        <TriangleAlert className="text-red-700" />
       </div>
     </CardWrapper>
   );

@@ -117,21 +117,22 @@ const Batch = () => {
   const selectedYear = academicYears.find(year => year.id === academicYearId)?.name;
 
   return (
-    <div className="container mx-auto py-6">
-      <Card className="shadow-md">
+    <div className="container mx-auto py-6 ">
+      <Card className="shadow-md rounded-theme">
         <CardHeader className="bg-gray-50 border-b">
           <CardTitle className="text-2xl">Batch Manager</CardTitle>
           <CardDescription>
             Manage your batches for different academic years
           </CardDescription>
         </CardHeader>
-        <CardContent className="pt-6">
+        <CardContent className="pt-6 bg-gray-50">
           <div className="flex items-center justify-between mb-6">
-            <div className="w-1/3">
+            <div className="w-1/3 ">
               <Label htmlFor="academicYear">Academic Year</Label>
               <Select 
                 value={academicYearId} 
                 onValueChange={setAcademicYearId}
+              
               >
                 <SelectTrigger className="mt-1">
                   <SelectValue placeholder="Select Academic Year" />
@@ -149,7 +150,7 @@ const Batch = () => {
             <Button 
               onClick={() => setIsAddDialogOpen(true)} 
               disabled={!academicYearId}
-              className="flex items-center gap-2"
+              className="flex items-center gap-2 text-white hover:text-black"
             >
               <PlusCircle size={18} />
               Add New Batch
@@ -169,7 +170,7 @@ const Batch = () => {
               <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
             </div>
           ) : academicYearId && batches.length > 0 ? (
-            <div className="border rounded-md">
+            <div className="border rounded-theme">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -187,7 +188,7 @@ const Batch = () => {
                             variant="outline"
                             size="sm"
                             onClick={() => openEditDialog(batch)}
-                            className="h-8 px-2 text-blue-600"
+                            className="h-8 px-2 text-white bg-primary"
                           >
                             <Pencil size={16} className="mr-1" />
                             Edit
@@ -196,7 +197,7 @@ const Batch = () => {
                             variant="outline"
                             size="sm"
                             onClick={() => openDeleteDialog(batch.id)}
-                            className="h-8 px-2 text-red-600"
+                            className="h-8 px-2 text-white bg-red-700"
                           >
                             <Trash2 size={16} className="mr-1" />
                             Delete
@@ -222,7 +223,7 @@ const Batch = () => {
 
       {/* Add Batch Dialog */}
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-        <DialogContent>
+        <DialogContent className="bg-white">
           <DialogHeader>
             <DialogTitle>Add New Batch</DialogTitle>
             <DialogDescription>
@@ -243,14 +244,14 @@ const Batch = () => {
             <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleAdd}>Create Batch</Button>
+            <Button onClick={handleAdd} className="bg-primary rounded-theme text-white hover:text-black">Create Batch</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* Edit Batch Dialog */}
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent>
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen} >
+        <DialogContent >
           <DialogHeader>
             <DialogTitle>Edit Batch</DialogTitle>
             <DialogDescription>
@@ -267,10 +268,10 @@ const Batch = () => {
             />
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)} >
               Cancel
             </Button>
-            <Button onClick={handleUpdate}>Save Changes</Button>
+            <Button onClick={handleUpdate} className="bg-primary rounded-theme text-white hover:text-black">Save Changes</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -288,7 +289,7 @@ const Batch = () => {
             <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
               Cancel
             </Button>
-            <Button variant="destructive" onClick={handleDelete}>
+            <Button className="bg-red-700 text-white" onClick={handleDelete}>
               Delete
             </Button>
           </DialogFooter>

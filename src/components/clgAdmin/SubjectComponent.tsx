@@ -138,7 +138,7 @@ export default function SubjectSelector({
           onFocus={() => setIsDropdownOpen(true)}
           onClick={() => setIsDropdownOpen(true)}
           disabled={disabled}
-          className={`w-full p-2 border rounded ${disabled ? 'bg-gray-100 cursor-not-allowed' : 'bg-white'}`}
+          className={`w-full p-2 border rounded-theme ${disabled ? 'bg-gray-100 cursor-not-allowed' : 'bg-white'}`}
         />
         {loading && (
           <div className="absolute right-3 top-2.5">
@@ -151,7 +151,7 @@ export default function SubjectSelector({
 
       {(isDropdownOpen && (subjects.length > 0 || showAddOption)) && (
         <div 
-          className="absolute z-20 w-full mt-1 border rounded shadow-lg bg-white"
+          className="absolute z-20 w-full mt-1 border rounded-theme shadow-lg bg-white"
           onClick={(e) => e.stopPropagation()} // Prevent clicks inside dropdown from closing it
         >
           {subjects.length > 0 ? (

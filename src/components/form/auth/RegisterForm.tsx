@@ -107,7 +107,7 @@ const RegisterForm = ({ text, role }: RegisterFormProps) => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-light-gray py-4 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen flex items-center justify-center  py-4 px-4 sm:px-6 lg:px-8">
       <Card className="w-full max-w-md overflow-hidden border-0 shadow-xl">
         <div className="h-2 bg-gradient-to-r from-dark-blue to-custom-purple"></div>
         <CardHeader className="pb-0">
@@ -143,7 +143,7 @@ const RegisterForm = ({ text, role }: RegisterFormProps) => {
                             field.onChange(value);
                           }}
                           value={field.value}
-                          className="h-12 w-full rounded-lg border-custom-slate/30 focus:border-dark-blue focus:ring-1 focus:ring-dark-blue transition-all duration-200"
+                          className="h-12 w-full rounded-xl border-custom-slate/30 focus:border-dark-blue focus:ring-1 focus:ring-dark-blue transition-all duration-200"
                           placeholder="Enter your full name"
                         />
                       </div>
@@ -167,7 +167,7 @@ const RegisterForm = ({ text, role }: RegisterFormProps) => {
                         <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-custom-slate h-5 w-5 group-hover:text-dark-blue transition-colors duration-200" />
                         <Input
                           {...field}
-                          className="h-12  w-full rounded-lg border-custom-slate/30 focus:border-dark-blue focus:ring-1 focus:ring-dark-blue transition-all duration-200"
+                          className="h-12  w-full rounded-xl border-custom-slate/30 focus:border-dark-blue focus:ring-1 focus:ring-dark-blue transition-all duration-200"
                           placeholder="Enter your email address"
                           type="email"
                         />
@@ -248,7 +248,7 @@ const RegisterForm = ({ text, role }: RegisterFormProps) => {
                             e.preventDefault();
                           }
                         }}
-                        className="h-10  w-full rounded-lg border-custom-slate/30 focus:border-dark-blue focus:ring-1 focus:ring-dark-blue transition-all duration-200"
+                        className="h-11  w-full rounded-xl border-custom-slate/30 focus:border-dark-blue focus:ring-1 focus:ring-dark-blue transition-all duration-200"
                       />
                     </FormControl>
                     <FormMessage />
@@ -297,7 +297,7 @@ const RegisterForm = ({ text, role }: RegisterFormProps) => {
                           <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-custom-slate h-5 w-5 group-hover:text-dark-blue transition-colors duration-200" />
                           <Input
                             {...field}
-                            className="h-12 pr-10 w-full rounded-lg border-custom-slate/30 focus:border-dark-blue focus:ring-1 focus:ring-dark-blue transition-all duration-200"
+                            className="h-12 pr-10 w-full rounded-xl border-custom-slate/30 focus:border-dark-blue focus:ring-1 focus:ring-dark-blue transition-all duration-200"
                             type={showPassword ? "text" : "password"}
                             placeholder="Enter your password"
                           />
@@ -340,7 +340,7 @@ const RegisterForm = ({ text, role }: RegisterFormProps) => {
                           {/* Progress bar */}
                           <div className="w-full bg-gray-200 rounded-full h-1.5 mb-2">
                             <div
-                              className={`h-1.5 rounded-full ${strengthColor} transition-all duration-300`}
+                              className={`h-1.5 rounded-xl ${strengthColor} transition-all duration-300`}
                               style={{ width: `${(totalScore / 5) * 100}%` }}
                             ></div>
                           </div>
@@ -373,7 +373,7 @@ const RegisterForm = ({ text, role }: RegisterFormProps) => {
                         <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-custom-slate h-5 w-5 group-hover:text-dark-blue transition-colors duration-200" />
                         <Input
                           {...field}
-                          className="h-12  pr-10 w-full rounded-lg border-custom-slate/30 focus:border-dark-blue focus:ring-1 focus:ring-dark-blue transition-all duration-200"
+                          className="h-12  pr-10 w-full rounded-xl border-custom-slate/30 focus:border-dark-blue focus:ring-1 focus:ring-dark-blue transition-all duration-200"
                           type={showConfirmPassword ? "text" : "password"}
                           placeholder="Confirm your password"
                         />
